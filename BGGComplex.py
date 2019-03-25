@@ -4,6 +4,8 @@ from itertools import groupby,chain
 #from sage.combinat.root_system.weyl_group import  WeylGroup
 #from sage.graphs.digraph import DiGraph
 #from sage.matrix import *
+#test 
+
 from sage.all import *
 
 class BGGComplex:
