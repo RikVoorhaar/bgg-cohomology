@@ -22,35 +22,24 @@ class BGGComplex:
         self.zero_root = self.W.domain().zero()
         
     def _compute_weyl_dictionary(self):
-        """Construct a dictionary enumerating all of the elements of the Weyl group. The keys are strings encoding a word in the simple reflections, and the values are elements of the Weyl group"""
-        self.WeylDic={"":self.W.one()} #start with the identity element
-        word_length=0
-        while len(self.WeylDic)<self.W.order(): #continue until we enumerated all the elements of the Weyl group
-            #we inductively find elements of longer word lengths by multipliying them by all the simple relflections. 
-            #We then keep only the elements we haven't found yet.
-            #This encodes every element of they Weyl group as a word in the simple reflections (but this is not unique)
-            BGGColumn=[s for s in self.WeylDic.keys() if len(s)==word_length] 
-            for w in BGGColumn:
-                for s in self.W.index_set():
-                    test_element= self.S[s]*self.WeylDic[w]
-                    if test_element not in self.WeylDic.values():
-                        self.WeylDic[str(s)+w]=test_element
-            word_length+=1
-        self.WeylDicReverse=dict([[v,k] for k,v in self.WeylDic.items()])
+        """Construct a dictionary enumerating all of the elements of the Weyl group. The keys are recuced words of the elements"""
+        self.reduced_word_dic={''.join([str(s) for s in g.reduced_word()]):g for g in self.W}
+        self.reduced_word_dic_reversed=dict([[v,k] for k,v in self.reduced_word_dic.items()])
+        self.reduced_words = self.reduced_word_dic.keys()
     
     def _construct_BGG_graph(self):
         "Find all the arrows in the BGG Graph. There is an arrow w->w' if len(w')=len(w)+1 and w' = t.w for some t in T."
         self.arrows=[]
-        for w in self.WeylDic.keys():
+        for w in self.reduced_words:
             for t in self.T:
-                product_word = self.WeylDicReverse[t*self.WeylDic[w]]
+                product_word = self.reduced_word_dic_reversed[t*self.reduced_word_dic[w]]
                 if len(product_word)==len(w)+1:
                     self.arrows+=[(w,product_word)]
         self.graph= DiGraph(self.arrows)
     
     def plot_graph(self):
         """Create a pretty plot of the BGG graph. Each word length is encoded by a different color. Usage: _.plot_graph().plot()"""
-        BGGVertices=sorted(self.WeylDic.keys(),key=len) 
+        BGGVertices=sorted(self.reduced_words,key=len) 
         BGGPartition=[list(v) for k,v in groupby(BGGVertices,len)]
 
         BGGGraphPlot = self.graph.to_undirected().graphplot(partition=BGGPartition,vertex_labels=None,vertex_size=30)
@@ -62,7 +51,8 @@ class BGGComplex:
         #for faster searching, make a dictionary of pairs (v,[u_1,...,u_k]) where v is a vertex and u_i are vertices such that
         #there is an arrow v->u_i
         outgoing={k:map(lambda x:x[1],v) for k,v in groupby(self.arrows,lambda x: x[0])}
-        outgoing[max(self.WeylDic.keys(),key=lambda x: len(x))]=[]
+        #outgoing[max(self.reduced_words,key=lambda x: len(x))]=[]
+        outgoing[self.reduced_word_dic_reversed[self.W.long_element()]]=[]
         
         # make a dictionary of pairs (v,[u_1,...,u_k]) where v is a vertex and u_i are vertices such that
         #there is an arrow u_i->v
@@ -97,8 +87,4 @@ class BGGComplex:
         weight = self._tuple_to_weigth(weight_tuple)
         new_weight= reflection.action(weight+self.rho)-self.rho
         return self._weight_to_tuple(new_weight)
-    
-    def longest_element(self):
-        """Returns the longest element of the Weyl groups"""
-        return max(self.WeylDic.keys(),key=len)
         
