@@ -1,10 +1,5 @@
 from itertools import groupby,chain
 
-#I don't know what sage module to import to make matrix(...) work (I want to coerce the list of simple roots into a matrix)
-#from sage.combinat.root_system.weyl_group import  WeylGroup
-#from sage.graphs.digraph import DiGraph
-#from sage.matrix import *
-
 from sage.all import *
 
 class BGGComplex:
@@ -25,7 +20,7 @@ class BGGComplex:
         """Construct a dictionary enumerating all of the elements of the Weyl group. The keys are recuced words of the elements"""
         self.reduced_word_dic={''.join([str(s) for s in g.reduced_word()]):g for g in self.W}
         self.reduced_word_dic_reversed=dict([[v,k] for k,v in self.reduced_word_dic.items()])
-        self.reduced_words = self.reduced_word_dic.keys()
+        self.reduced_words = sorted(self.reduced_word_dic.keys(),key=len) #sort the reduced words by their length
     
     def _construct_BGG_graph(self):
         "Find all the arrows in the BGG Graph. There is an arrow w->w' if len(w')=len(w)+1 and w' = t.w for some t in T."
@@ -35,6 +30,7 @@ class BGGComplex:
                 product_word = self.reduced_word_dic_reversed[t*self.reduced_word_dic[w]]
                 if len(product_word)==len(w)+1:
                     self.arrows+=[(w,product_word)]
+        self.arrows = sorted(self.arrows,key=lambda t: len(t[0])) #sort the arrows by the word length
         self.graph= DiGraph(self.arrows)
     
     def plot_graph(self):
