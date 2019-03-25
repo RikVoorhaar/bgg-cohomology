@@ -1,4 +1,6 @@
 from itertools import groupby,chain
+
+#I don't know what sage module to import to make matrix(...) work (I want to coerce a 
 #from sage.combinat.root_system.weyl_group import  WeylGroup
 #from sage.graphs.digraph import DiGraph
 #from sage.matrix import *
@@ -32,13 +34,13 @@ class BGGComplex:
         self.WeylDicReverse=dict([[v,k] for k,v in self.WeylDic.items()])
     
     def _construct_BGG_graph(self):
-        arrows=[]
+        self.arrows=[]
         for w in self.WeylDic.keys():
             for t in self.T:
                 product_word = self.WeylDicReverse[t*self.WeylDic[w]]
                 if len(product_word)==len(w)+1:
-                    arrows+=[(w,product_word)]
-        self.graph= DiGraph(arrows)
+                    self.arrows+=[(w,product_word)]
+        self.graph= DiGraph(self.arrows)
     
     def plot_graph(self):  
         BGGVertices=sorted(self.WeylDic.keys(),key=len)
@@ -46,6 +48,21 @@ class BGGComplex:
 
         BGGGraphPlot = self.graph.to_undirected().graphplot(partition=BGGPartition,vertex_labels=None,vertex_size=30)
         return BGGGraphPlot
+		
+	def find_cycles(self):
+		vertices=self.WeylDic.keys()
+		arrows=self.arrows
+
+		outgoing={k:map(lambda x:x[1],v) for k,v in groupby(self.arrows,lambda x: x[0])}
+		outgoing[max(self.WeylDic.keys(),key=lambda x: len(x))]=[]
+		incoming={k:map(lambda x:x[0],v) for k,v in groupby(self.arrows,lambda x: x[1])}
+		incoming['']=[]
+
+		self.cycles=chain.from_iterable([[a+(v,) for v in outgoing[a[-1]]] for a in self.arrows])
+		self.cycles=chain.from_iterable([[a+(v,) for v in incoming[a[-1]] if v != a[1]] for a in self.cycles])
+		self.cycles=[a+(a[0],) for a in self.cycles if a[0] in incoming[a[-1]]]
+		
+		return self.cycles
 
     def _weight_to_tuple(self,weight):
         b=weight.to_vector()
