@@ -80,4 +80,8 @@ class BGGComplex:
         weight = self._tuple_to_weigth(weight_tuple)
         new_weight= reflection.action(weight+self.rho)-self.rho
         return self._weight_to_tuple(new_weight)
+    
+    def longest_element(self):
+        """Returns the longest element of the Weyl groups"""
+        return max(self.WeylDic.keys(),key=len)
         
