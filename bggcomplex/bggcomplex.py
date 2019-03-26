@@ -2,6 +2,8 @@ from itertools import groupby,chain
 
 from sage.all import *
 
+from compute_signs import compute_signs
+
 class BGGComplex:
     """A class encoding all the things we need of the BGG complex"""
     def __init__(self, root_system):
@@ -15,6 +17,7 @@ class BGGComplex:
         self.rho = self.W.domain().rho()
         self.simple_roots = self.W.domain().simple_roots().values()
         self.zero_root = self.W.domain().zero()
+        
         
     def _compute_weyl_dictionary(self):
         """Construct a dictionary enumerating all of the elements of the Weyl group. The keys are recuced words of the elements"""
@@ -67,6 +70,10 @@ class BGGComplex:
         self.cycles=[a+(a[0],) for a in self.cycles if a[0] in incoming[a[-1]]]
 
         return self.cycles
+    
+    def compute_signs(self):
+        """Computes signs for all the edges so that the product of signs around any admissible cycle is -1. Returns a dictionary with the edges as keys and the signs as values."""
+        self.signs = compute_signs(self)
 
     def _weight_to_tuple(self,weight):
         """Decompose a weight into a tuple encoding the weight as a linear combination of the simple roots"""
