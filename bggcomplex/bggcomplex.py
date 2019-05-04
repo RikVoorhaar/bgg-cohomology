@@ -3,11 +3,15 @@ from itertools import groupby,chain
 from sage.all import *
 
 from compute_signs import compute_signs
+from compute_maps import BGGMapSolver
 
 class BGGComplex:
     """A class encoding all the things we need of the BGG complex"""
     def __init__(self, root_system):
         self.W = WeylGroup(root_system)
+        self.LA =  LieAlgebra(QQ, cartan_type=root_system)
+        self.PBW = self.LA.pbw_basis()
+        self.lattice = self.W.domain().root_system.root_lattice()
         self.S = self.W.simple_reflections()
         self.T = self.W.reflections()
         
@@ -17,6 +21,7 @@ class BGGComplex:
         self.rho = self.W.domain().rho()
         self.simple_roots = self.W.domain().simple_roots().values()
         self.zero_root = self.W.domain().zero()
+        self.allowed_tuples = {(self._root_to_list(self._weight_to_tuple(r))) for r in self.W.domain().negative_roots()}
         
         
     def _compute_weyl_dictionary(self):
@@ -75,6 +80,11 @@ class BGGComplex:
         """Computes signs for all the edges so that the product of signs around any admissible cycle is -1. Returns a dictionary with the edges as keys and the signs as values."""
         self.signs = compute_signs(self)
 
+    def init_map_solver(self,root):
+        """Initialize an instance of the map solver"""
+        self.find_cycles()
+        self.MapSolver = BGGMapSolver(self,root)
+
     def _weight_to_tuple(self,weight):
         """Decompose a weight into a tuple encoding the weight as a linear combination of the simple roots"""
         b=weight.to_vector()
@@ -83,13 +93,29 @@ class BGGComplex:
         A=matrix(A).transpose()
         return transpose(A.solve_right(b)).list()
 
-    def _tuple_to_weigth(self,t):
+    def _tuple_to_weight(self,t):
         """Turn a tuple encoding a linear combination of simple roots back into a weight"""
         return sum(a*b for a,b in zip(t,self.simple_roots))
 
+    @staticmethod
+    def _root_to_list(r):
+        """turn a tuple encoding linear combination of simple roots into a sorted list of incdices
+        of simple roots summing to the input, e.g. [2,1,0,3]->[1,1,2,4,4,4]"""
+        l = ()
+        for i, n in enumerate(r):
+            l += (i + 1,) * (int(-n))
+        return l
+
+    def _list_to_root(self,l):
+        """The inverse operation of _root_to_list, e.g. [1,1,2,4]->[2,1,0,1]"""
+        r = [0] * len(self.simple_roots)
+        for n in l:
+            r[n - 1] += -1
+        return r
+
     def dot_action(self,reflection,weight_tuple):
         """Compute the dot action of a reflection on a weight. The reflection should be an element of the Weyl group self.W and the weight should be given as a tuple encoding it as a linear combination of simple roots."""
-        weight = self._tuple_to_weigth(weight_tuple)
+        weight = self._tuple_to_weight(weight_tuple)
         new_weight= reflection.action(weight+self.rho)-self.rho
         return self._weight_to_tuple(new_weight)
         
