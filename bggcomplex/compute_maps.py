@@ -1,5 +1,7 @@
-from numpy import array
+from numpy import array,int16,zeros
 from sympy.utilities.iterables import multiset_partitions
+from scipy.sparse import csr_matrix
+from scipy.sparse.linalg import spsolve
 
 class BGGMapSolver:
     """A class encoding the methods to compute all the maps in the BGG complex"""
@@ -93,3 +95,43 @@ class BGGMapSolver:
         parts = [sorted(p, key=lambda l: (len(l), -l[0])) for p in parts]
 
         return [self._partition_to_PBW(p) for p in parts]
+
+    @staticmethod
+    def vectorize_polynomial(polynomial,monomial_to_index):
+        coeffs = polynomial.monomial_coefficients()
+        vector = zeros(len(monomial_to_index), dtype=int16)
+        for monomial, coefficient in coeffs.items():
+            vector[monomial_to_index[str(monomial)]] = coefficient
+        return vector
+
+    @staticmethod
+    def vectorize_polynomial_list(polynomial_list,monomial_to_index):
+        row = []
+        col = []
+        data = []
+        for row_num, polynomial in enumerate(polynomial_list):
+            for monomial, coefficient in polynomial.monomial_coefficients().items():
+                col.append(row_num)
+                row.append(monomial_to_index[str(monomial)])
+                data.append(coefficient)
+        return csr_matrix((data, (row, col)), shape=(len(polynomial_list), len(monomial_to_index)), dtype=int16)
+    
+
+    def solve_problem(self,problem):
+        basis = self.compute_PBW_basis_multidegree(problem[1])
+        if problem[2] == 'right':
+            LHS = [problem[3] * p for p in basis]
+        if problem[2] == 'left':
+            LHS = [p * problem[3] for p in basis]
+        monomial_to_index = {}
+        i = 0
+        for l in LHS:
+            for monomial in l.monomials():
+                if str(monomial) not in monomial_to_index:
+                    monomial_to_index[str(monomial)] = i
+                    i += 1
+        sol = spsolve(self.vectorize_polynomial_list(LHS,monomial_to_index),
+                      self.vectorize_polynomial(problem[4],monomial_to_index)
+                      ).astype(int16)
+
+        return sum(int(c) * basis[i] for i, c in enumerate(sol))
