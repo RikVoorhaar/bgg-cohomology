@@ -1,7 +1,8 @@
-from numpy import array,int16,zeros
+from numpy import array,int16,zeros,around
 from sympy.utilities.iterables import multiset_partitions
 from scipy.sparse import csr_matrix
-from scipy.sparse.linalg import spsolve
+#from scipy.sparse.linalg import spsolve,lsmr
+from scipy.linalg import solve,lstsq
 
 class BGGMapSolver:
     """A class encoding the methods to compute all the maps in the BGG complex"""
@@ -12,7 +13,7 @@ class BGGMapSolver:
                       BGG.reduced_word_dic.items()}
         self.maps = {}
         self._compute_initial_maps()
-        self.problems = []
+        self.problem_dic = {}
 
 
     def _compute_initial_maps(self):
@@ -25,28 +26,70 @@ class BGGMapSolver:
                 i = diff.nonzero()[0][0] + 1
                 self.maps[(s, t)] = self.BGG.PBW(self.BGG.LA.f(i)) ** sum(diff)
 
-    def get_available_problems(self):
+    def _get_available_problems(self):
         """Find all the admissible cycles in the BGG graph where we know three out of the four maps,
-        Call the unknown map 'f', then for each such cycle make a tuple of form.
-        (edge with f, multi-degree of f, 'left'/'right', g, h),
-        where we want to solve fg=h if 'left' and fg=h if 'right'"""
+        for each such cycle, create a dictionary containing all the information needed to solve
+        for the remaining fourth map. We only store the problem of lowest total degree for any undetermined edge."""
         for c in self.BGG.cycles:
             edg = (c[0:2], c[1:3], c[4:2:-1], c[3:1:-1]) #unpack cycle into its four edges
             mask = [e in self.maps for e in edg]
             if sum(mask) == 3: #if we know three of the maps...
-                if mask.index(False) == 0:
-                    self.problems.append((edg[0], self.action_dic[edg[0][0]] - self.action_dic[edg[0][1]], 'left',
-                                          self.maps[edg[1]], self.maps[edg[2]] * self.maps[edg[3]]))
-                if mask.index(False) == 1:
-                    self.problems.append((edg[1], self.action_dic[edg[1][0]] - self.action_dic[edg[1][1]], 'right',
-                                          self.maps[edg[0]], self.maps[edg[2]] * self.maps[edg[3]]))
-                if mask.index(False) == 2:
-                    self.problems.append((edg[2], self.action_dic[edg[2][0]] - self.action_dic[edg[2][1]], 'left',
-                                          self.maps[edg[3]], self.maps[edg[0]] * self.maps[edg[1]]))
-                if mask.index(False) == 3:
-                    self.problems.append((edg[3], self.action_dic[edg[3][0]] - self.action_dic[edg[3][1]], 'right',
-                                          self.maps[edg[2]], self.maps[edg[0]] * self.maps[edg[1]]))
+                problem={}
+                problem['tot_deg'] = sum(self.action_dic[c[0]] - self.action_dic[c[2]])
 
+                if mask.index(False) == 0:
+                    problem['edge']=edg[0]
+                    problem['deg']=self.action_dic[edg[0][0]] - self.action_dic[edg[0][1]]
+                    problem['side']='left'
+                    problem['known_LHS']=self.maps[edg[1]]
+                    problem['RHS']=self.maps[edg[2]] * self.maps[edg[3]]
+                if mask.index(False) == 1:
+                    problem['edge']=edg[1]
+                    problem['deg']=self.action_dic[edg[1][0]] - self.action_dic[edg[1][1]]
+                    problem['side']='right'
+                    problem['known_LHS']=self.maps[edg[0]]
+                    problem['RHS']=self.maps[edg[2]] * self.maps[edg[3]]
+                if mask.index(False) == 2:
+                    problem['edge']=edg[2]
+                    problem['deg']=self.action_dic[edg[2][0]] - self.action_dic[edg[2][1]]
+                    problem['side']='left'
+                    problem['known_LHS']=self.maps[edg[3]]
+                    problem['RHS']=self.maps[edg[0]] * self.maps[edg[1]]
+                if mask.index(False) == 3:
+                    problem['edge']=edg[3]
+                    problem['deg']=self.action_dic[edg[3][0]] - self.action_dic[edg[3][1]]
+                    problem['side']='right'
+                    problem['known_LHS']=self.maps[edg[2]]
+                    problem['RHS']=self.maps[edg[0]] * self.maps[edg[1]]
+
+                #only store the problem if either we didn't have a problem for this edge,
+                #or the problem we had for this edge was of higher degree
+                current_edge=problem['edge']
+                if current_edge in self.problem_dic:
+                    existing_problem = self.problem_dic[current_edge]
+                    if existing_problem['tot_deg']>problem['tot_deg']:
+                        self.problem_dic[current_edge]=problem
+                else:
+                    self.problem_dic[current_edge] = problem
+
+    def problems(self):
+        """Generator yielding problems. Once we run out of problems, we go through all the cycles to look for more problems.
+        If we run out then, it means we found all the maps"""
+        while True:
+            if (len(self.problem_dic)) == 0:
+                self._get_available_problems()
+                if len(self.problem_dic) ==0:
+                    break
+
+            _, problem = self.problem_dic.popitem()
+            yield problem
+
+    def solve(self):
+        """Iterate over all the problems to find all the maps, and return the result"""
+        for problem in self.problems():
+            sol = self.solve_problem(problem)
+            self.maps[problem['edge']] = sol
+        return self.maps
 
     def _is_nonzero(self,l):
         """returns True if a tuple of simple roots corresponds to a basis element of the Lie algebra, False if not.
@@ -98,6 +141,7 @@ class BGGMapSolver:
 
     @staticmethod
     def vectorize_polynomial(polynomial,monomial_to_index):
+        """given a dictionary of monomial->index, turn a polynomial into a vector"""
         coeffs = polynomial.monomial_coefficients()
         vector = zeros(len(monomial_to_index), dtype=int16)
         for monomial, coefficient in coeffs.items():
@@ -106,23 +150,25 @@ class BGGMapSolver:
 
     @staticmethod
     def vectorize_polynomial_list(polynomial_list,monomial_to_index):
+        """given a dictionary of monomial->index, turn a list of polynomials into a sparse matrix.
+        Currently not used."""
         row = []
         col = []
         data = []
         for row_num, polynomial in enumerate(polynomial_list):
             for monomial, coefficient in polynomial.monomial_coefficients().items():
-                col.append(row_num)
-                row.append(monomial_to_index[str(monomial)])
+                row.append(row_num)
+                col.append(monomial_to_index[str(monomial)])
                 data.append(coefficient)
-        return csr_matrix((data, (row, col)), shape=(len(polynomial_list), len(monomial_to_index)), dtype=int16)
-    
+        return csr_matrix((data, (row, col)), shape=(len(monomial_to_index), len(polynomial_list)), dtype=int16)
 
     def solve_problem(self,problem):
-        basis = self.compute_PBW_basis_multidegree(problem[1])
-        if problem[2] == 'right':
-            LHS = [problem[3] * p for p in basis]
-        if problem[2] == 'left':
-            LHS = [p * problem[3] for p in basis]
+        """solve the division problem in PBW basis"""
+        basis = self.compute_PBW_basis_multidegree(problem['deg'])
+        if problem['side'] == 'right':
+            LHS = [problem['known_LHS'] * p for p in basis]
+        if problem['side'] == 'left':
+            LHS = [p * problem['known_LHS'] for p in basis]
         monomial_to_index = {}
         i = 0
         for l in LHS:
@@ -130,8 +176,26 @@ class BGGMapSolver:
                 if str(monomial) not in monomial_to_index:
                     monomial_to_index[str(monomial)] = i
                     i += 1
-        sol = spsolve(self.vectorize_polynomial_list(LHS,monomial_to_index),
-                      self.vectorize_polynomial(problem[4],monomial_to_index)
-                      ).astype(int16)
+        A = array([self.vectorize_polynomial(p, monomial_to_index) for p in LHS]).T
+        b = self.vectorize_polynomial(problem['RHS'], monomial_to_index)
 
-        return sum(int(c) * basis[i] for i, c in enumerate(sol))
+        if A.shape[0] == A.shape[1]:
+            sol = around(solve(A, b)).astype(int16)
+        else:
+            sol = lstsq(A, b)
+            sol = around(sol[0]).astype(int16) #without the 'around' type conversion goes wrong for whatever reason
+
+        output = sum(int(c) * basis[i] for i, c in enumerate(sol))
+
+        return output
+
+    def check_maps(self):
+        """Check for each cycle whether it commutes, for debugging purposes"""
+        problems_found = False
+        for c in self.BGG.cycles:
+            edg = (c[0:2], c[1:3], c[4:2:-1], c[3:1:-1])
+            if self.maps[edg[0]]*self.maps[edg[1]]!=self.maps[edg[2]]*self.maps[edg[3]]:
+                print("Problem found at cycle",c)
+                problems_found=True
+        if not problems_found:
+            print("checked %d cycles, with no problems found!"%len(self.BGG.cycles))
