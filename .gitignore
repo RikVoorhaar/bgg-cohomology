@@ -1,0 +1,6 @@
+
+*.pyc
+
+.idea
+bggcomplex/.idea
+bggcomplex/.ipynb_checkpoints

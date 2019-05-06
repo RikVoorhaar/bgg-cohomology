@@ -2,14 +2,8 @@
 <project version="4">
   <component name="ChangeListManager">
     <list default="true" id="a5db0cea-ffbf-4687-9b47-3586a27d0ef0" name="Default Changelist" comment="">
-      <change afterPath="$PROJECT_DIR$/.idea/BGG.iml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/.idea/misc.xml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/.idea/modules.xml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/.idea/vcs.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/bggcomplex/.ipynb_checkpoints/RiksNotebook-checkpoint.ipynb" beforeDir="false" afterPath="$PROJECT_DIR$/bggcomplex/.ipynb_checkpoints/RiksNotebook-checkpoint.ipynb" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/bggcomplex/RiksNotebook.ipynb" beforeDir="false" afterPath="$PROJECT_DIR$/bggcomplex/RiksNotebook.ipynb" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/bggcomplex/bggcomplex.py" beforeDir="false" afterPath="$PROJECT_DIR$/bggcomplex/bggcomplex.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/bggcomplex/compute_maps.py" beforeDir="false" afterPath="$PROJECT_DIR$/bggcomplex/compute_maps.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/bggcomplex/python2.7.exe.stackdump" beforeDir="false" />
     </list>
     <option name="EXCLUDED_CONVERTED_TO_IGNORED" value="true" />
     <option name="SHOW_DIALOG" value="false" />
@@ -19,11 +13,11 @@
   </component>
   <component name="FileEditorManager">
     <leaf>
-      <file pinned="false" current-in-tab="false">
+      <file pinned="false" current-in-tab="true">
         <entry file="file://$PROJECT_DIR$/bggcomplex/bggcomplex.py">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="459">
-              <caret line="93" column="8" selection-start-line="93" selection-start-column="8" selection-end-line="93" selection-end-column="43" />
+            <state relative-caret-position="204">
+              <caret line="18" column="39" lean-forward="true" selection-start-line="18" selection-start-column="39" selection-end-line="18" selection-end-column="39" />
               <folding>
                 <element signature="e#0#35#0" expanded="true" />
               </folding>
@@ -31,11 +25,11 @@
           </provider>
         </entry>
       </file>
-      <file pinned="false" current-in-tab="true">
+      <file pinned="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/bggcomplex/compute_maps.py">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="102">
-              <caret line="6" column="19" lean-forward="true" selection-start-line="6" selection-start-column="19" selection-end-line="6" selection-end-column="19" />
+            <state relative-caret-position="-170">
+              <caret line="11" column="42" selection-start-line="11" selection-start-column="42" selection-end-line="11" selection-end-column="42" />
               <folding>
                 <element signature="e#0#51#0" expanded="true" />
               </folding>
@@ -46,7 +40,7 @@
       <file pinned="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/bggcomplex/compute_signs.py">
           <provider selected="true" editor-type-id="text-editor">
-            <state>
+            <state relative-caret-position="-451">
               <folding>
                 <element signature="e#0#32#0" expanded="true" />
               </folding>
@@ -62,8 +56,8 @@
   <component name="IdeDocumentHistory">
     <option name="CHANGED_PATHS">
       <list>
-        <option value="$PROJECT_DIR$/bggcomplex/bggcomplex.py" />
         <option value="$PROJECT_DIR$/bggcomplex/compute_maps.py" />
+        <option value="$PROJECT_DIR$/bggcomplex/bggcomplex.py" />
       </list>
     </option>
   </component>
@@ -153,29 +147,29 @@
   <component name="editorHistoryManager">
     <entry file="file://$PROJECT_DIR$/bggcomplex/compute_signs.py">
       <provider selected="true" editor-type-id="text-editor">
-        <state>
+        <state relative-caret-position="-451">
           <folding>
             <element signature="e#0#32#0" expanded="true" />
           </folding>
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/bggcomplex/bggcomplex.py">
+    <entry file="file://$PROJECT_DIR$/bggcomplex/compute_maps.py">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="459">
-          <caret line="93" column="8" selection-start-line="93" selection-start-column="8" selection-end-line="93" selection-end-column="43" />
+        <state relative-caret-position="-170">
+          <caret line="11" column="42" selection-start-line="11" selection-start-column="42" selection-end-line="11" selection-end-column="42" />
           <folding>
-            <element signature="e#0#35#0" expanded="true" />
+            <element signature="e#0#51#0" expanded="true" />
           </folding>
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/bggcomplex/compute_maps.py">
+    <entry file="file://$PROJECT_DIR$/bggcomplex/bggcomplex.py">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="102">
-          <caret line="6" column="19" lean-forward="true" selection-start-line="6" selection-start-column="19" selection-end-line="6" selection-end-column="19" />
+        <state relative-caret-position="204">
+          <caret line="18" column="39" lean-forward="true" selection-start-line="18" selection-start-column="39" selection-end-line="18" selection-end-column="39" />
           <folding>
-            <element signature="e#0#51#0" expanded="true" />
+            <element signature="e#0#35#0" expanded="true" />
           </folding>
         </state>
       </provider>

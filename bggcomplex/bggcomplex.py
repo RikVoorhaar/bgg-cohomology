@@ -10,7 +10,7 @@ class BGGComplex:
     """A class encoding all the things we need of the BGG complex"""
     def __init__(self, root_system):
         self.W = WeylGroup(root_system)
-        self.LA =  LieAlgebra(QQ, cartan_type=root_system)
+        self.LA =  LieAlgebra(ZZ, cartan_type=root_system)
         self.PBW = self.LA.pbw_basis()
         self.lattice = self.W.domain().root_system.root_lattice()
         self.S = self.W.simple_reflections()
@@ -56,6 +56,8 @@ class BGGComplex:
         """Find all the admitted cycles in the BGG graph. An admitted cycle consists of two paths a->b->c and a->b'->c,
          where the word length increases by 1 each step. The cycles are returned as tuples (a,b,c,b',a)."""
 
+        #only compute cycles if we haven't yet done so already
+        #this isn't very pythonic, but it works
         try:
             self.cycles
         except AttributeError:
