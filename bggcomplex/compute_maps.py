@@ -1,8 +1,9 @@
-from numpy import array,int16,zeros,around
+from numpy import array,int16,zeros,around,greater_equal,array_equal
 from sympy.utilities.iterables import multiset_partitions
 from scipy.sparse import csr_matrix
 #from scipy.sparse.linalg import spsolve,lsmr
 from scipy.linalg import solve,lstsq
+from time import time
 
 class BGGMapSolver:
     """A class encoding the methods to compute all the maps in the BGG complex"""
@@ -15,6 +16,7 @@ class BGGMapSolver:
         self._compute_initial_maps()
         self.problem_dic = {}
 
+        self.timer = {'linalg':0,'mult':0,'vect':0,'basis':0,'index':0}
 
     def _compute_initial_maps(self):
         """If the difference the dot action between source and target vertex is a multiple of a simple root,
@@ -87,8 +89,7 @@ class BGGMapSolver:
     def solve(self):
         """Iterate over all the problems to find all the maps, and return the result"""
         for problem in self.problems():
-            sol = self.solve_problem(problem)
-            self.maps[problem['edge']] = sol
+            self.solve_problem(problem)
         return self.maps
 
     def _is_nonzero(self,l):
@@ -139,6 +140,28 @@ class BGGMapSolver:
 
         return [self._partition_to_PBW(p) for p in parts]
 
+    def multidegree_to_root_sum(self,deg):
+        queue = [(deg, [0])]
+        output = []
+        while len(queue) > 0:
+            vect, partition = queue.pop()
+            for index in range(
+                    partition[-1], len(self.BGG.neg_roots)):
+                root = self.BGG.neg_roots[index]
+                if all(greater_equal(vect, root)):
+                    if array_equal(vect, root):
+                        output.append(partition[1:] + [index])
+                    else:
+                        queue.append((vect - root, partition + [index]))
+        return output
+
+    def partition_to_PBW(self, partition):
+        output = 1
+        for index in partition:
+            root = sum(-self.BGG.lattice.alpha()[i + 1] * int(n) for i, n in enumerate(self.BGG.neg_roots[index]))
+            output *= self.BGG.PBW_alg_gens[root]
+        return output
+
     @staticmethod
     def vectorize_polynomial(polynomial,monomial_to_index):
         """given a dictionary of monomial->index, turn a polynomial into a vector"""
@@ -164,11 +187,20 @@ class BGGMapSolver:
 
     def solve_problem(self,problem):
         """solve the division problem in PBW basis"""
-        basis = self.compute_PBW_basis_multidegree(problem['deg'])
+        t = time()
+        #basis = self.compute_PBW_basis_multidegree(problem['deg'])
+        basis = [self.partition_to_PBW(partition) for partition in self.multidegree_to_root_sum(problem['deg'])]
+        self.timer['basis']+=time()-t
+
+        t =time()
         if problem['side'] == 'right':
             LHS = [problem['known_LHS'] * p for p in basis]
         if problem['side'] == 'left':
             LHS = [p * problem['known_LHS'] for p in basis]
+        self.timer['mult']+=time()-t
+
+
+        t=time()
         monomial_to_index = {}
         i = 0
         for l in LHS:
@@ -176,9 +208,14 @@ class BGGMapSolver:
                 if str(monomial) not in monomial_to_index:
                     monomial_to_index[str(monomial)] = i
                     i += 1
+        self.timer['index']=time()-t
+
+        t=time()
         A = array([self.vectorize_polynomial(p, monomial_to_index) for p in LHS]).T
         b = self.vectorize_polynomial(problem['RHS'], monomial_to_index)
+        self.timer['vect']+=time()-t
 
+        t = time()
         if A.shape[0] == A.shape[1]:
             sol = around(solve(A, b)).astype(int16)
         else:
@@ -186,8 +223,9 @@ class BGGMapSolver:
             sol = around(sol[0]).astype(int16) #without the 'around' type conversion goes wrong for whatever reason
 
         output = sum(int(c) * basis[i] for i, c in enumerate(sol))
+        self.timer['linalg']+=time()-t
 
-        return output
+        self.maps[problem['edge']] = output
 
     def check_maps(self):
         """Check for each cycle whether it commutes, for debugging purposes"""

@@ -2,6 +2,8 @@ from itertools import groupby,chain
 
 from sage.all import *
 
+from numpy import array
+
 from compute_signs import compute_signs
 from compute_maps import BGGMapSolver
 
@@ -12,6 +14,7 @@ class BGGComplex:
         self.W = WeylGroup(root_system)
         self.LA =  LieAlgebra(ZZ, cartan_type=root_system)
         self.PBW = self.LA.pbw_basis()
+        self.PBW_alg_gens = self.PBW.algebra_generators()
         self.lattice = self.W.domain().root_system.root_lattice()
         self.S = self.W.simple_reflections()
         self.T = self.W.reflections()
@@ -21,6 +24,8 @@ class BGGComplex:
         
         self.rho = self.W.domain().rho()
         self.simple_roots = self.W.domain().simple_roots().values()
+        self.neg_roots = sorted([-array(self._weight_to_tuple(r)) for r in self.W.domain().negative_roots()],
+                                key=lambda l: (sum(l), tuple(l)))
         self.zero_root = self.W.domain().zero()
         self.allowed_tuples = {(self._root_to_list(self._weight_to_tuple(r))) for r in self.W.domain().negative_roots()}
         

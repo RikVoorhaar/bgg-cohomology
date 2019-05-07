@@ -1,4 +1,4 @@
-from numpy.random import randint
+from numpy.random import randint,choice
 from itertools import chain
 
 def compute_signs(BGG):
@@ -65,7 +65,7 @@ def compute_signs(BGG):
             bad_cycle_counter=current_bad_cycles
             edges_to_be_randomized=1
         else:
-            for i in np.choice(edge_numbers,size=edges_to_be_randomized):
+            for i in choice(edge_numbers,size=edges_to_be_randomized):
                 signs[i]*=-1
             edges_to_be_randomized*=2
             edges_to_be_randomized=max(edges_to_be_randomized,len(signs))
