@@ -113,22 +113,6 @@ class BGGComplex:
         """Turn a tuple encoding a linear combination of simple roots back into a weight"""
         return sum(a*b for a,b in zip(t,self.simple_roots))
 
-    # @staticmethod
-    # def _root_to_list(r):
-    #     """turn a tuple encoding linear combination of simple roots into a sorted list of incdices
-    #     of simple roots summing to the input, e.g. [2,1,0,3]->[1,1,2,4,4,4]"""
-    #     l = ()
-    #     for i, n in enumerate(r):
-    #         l += (i + 1,) * (int(-n))
-    #     return l
-    #
-    # def _list_to_root(self,l):
-    #     """The inverse operation of _root_to_list, e.g. [1,1,2,4]->[2,1,0,1]"""
-    #     r = [0] * len(self.simple_roots)
-    #     for n in l:
-    #         r[n - 1] += -1
-    #     return r
-
     def dot_action(self,reflection,weight):
         """Compute the dot action of a reflection on a weight. The reflection should be an element of the Weyl group
         self.W and the weight should be given as a tuple encoding it as a linear combination of simple roots."""
