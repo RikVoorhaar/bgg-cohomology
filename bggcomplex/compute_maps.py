@@ -1,9 +1,9 @@
 from numpy import array,int16,zeros,around,greater_equal,array_equal
-from sympy.utilities.iterables import multiset_partitions
-from scipy.sparse import csr_matrix
-#from scipy.sparse.linalg import spsolve,lsmr
+
 from scipy.linalg import solve,lstsq
 from time import time
+from multiprocessing import cpu_count
+from sage.parallel.decorate import parallel
 
 class BGGMapSolver:
     """A class encoding the methods to compute all the maps in the BGG complex"""
@@ -86,61 +86,33 @@ class BGGMapSolver:
             _, problem = self.problem_dic.popitem()
             yield problem
 
-    def solve(self):
+    def divide_problems(self,n_cores):
+        problem_list = self.problem_dic.values()
+        self.problem_dic={}
+        output=[]
+        batch_size =  len(problem_list)//n_cores
+        for i in range(n_cores-1):
+            output+=[problem_list[i*batch_size:(i+1)*batch_size]]
+        output+=[problem_list[n_cores*batch_size:]]
+        return output
+
+    def solve(self,parallel=False):
         """Iterate over all the problems to find all the maps, and return the result"""
-        for problem in self.problems():
-            self.solve_problem(problem)
+        if parallel:
+            while True:
+                self._get_available_problems()
+                if len(self.problem_dic)==0:
+                    break
+                problems = self.divide_problems(cpu_count()-1)
+                for _ in self.solve_problem_parallel(problems):
+                    pass
+        else:
+            for problem in self.problems():
+                self.solve_problem(problem)
         return self.maps
 
-    def _is_nonzero(self,l):
-        """returns True if a tuple of simple roots corresponds to a basis element of the Lie algebra, False if not.
-        e.g. [1 1]->False, because[ f_1,f_1]=0, and [1 1 2]->True/False depending on whether [-2,-1,..] is in the lattice"""
-        if len(l) == 1:
-            return True
-        if len(set(l)) == 1:
-            return False
-        if tuple(l) in self.BGG.allowed_tuples:
-            return True
-        return False
-
-    def _prune(self,p):
-        """Return True if all of the constituent list in input partition correspond to Lie algebra basis element,
-        False otherwise"""
-        for l in p:
-            if not self._is_nonzero(l):
-                return False
-        return True
-
-    def _list_to_PBW(self,l):
-        """Given a list of simple roots (e.g. [1 1 2 3]) turn it into element PBW[-alpha[1]*2-alpha[2]-alpha[3]]"""
-        root = sum(-self.BGG.lattice.alpha()[i] for i in l)
-        return self.BGG.PBW.algebra_generators()[root]
-
-    def _partition_to_PBW(self,p):
-        """Given a partition of the multiset encoding the degree, compute the corresponding monomial in the PBW basis,
-        e.g. [[2,3],[1,2]]->PBW[-alpha[2]-alpha[3]]*PBW[-alpha[1]-alpha[2]]"""
-        pbws = [self._list_to_PBW(l) for l in p]
-        return reduce(lambda x, y: x * y, pbws)
-
-    def compute_PBW_basis_multidegree(self,deg):
-        """Given a mutlidegree (e.g. [2,1,2]), compute a (PBW) basis of all the monomials in U(g) with this multidegree"""
-
-        #turn multidegree in symmetric word, e.g. [2 1 2]->[1 1 2 3 3]
-        sym = []
-        for i, n in enumerate(deg):
-            sym += ((i + 1,) * n)
-
-        #compute all the multiset partitions of list, remove those which don't correspond to PBW basis elements
-        parts = list(multiset_partitions(sym))
-        parts = [p for p in parts if self._prune(p)]
-
-        #sort elements of set of multiset partitions such that they are in the order sagemath's pbw_basis routine expects
-        #it seems a<b if len(a)<len(b), and if len equal then a<b if a[0]>b[0]
-        parts = [sorted(p, key=lambda l: (len(l), -l[0])) for p in parts]
-
-        return [self._partition_to_PBW(p) for p in parts]
-
     def multidegree_to_root_sum(self,deg):
+        """Compute a PBW basis of a given multi-degree"""
         queue = [(deg, [0])]
         output = []
         while len(queue) > 0:
@@ -170,20 +142,6 @@ class BGGMapSolver:
         for monomial, coefficient in coeffs.items():
             vector[monomial_to_index[str(monomial)]] = coefficient
         return vector
-
-    @staticmethod
-    def vectorize_polynomial_list(polynomial_list,monomial_to_index):
-        """given a dictionary of monomial->index, turn a list of polynomials into a sparse matrix.
-        Currently not used."""
-        row = []
-        col = []
-        data = []
-        for row_num, polynomial in enumerate(polynomial_list):
-            for monomial, coefficient in polynomial.monomial_coefficients().items():
-                row.append(row_num)
-                col.append(monomial_to_index[str(monomial)])
-                data.append(coefficient)
-        return csr_matrix((data, (row, col)), shape=(len(monomial_to_index), len(polynomial_list)), dtype=int16)
 
     def solve_problem(self,problem):
         """solve the division problem in PBW basis"""
@@ -226,6 +184,12 @@ class BGGMapSolver:
         self.timer['linalg']+=time()-t
 
         self.maps[problem['edge']] = output
+
+    @parallel(cpu_count()-1)
+    def solve_problem_parallel(self,problem_list):
+        for problem in problem_list:
+            self.solve_problem(problem)
+        return None
 
     def check_maps(self):
         """Check for each cycle whether it commutes, for debugging purposes"""

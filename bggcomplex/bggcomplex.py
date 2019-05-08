@@ -27,7 +27,7 @@ class BGGComplex:
         self.neg_roots = sorted([-array(self._weight_to_tuple(r)) for r in self.W.domain().negative_roots()],
                                 key=lambda l: (sum(l), tuple(l)))
         self.zero_root = self.W.domain().zero()
-        self.allowed_tuples = {(self._root_to_list(self._weight_to_tuple(r))) for r in self.W.domain().negative_roots()}
+        #self.allowed_tuples = {(self._root_to_list(self._weight_to_tuple(r))) for r in self.W.domain().negative_roots()}
         
     def _compute_weyl_dictionary(self):
         """Construct a dictionary enumerating all of the elements of the Weyl group.
@@ -113,25 +113,41 @@ class BGGComplex:
         """Turn a tuple encoding a linear combination of simple roots back into a weight"""
         return sum(a*b for a,b in zip(t,self.simple_roots))
 
-    @staticmethod
-    def _root_to_list(r):
-        """turn a tuple encoding linear combination of simple roots into a sorted list of incdices
-        of simple roots summing to the input, e.g. [2,1,0,3]->[1,1,2,4,4,4]"""
-        l = ()
-        for i, n in enumerate(r):
-            l += (i + 1,) * (int(-n))
-        return l
+    # @staticmethod
+    # def _root_to_list(r):
+    #     """turn a tuple encoding linear combination of simple roots into a sorted list of incdices
+    #     of simple roots summing to the input, e.g. [2,1,0,3]->[1,1,2,4,4,4]"""
+    #     l = ()
+    #     for i, n in enumerate(r):
+    #         l += (i + 1,) * (int(-n))
+    #     return l
+    #
+    # def _list_to_root(self,l):
+    #     """The inverse operation of _root_to_list, e.g. [1,1,2,4]->[2,1,0,1]"""
+    #     r = [0] * len(self.simple_roots)
+    #     for n in l:
+    #         r[n - 1] += -1
+    #     return r
 
-    def _list_to_root(self,l):
-        """The inverse operation of _root_to_list, e.g. [1,1,2,4]->[2,1,0,1]"""
-        r = [0] * len(self.simple_roots)
-        for n in l:
-            r[n - 1] += -1
-        return r
-
-    def dot_action(self,reflection,weight_tuple):
+    def dot_action(self,reflection,weight):
         """Compute the dot action of a reflection on a weight. The reflection should be an element of the Weyl group
         self.W and the weight should be given as a tuple encoding it as a linear combination of simple roots."""
-        weight = self._tuple_to_weight(weight_tuple)
+        weight = self._tuple_to_weight(weight)
         new_weight= reflection.action(weight+self.rho)-self.rho
         return self._weight_to_tuple(new_weight)
+
+    def is_dot_regular(self,mu):
+        stab_counter = 0
+        for w in self.W:
+            if w.action(mu + self.rho) - self.rho == mu:
+                stab_counter += 1
+        if stab_counter <= 1:
+            return True
+        else:
+            return False
+
+    def make_dominant(self,mu):
+        for w in self.W:
+            new_mu = w.action(mu + self.rho) - self.rho
+            if new_mu.is_dominant():
+                return new_mu, w
