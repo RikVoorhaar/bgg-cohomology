@@ -12,21 +12,22 @@ class BGGComplex:
     """A class encoding all the things we need of the BGG complex"""
     def __init__(self, root_system):
         self.W = WeylGroup(root_system)
-        self.LA =  LieAlgebra(ZZ, cartan_type=root_system)
+        self.domain = self.W.domain()
+        self.LA =  LieAlgebra(QQ, cartan_type=root_system)
         self.PBW = self.LA.pbw_basis()
         self.PBW_alg_gens = self.PBW.algebra_generators()
-        self.lattice = self.W.domain().root_system.root_lattice()
+        self.lattice = self.domain.root_system.root_lattice()
         self.S = self.W.simple_reflections()
         self.T = self.W.reflections()
         
         self._compute_weyl_dictionary()
         self._construct_BGG_graph()
         
-        self.rho = self.W.domain().rho()
-        self.simple_roots = self.W.domain().simple_roots().values()
-        self.neg_roots = sorted([-array(self._weight_to_tuple(r)) for r in self.W.domain().negative_roots()],
+        self.rho = self.domain.rho()
+        self.simple_roots = self.domain.simple_roots().values()
+        self.neg_roots = sorted([-array(self._weight_to_tuple(r)) for r in self.domain.negative_roots()],
                                 key=lambda l: (sum(l), tuple(l)))
-        self.zero_root = self.W.domain().zero()
+        self.zero_root = self.domain.zero()
         #self.allowed_tuples = {(self._root_to_list(self._weight_to_tuple(r))) for r in self.W.domain().negative_roots()}
         
     def _compute_weyl_dictionary(self):
