@@ -6,7 +6,8 @@ from sage.modules.with_basis.indexed_element import IndexedFreeModuleElement
 from sage.combinat.free_module import CombinatorialFreeModule
 from sage.sets.finite_enumerated_set import FiniteEnumeratedSet
 from sage.rings.rational_field import RationalField
-
+from sage.algebras.lie_algebras.subalgebra import LieSubalgebra_finite_dimensional_with_basis
+from sage.sets.family import Family
 
 class LieAlgebraModuleElement(IndexedFreeModuleElement):
     """Element class of LieAlgebraModule. We only modify __repr__ here for clear display"""
@@ -19,7 +20,7 @@ class LieAlgebraModuleElement(IndexedFreeModuleElement):
             return '0'
         output_string = ''
 
-        # display all the monomials+coefficients as a sum, omiting + if there is a minus in the next term,
+        # display all the monomials+coefficients as a sum, omitting + if there is a minus in the next term,
         # and omitting the coefficient if it is 1.
         for t, c in self.monomial_coefficients().items():
             if len(output_string) > 0:
@@ -56,6 +57,11 @@ class LieAlgebraModule(CombinatorialFreeModule):
         self.lie_algebra = lie_algebra
         self._index_action = action
         self.basis_keys = basis_keys
+        if isinstance(lie_algebra,LieSubalgebra_finite_dimensional_with_basis):
+            ambient_basis = dict(lie_algebra.ambient().basis()).items()
+            self.lie_algebra_basis = Family({k:v for k,v in ambient_basis if v in lie_algebra.basis()})
+        else:
+            self.lie_algebra_basis = self.lie_algebra.basis()
         super(LieAlgebraModule, self).__init__(base_ring, basis_keys=basis_keys)
 
     def action(self, X, m):
@@ -63,12 +69,28 @@ class LieAlgebraModule(CombinatorialFreeModule):
         uses self._index_action to extend to define the action of X on m, resulting in an element X.m in the
         module."""
 
-        assert isinstance(X, self.lie_algebra.element_class)
-        assert isinstance(m, self.element_class)
+        #assert isinstance(X, self.lie_algebra.element_class)
+        #assert isinstance(m, self.element_class)
         total = self.zero()
         for i, c in m.monomial_coefficients().iteritems():
             total += c * sum([d * self.basis()[j] for j, d in self._index_action(X, i).items()],
                              self.zero())
+        return total
+
+    def pbw_action(self, pbw_elt, m):
+        """Repeatedly apply action to terms in a pbw polynomial to compute the action of the universal
+        enveloping algebra on the Lie algebra"""
+        total = self.zero()
+        for monomial, coefficient in pbw_elt.monomial_coefficients().items():
+            # convert monomials to list of roots, which are used as keys for the lie algebra basis
+            # we reverse the final list because we act on the left.
+            lie_alg_elements = [self.lie_algebra_basis[term] for term in monomial.to_word_list()][::-1]
+            sub_total = m
+            for X in lie_alg_elements:
+                sub_total = self.action(X, sub_total)
+                if sub_total == self.zero():
+                    break
+            total += coefficient*sub_total
         return total
 
     def direct_sum(*modules):
@@ -112,7 +134,7 @@ class LieAlgebraModule(CombinatorialFreeModule):
         base ring, but I first need to program the base ring as a Lie algebra module. For n==1 we return a fresh instance of the same LieAlgebraModule."""
 
         if n == 0:
-            # technically this should return a copy of the base irng instead
+            # technically this should return a copy of the base ring instead
             return LieAlgebraModule(self.base_ring(), [], self.lie_algebra, lambda X, k: {})
         if n == 1:
             return LieAlgebraModule(self.base_ring(), self.basis_keys, self.lie_algebra, self._index_action)
@@ -139,7 +161,7 @@ class LieAlgebraModule(CombinatorialFreeModule):
         on zero generators."""
 
         if n == 0:
-            # technically this should return a copy of the base irng instead
+            # technically this should return a copy of the base ring instead
             return LieAlgebraModule(self.base_ring(), [], self.lie_algebra, lambda X, k: {})
         if n == 1:
             return LieAlgebraModule(self.base_ring(), self.basis_keys, self.lie_algebra, self._index_action)
@@ -187,7 +209,6 @@ class DirectSum:
         return (self.key, self.index) == (other.key, other.index)
 
     def __repr__(self):
-        #return '(⊕%d, %s)' % (self.index, str(self.key))
         return str(self.key)
 
 
@@ -331,9 +352,8 @@ class LieAlgebraModuleFactory:
 
         self.root_to_string = {r: i for i, r in self.string_to_root.items()}
 
-    def string_to_lie_algebra(self, m, subalgebra='g'):
-        lie_algebra = self.subalgebra[subalgebra]
-        return lie_algebra.basis()[self.string_to_root[m]]
+    def string_to_lie_algebra(self, m):
+        return self.lie_algebra.basis()[self.string_to_root[m]]
 
     def _basis_to_subalgebra(self, basis):
         basis = [self.lie_algebra.basis()[self.string_to_root[r]] for r in basis]
@@ -350,7 +370,7 @@ class LieAlgebraModuleFactory:
         """Takes X and element of the Lie algebra, and m an index of the basis of the Lie algebra, and outputs
         the adjoint action of X on the corresponding basis element"""
         lie_algebra = self.subalgebra[subalgebra]
-        bracket = lie_algebra.bracket(X, self.string_to_lie_algebra(m, subalgebra=subalgebra))
+        bracket = lie_algebra.bracket(X, self.string_to_lie_algebra(m))
         return self.lie_alg_to_module_basis(bracket)
 
     def construct_module(self, base_ring=RationalField(), subalgebra='g', action='adjoint'):
