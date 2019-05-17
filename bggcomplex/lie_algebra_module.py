@@ -58,9 +58,11 @@ class LieAlgebraModule(CombinatorialFreeModule):
         self._index_action = action
         self.basis_keys = basis_keys
         if isinstance(lie_algebra,LieSubalgebra_finite_dimensional_with_basis):
-            ambient_basis = dict(lie_algebra.ambient().basis()).items()
+            self.ambient_lie_algebra = lie_algebra.ambient()
+            ambient_basis = dict(self.ambient_lie_algebra.basis()).items()
             self.lie_algebra_basis = Family({k:v for k,v in ambient_basis if v in lie_algebra.basis()})
         else:
+            self.ambient_lie_algebra = lie_algebra
             self.lie_algebra_basis = self.lie_algebra.basis()
         super(LieAlgebraModule, self).__init__(base_ring, basis_keys=basis_keys)
 
@@ -69,8 +71,6 @@ class LieAlgebraModule(CombinatorialFreeModule):
         uses self._index_action to extend to define the action of X on m, resulting in an element X.m in the
         module."""
 
-        #assert isinstance(X, self.lie_algebra.element_class)
-        #assert isinstance(m, self.element_class)
         total = self.zero()
         for i, c in m.monomial_coefficients().iteritems():
             total += c * sum([d * self.basis()[j] for j, d in self._index_action(X, i).items()],
@@ -186,8 +186,8 @@ class LieAlgebraModule(CombinatorialFreeModule):
 
     @staticmethod
     def _tensor_product_basis(*iterators):
-        """gives the set of all (ordered) tuples of same length as number of iterators, where the ith element belongs to the
-        ith iterator. """
+        """gives the set of all (ordered) tuples of same length as number of iterators, where the ith element belongs
+        to the ith iterator. """
         iterators = list(iterators)
         basis = [[x] for x in iterators.pop()]
         while len(iterators) > 0:
@@ -361,7 +361,7 @@ class LieAlgebraModuleFactory:
 
     def lie_alg_to_module_basis(self, X):
         """Takes an element of the Lie algebra and writes it out as a dict in the module basis"""
-        out_dict = {}
+        out_dict = Counter()
         for t, c in X.monomial_coefficients().items():
             out_dict[self.root_to_string[t]] = c
         return out_dict
@@ -375,5 +375,6 @@ class LieAlgebraModuleFactory:
 
     def construct_module(self, base_ring=RationalField(), subalgebra='g', action='adjoint'):
         if action=='adjoint':
-            action_map = lambda X, m: self.adjoint_action(X,m)
-            return LieAlgebraModule(base_ring, self.basis[subalgebra], self.subalgebra[subalgebra], action_map)
+            #action_map = lambda X, m: self.adjoint_action(X,m)
+            return LieAlgebraModule(base_ring, self.basis[subalgebra], self.subalgebra[subalgebra],
+                                    self.adjoint_action())
