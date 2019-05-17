@@ -336,6 +336,8 @@ class LieAlgebraModuleFactory:
         self.subalgebra['n'] = self._basis_to_subalgebra(self.basis['n'])
         self.subalgebra['b'] = self._basis_to_subalgebra(self.basis['b'])
 
+        self.dual_root_map = self._init_dual_root_map()
+
     def _initialize_root_dictionary(self):
         def root_dict_to_string(root_dict):
             return ''.join(''.join([str(k)] * abs(v)) for k, v in root_dict.items())
@@ -373,8 +375,30 @@ class LieAlgebraModuleFactory:
         bracket = self.lie_algebra.bracket(X, self.string_to_lie_algebra(m))
         return self.lie_alg_to_module_basis(bracket)
 
+    def _init_dual_root_map(self):
+        dual_root_map = dict()
+        for root in self.e_roots + self.f_roots:
+            dual_root_map[self.root_to_string[-root]] = self.root_to_string[root]
+        for root in self.h_roots:
+            dual_root_map[self.root_to_string[root]] = self.root_to_string[root]
+        return dual_root_map
+
+    def pairing(self, X, Y):
+        return sum(c1 * c2 for x1, c1 in X.items() for x2, c2 in Y.items() if x1 == self.dual_root_map[x2])
+
+    def coadjoint_action(self, X, m, basis):
+        output = dict()
+        for alpha in basis:
+            alpha_dual = self.string_to_lie_algebra(dual_root_map[alpha])
+            bracket = self.lie_algebra.bracket(X, alpha_dual)
+            bracket = self.lie_alg_to_module_basis(bracket)
+            inn_product = self.pairing(bracket, {m: 1})
+            if inn_product != 0: 
+                output[alpha] = -inn_product
+        return output
+
     def construct_module(self, base_ring=RationalField(), subalgebra='g', action='adjoint'):
         if action=='adjoint':
             #action_map = lambda X, m: self.adjoint_action(X,m)
             return LieAlgebraModule(base_ring, self.basis[subalgebra], self.subalgebra[subalgebra],
-                                    self.adjoint_action())
+                                    self.adjoint_action)
