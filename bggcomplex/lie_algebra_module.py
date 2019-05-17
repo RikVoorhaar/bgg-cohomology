@@ -23,15 +23,11 @@ class LieAlgebraModuleElement(IndexedFreeModuleElement):
         # display all the monomials+coefficients as a sum, omitting + if there is a minus in the next term,
         # and omitting the coefficient if it is 1.
         for t, c in self.monomial_coefficients().items():
-            if len(output_string) > 0:
-                try:
-                    if c < 0:
-                        output_string += '-'
-                        c *= -1
-                    else:
-                        output_string += '+'
-                except:
-                    output_string += '+'
+            if c < 0:
+                output_string += '-'
+                c *= -1
+            elif len(output_string) > 0:
+                output_string += '+'
             if c not in {1, -1}:
                 output_string += str(c) + '*'
             output_string += str(t)
@@ -57,7 +53,7 @@ class LieAlgebraModule(CombinatorialFreeModule):
         self.lie_algebra = lie_algebra
         self._index_action = action
         self.basis_keys = basis_keys
-        if isinstance(lie_algebra,LieSubalgebra_finite_dimensional_with_basis):
+        if isinstance(lie_algebra, LieSubalgebra_finite_dimensional_with_basis):
             self.ambient_lie_algebra = lie_algebra.ambient()
             ambient_basis = dict(self.ambient_lie_algebra.basis()).items()
             self.lie_algebra_basis = Family({k:v for k,v in ambient_basis if v in lie_algebra.basis()})
@@ -84,7 +80,7 @@ class LieAlgebraModule(CombinatorialFreeModule):
         for monomial, coefficient in pbw_elt.monomial_coefficients().items():
             # convert monomials to list of roots, which are used as keys for the lie algebra basis
             # we reverse the final list because we act on the left.
-            lie_alg_elements = [self.lie_algebra_basis[term] for term in monomial.to_word_list()][::-1]
+            lie_alg_elements = [self.ambient_lie_algebra.basis()[term] for term in monomial.to_word_list()][::-1]
             sub_total = m
             for X in lie_alg_elements:
                 sub_total = self.action(X, sub_total)
@@ -115,7 +111,15 @@ class LieAlgebraModule(CombinatorialFreeModule):
         element in the tuple belongs to precisely one of the original modules. The action is defined through
         the coproduct, e.g. X.(a (x) b) = (X.a)(x)b+a(x)(X.b)."""
 
-        new_basis = LieAlgebraModule.tensor_product_basis(*[module.basis_keys for module in modules])
+        for module in modules:
+            if len(module.basis_keys) == 0:
+                return LieAlgebraModule(modules[0].base_ring(), [], modules[0].lie_algebra, lambda X, k: {})
+        if len([module for module in modules if len(module.basis_keys) > 1]) > 0:
+            modules = [module for module in modules if len(module.basis_keys) > 1]
+        else:
+            return LieAlgebraModule(modules[0].base_ring(), [1], modules[0].lie_algebra, lambda X, k: {})
+
+        new_basis = LieAlgebraModule._tensor_product_basis(*[module.basis_keys for module in modules])
 
         def action(X, m):
             out_dict = Counter()
@@ -124,18 +128,18 @@ class LieAlgebraModule(CombinatorialFreeModule):
                 index_dict = Counter({m.replace(index, t): c for t, c in action_on_term.items()})
                 out_dict += index_dict
             return out_dict
-
         return LieAlgebraModule(modules[0].base_ring(), new_basis, modules[0].lie_algebra, action)
 
     def symmetric_power(self, n):
         """Gives n-fold symmetric power of module. The basis is given by the set of all sub-multisets (with repetition)
         of size n of the basis of the module. The action is induced from the action on the tensor product.
         In the special case that n=0, we return the module spanned by 0 elements. Technically we should return the
-        base ring, but I first need to program the base ring as a Lie algebra module. For n==1 we return a fresh instance of the same LieAlgebraModule."""
+        base ring, but I first need to program the base ring as a Lie algebra module. For n==1 we return a fresh
+        instance of the same LieAlgebraModule."""
 
         if n == 0:
             # technically this should return a copy of the base ring instead
-            return LieAlgebraModule(self.base_ring(), [], self.lie_algebra, lambda X, k: {})
+            return LieAlgebraModule(self.base_ring(), [1], self.lie_algebra, lambda X, k: {})
         if n == 1:
             return LieAlgebraModule(self.base_ring(), self.basis_keys, self.lie_algebra, self._index_action)
 
@@ -162,7 +166,7 @@ class LieAlgebraModule(CombinatorialFreeModule):
 
         if n == 0:
             # technically this should return a copy of the base ring instead
-            return LieAlgebraModule(self.base_ring(), [], self.lie_algebra, lambda X, k: {})
+            return LieAlgebraModule(self.base_ring(), [1], self.lie_algebra, lambda X, k: {})
         if n == 1:
             return LieAlgebraModule(self.base_ring(), self.basis_keys, self.lie_algebra, self._index_action)
         if n > len(self.basis_keys):
@@ -197,7 +201,7 @@ class LieAlgebraModule(CombinatorialFreeModule):
         return basis
 
 
-class DirectSum:
+class DirectSum(object):
     def __init__(self, index, key):
         self.index = int(index)
         self.key = key
@@ -206,21 +210,21 @@ class DirectSum:
         return hash((self.index, self.key))
 
     def __eq__(self, other):
-        return (self.key, self.index) == (other.key, other.index)
+        return type(self)==type(other) and (self.key, self.index) == (other.key, other.index)
 
     def __repr__(self):
         return str(self.key)
 
 
-class TensorProduct:
+class TensorProduct(object):
     def __init__(self, *keys):
-        self.keys = tuple(keys)
+        self.keys = list(keys)
 
     def __hash__(self):
-        return hash(self.keys)
+        return hash(tuple(self.keys))
 
     def __eq__(self, other):
-        return self.keys == other.keys
+        return type(self)==type(other) and self.keys == other.keys
 
     def __repr__(self):
         return '⊗'.join([str(k) for k in self.keys])
@@ -229,18 +233,21 @@ class TensorProduct:
         return self.keys[index]
 
     def __setitem__(self, index, value):
-        keys = list(self.keys)
-        keys[index] = value
-        self.keys = tuple(keys)
+        self.keys[index] = value
         return self
 
     def replace(self, index, value):
-        keys = list(self.keys)
+        keys = self.keys
         keys[index] = value
         return TensorProduct(*keys)
 
+    def insert(self, index, value):
+        keys = self.keys
+        keys.insert(index, value)
+        return TensorProduct(*keys)
 
-class SymmetricProduct:
+
+class SymmetricProduct(object):
     def __init__(self, *keys):
         self.keys = sorted(keys)
 
@@ -248,7 +255,7 @@ class SymmetricProduct:
         return hash(tuple(self.keys))
 
     def __eq__(self, other):
-        return self.keys == other.keys
+        return type(self)==type(other) and self.keys == other.keys
 
     def __repr__(self):
         return '⊙'.join([str(k) for k in self.keys])
@@ -265,8 +272,13 @@ class SymmetricProduct:
         keys[index] = value
         return SymmetricProduct(*keys)
 
+    def insert(self, value):
+        keys = self.keys
+        keys.append(value)
+        return SymmetricProduct(*keys)
 
-class AlternatingProduct:
+
+class AlternatingProduct(object):
     def __init__(self, *keys):
         self.keys = list(keys)
 
@@ -274,7 +286,7 @@ class AlternatingProduct:
         return hash(tuple(self.keys))
 
     def __eq__(self, other):
-        return self.keys == other.keys
+        return type(self)==type(other) and self.keys == other.keys
 
     def __repr__(self):
         return '∧'.join([str(k) for k in self.keys])
@@ -289,6 +301,11 @@ class AlternatingProduct:
     def replace(self, index, value):
         keys = list(self.keys)
         keys[index] = value
+        return AlternatingProduct(*keys)
+
+    def insert(self, value, index=0):
+        keys = self.keys
+        keys.insert(index, value)
         return AlternatingProduct(*keys)
 
     def parity(self):
@@ -336,7 +353,7 @@ class LieAlgebraModuleFactory:
         self.subalgebra['n'] = self._basis_to_subalgebra(self.basis['n'])
         self.subalgebra['b'] = self._basis_to_subalgebra(self.basis['b'])
 
-        self.dual_root_map = self._init_dual_root_map()
+        self.dual_root_dict = self._init_dual_root_dict()
 
     def _initialize_root_dictionary(self):
         def root_dict_to_string(root_dict):
@@ -375,21 +392,21 @@ class LieAlgebraModuleFactory:
         bracket = self.lie_algebra.bracket(X, self.string_to_lie_algebra(m))
         return self.lie_alg_to_module_basis(bracket)
 
-    def _init_dual_root_map(self):
-        dual_root_map = dict()
+    def _init_dual_root_dict(self):
+        dual_root_dict = dict()
         for root in self.e_roots + self.f_roots:
-            dual_root_map[self.root_to_string[-root]] = self.root_to_string[root]
+            dual_root_dict[self.root_to_string[-root]] = self.root_to_string[root]
         for root in self.h_roots:
-            dual_root_map[self.root_to_string[root]] = self.root_to_string[root]
-        return dual_root_map
+            dual_root_dict[self.root_to_string[root]] = self.root_to_string[root]
+        return dual_root_dict
 
     def pairing(self, X, Y):
-        return sum(c1 * c2 for x1, c1 in X.items() for x2, c2 in Y.items() if x1 == self.dual_root_map[x2])
+        return sum(c1 * c2 for x1, c1 in X.items() for x2, c2 in Y.items() if x1 == self.dual_root_dict[x2])
 
     def coadjoint_action(self, X, m, basis):
         output = dict()
         for alpha in basis:
-            alpha_dual = self.string_to_lie_algebra(dual_root_map[alpha])
+            alpha_dual = self.string_to_lie_algebra(self.dual_root_dict[alpha])
             bracket = self.lie_algebra.bracket(X, alpha_dual)
             bracket = self.lie_alg_to_module_basis(bracket)
             inn_product = self.pairing(bracket, {m: 1})
@@ -398,7 +415,6 @@ class LieAlgebraModuleFactory:
         return output
 
     def construct_module(self, base_ring=RationalField(), subalgebra='g', action='adjoint'):
-        if action=='adjoint':
-            #action_map = lambda X, m: self.adjoint_action(X,m)
-            return LieAlgebraModule(base_ring, self.basis[subalgebra], self.subalgebra[subalgebra],
-                                    self.adjoint_action)
+        action_map = {'adjoint':self.adjoint_action,
+                      'coadjoint': (lambda X,m: self.coadjoint_action(X, m, self.basis[subalgebra]))}
+        return LieAlgebraModule(base_ring, self.basis[subalgebra], self.subalgebra[subalgebra], action_map[action])
