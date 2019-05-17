@@ -366,14 +366,14 @@ class LieAlgebraModuleFactory:
             out_dict[self.root_to_string[t]] = c
         return out_dict
 
-    def adjoint_action(self, X, m, subalgebra='g'):
+    def adjoint_action(self, X, m):
         """Takes X and element of the Lie algebra, and m an index of the basis of the Lie algebra, and outputs
         the adjoint action of X on the corresponding basis element"""
-        lie_algebra = self.subalgebra[subalgebra]
-        bracket = lie_algebra.bracket(X, self.string_to_lie_algebra(m))
+        #lie_algebra = self.subalgebra[subalgebra]
+        bracket = self.lie_algebra.bracket(X, self.string_to_lie_algebra(m))
         return self.lie_alg_to_module_basis(bracket)
 
     def construct_module(self, base_ring=RationalField(), subalgebra='g', action='adjoint'):
         if action=='adjoint':
-            action_map = lambda X, m: self.adjoint_action(X,m,subalgebra=subalgebra)
+            action_map = lambda X, m: self.adjoint_action(X,m)
             return LieAlgebraModule(base_ring, self.basis[subalgebra], self.subalgebra[subalgebra], action_map)
