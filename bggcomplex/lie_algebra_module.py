@@ -114,10 +114,10 @@ class LieAlgebraModule(CombinatorialFreeModule):
         for module in modules:
             if len(module.basis_keys) == 0:
                 return LieAlgebraModule(modules[0].base_ring(), [], modules[0].lie_algebra, lambda X, k: {})
-        if len([module for module in modules if len(module.basis_keys) > 1]) > 0:
-            modules = [module for module in modules if len(module.basis_keys) > 1]
-        else:
-            return LieAlgebraModule(modules[0].base_ring(), [1], modules[0].lie_algebra, lambda X, k: {})
+        #if len([module for module in modules if len(module.basis_keys) > 1]) > 0:
+        #    modules = [module for module in modules if len(module.basis_keys) > 1]
+        #else:
+        #    return LieAlgebraModule(modules[0].base_ring(), [1], modules[0].lie_algebra, lambda X, k: {})
 
         new_basis = LieAlgebraModule._tensor_product_basis(*[module.basis_keys for module in modules])
 
@@ -138,7 +138,6 @@ class LieAlgebraModule(CombinatorialFreeModule):
         instance of the same LieAlgebraModule."""
 
         if n == 0:
-            # technically this should return a copy of the base ring instead
             return LieAlgebraModule(self.base_ring(), [1], self.lie_algebra, lambda X, k: {})
         if n == 1:
             return LieAlgebraModule(self.base_ring(), self.basis_keys, self.lie_algebra, self._index_action)
@@ -165,7 +164,6 @@ class LieAlgebraModule(CombinatorialFreeModule):
         on zero generators."""
 
         if n == 0:
-            # technically this should return a copy of the base ring instead
             return LieAlgebraModule(self.base_ring(), [1], self.lie_algebra, lambda X, k: {})
         if n == 1:
             return LieAlgebraModule(self.base_ring(), self.basis_keys, self.lie_algebra, self._index_action)
@@ -237,12 +235,12 @@ class TensorProduct(object):
         return self
 
     def replace(self, index, value):
-        keys = self.keys
+        keys = self.keys[:]
         keys[index] = value
         return TensorProduct(*keys)
 
     def insert(self, index, value):
-        keys = self.keys
+        keys = self.keys[:]
         keys.insert(index, value)
         return TensorProduct(*keys)
 
@@ -268,12 +266,12 @@ class SymmetricProduct(object):
         return self
 
     def replace(self, index, value):
-        keys = self.keys
+        keys = self.keys[:]
         keys[index] = value
         return SymmetricProduct(*keys)
 
     def insert(self, value):
-        keys = self.keys
+        keys = self.keys[:]
         keys.append(value)
         return SymmetricProduct(*keys)
 
@@ -299,18 +297,18 @@ class AlternatingProduct(object):
         return self
 
     def replace(self, index, value):
-        keys = list(self.keys)
+        keys = self.keys[:]
         keys[index] = value
         return AlternatingProduct(*keys)
 
     def insert(self, value, index=0):
-        keys = self.keys
+        keys = self.keys[:]
         keys.insert(index, value)
         return AlternatingProduct(*keys)
 
     def parity(self):
         """Computes the parity of the permutation. """
-        a = list(self.keys)
+        a = self.keys[:]
         if len(set(a)) < len(a):
             return 0
         b = sorted(a)
