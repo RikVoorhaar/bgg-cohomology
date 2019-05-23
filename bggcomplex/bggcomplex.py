@@ -28,7 +28,7 @@ class BGGComplex:
         self.neg_roots = sorted([-array(self._weight_to_tuple(r)) for r in self.domain.negative_roots()],
                                 key=lambda l: (sum(l), tuple(l)))
         self.zero_root = self.domain.zero()
-        #self.allowed_tuples = {(self._root_to_list(self._weight_to_tuple(r))) for r in self.W.domain().negative_roots()}
+        # self.allowed_tuples = {(self._root_to_list(self._weight_to_tuple(r))) for r in self.W.domain().negative_roots()}
         
     def _compute_weyl_dictionary(self):
         """Construct a dictionary enumerating all of the elements of the Weyl group.
@@ -62,31 +62,31 @@ class BGGComplex:
         """Find all the admitted cycles in the BGG graph. An admitted cycle consists of two paths a->b->c and a->b'->c,
          where the word length increases by 1 each step. The cycles are returned as tuples (a,b,c,b',a)."""
 
-        #only compute cycles if we haven't yet done so already
-        #this isn't very pythonic, but it works
+        # only compute cycles if we haven't yet done so already
+        # this isn't very pythonic, but it works
         try:
             self.cycles
         except AttributeError:
-            #for faster searching, make a dictionary of pairs (v,[u_1,...,u_k]) where v is a vertex and u_i
+            # for faster searching, make a dictionary of pairs (v,[u_1,...,u_k]) where v is a vertex and u_i
             # are vertices such that there is an arrow v->u_i
             first = lambda x: x[0]
             second = lambda x: x[1]
             outgoing={k:map(second,v) for k,v in groupby(sorted(self.arrows,key=first),first)}
-            #outgoing[max(self.reduced_words,key=lambda x: len(x))]=[]
+            # outgoing[max(self.reduced_words,key=lambda x: len(x))]=[]
             outgoing[self.reduced_word_dic_reversed[self.W.long_element()]]=[]
 
             # make a dictionary of pairs (v,[u_1,...,u_k]) where v is a vertex and u_i are vertices such that
-            #there is an arrow u_i->v
+            # there is an arrow u_i->v
             incoming={k:map(first,v) for k,v in groupby(sorted(self.arrows,key=second),second)}
             incoming['']=[]
 
-            #enumerate all paths of length 2, a->b->c, where length goes +1,+1
+            # enumerate all paths of length 2, a->b->c, where length goes +1,+1
             self.cycles=chain.from_iterable([[a+(v,) for v in outgoing[a[-1]]] for a in self.arrows])
 
-            #enumerate all paths of length 3, a->b->c->b' such that b' != b and length goes +1,+1,-1
+            # enumerate all paths of length 3, a->b->c->b' such that b' != b and length goes +1,+1,-1
             self.cycles=chain.from_iterable([[a+(v,) for v in incoming[a[-1]] if v != a[1]] for a in self.cycles])
 
-            #enumerate all cycles of length 4, a->b->c->b'->a such that b'!=b and length goes +1,+1,-1,-1
+            # enumerate all cycles of length 4, a->b->c->b'->a such that b'!=b and length goes +1,+1,-1,-1
             self.cycles=[a+(a[0],) for a in self.cycles if a[0] in incoming[a[-1]]]
 
         return self.cycles
@@ -99,7 +99,7 @@ class BGGComplex:
     def compute_maps(self,root):
         """Initialize an instance of the map solver"""
         self.find_cycles()
-        MapSolver = BGGMapSolver(self,root)
+        MapSolver = BGGMapSolver(self,  root)
         return MapSolver.solve()
 
     def _weight_to_tuple(self,weight):
@@ -112,7 +112,7 @@ class BGGComplex:
 
     def _tuple_to_weight(self,t):
         """Turn a tuple encoding a linear combination of simple roots back into a weight"""
-        return sum(a*b for a,b in zip(t,self.simple_roots))
+        return sum(a*b for a, b in zip(t,self.simple_roots))
 
     def dot_action(self,reflection,weight):
         """Compute the dot action of a reflection on a weight. The reflection should be an element of the Weyl group
@@ -121,7 +121,7 @@ class BGGComplex:
         new_weight= reflection.action(weight+self.rho)-self.rho
         return self._weight_to_tuple(new_weight)
 
-    def is_dot_regular(self,mu):
+    def is_dot_regular(self, mu):
         stab_counter = 0
         for w in self.W:
             if w.action(mu + self.rho) - self.rho == mu:
@@ -131,7 +131,7 @@ class BGGComplex:
         else:
             return False
 
-    def make_dominant(self,mu):
+    def make_dominant(self, mu):
         for w in self.W:
             new_mu = w.action(mu + self.rho) - self.rho
             if new_mu.is_dominant():

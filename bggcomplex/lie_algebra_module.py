@@ -357,7 +357,7 @@ class LieAlgebraModuleFactory:
         def root_dict_to_string(root_dict):
             return ''.join(''.join([str(k)] * abs(v)) for k, v in root_dict.items())
 
-        self.string_to_root = dict( )
+        self.string_to_root = dict()
         for i, b in dict(self.lattice.alphacheck()).items():
             self.string_to_root['h%d' % i] = b
         for a in self.lattice.negative_roots():
