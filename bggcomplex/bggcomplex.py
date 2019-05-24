@@ -110,6 +110,12 @@ class BGGComplex:
         A=matrix(A).transpose()
         return transpose(A.solve_right(b)).list()
 
+    def weight_to_alpha_sum(self,weight):
+        tuple = self._weight_to_tuple(weight)
+        alpha = self.lattice.alpha()
+        zero = self.lattice.zero()
+        return sum((int(c)*alpha[i+1] for i, c in enumerate(tuple)), zero)
+
     def _tuple_to_weight(self,t):
         """Turn a tuple encoding a linear combination of simple roots back into a weight"""
         return sum(a*b for a, b in zip(t,self.simple_roots))

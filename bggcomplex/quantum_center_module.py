@@ -6,9 +6,10 @@ class QuantumFactory(object):
     among other things."""
 
     def __init__(self, BGG):
+        self.BGG = BGG
         self.factory = LieAlgebraModuleFactory(BGG.LA)
-        self.modules = dict()
 
+        self.modules = dict()
         self.modules['g'] = self.factory.construct_module(subalgebra='g', action='adjoint')
         self.modules['n'] = self.factory.construct_module(subalgebra='n', action='adjoint')
         self.modules['u'] = self.factory.construct_module(subalgebra='u', action='coadjoint')
@@ -96,11 +97,35 @@ class QuantumFactory(object):
         return T_span
 
     def get_weight(self, obj):
+        zero = self.factory.lattice.zero()
         if isinstance(obj, (TensorProduct, SymmetricProduct, AlternatingProduct)):
-            return sum(self.get_weight(k) for k in obj.keys)
+            return sum((self.get_weight(k) for k in obj.keys), zero)
         elif isinstance(obj, DirectSum):
             return self.get_weight(obj.key)
         elif isinstance(obj, str):
-            return self.factory.string_to_root[obj]
+            if obj[0] in ('f', 'e'):
+                return self.factory.string_to_root[obj]
+            else:
+                return zero
         else:
-            return 0
+            return zero
+
+    def compute_weights(self,module, i=0):
+        all_weights = set()
+        for key in module.basis_keys:
+            weight = self.get_weight(key)
+            all_weights.add(weight)
+
+        regular_dominant = []
+        regular_non_dominant = []
+        for mu in all_weights:
+            if self.BGG.is_dot_regular(mu):
+                if mu.is_dominant():
+                    regular_dominant.append(mu)
+                else:
+                    mu_prime, w = self.BGG.make_dominant(mu)
+                    mu_prime = self.BGG.weight_to_alpha_sum(mu_prime)
+                    w = self.BGG.reduced_word_dic_reversed[w]
+                    if len(w) == max(i, 1):
+                        regular_non_dominant.append((mu, mu_prime, w))
+        return regular_dominant, regular_non_dominant
