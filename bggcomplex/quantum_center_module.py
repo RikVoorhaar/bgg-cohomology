@@ -129,3 +129,7 @@ class QuantumFactory(object):
                     if len(w) == max(i, 1):
                         regular_non_dominant.append((mu, mu_prime, w))
         return regular_dominant, regular_non_dominant
+
+    def weight_module(self, j, k):
+        return WeightModuleWithRelations(self.BGG.LA.base_ring(), self.M_module(j, k),
+                                         self.get_weight, self.T_spanning_set(j, k))

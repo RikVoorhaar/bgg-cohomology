@@ -44,12 +44,12 @@ class LieAlgebraModule(CombinatorialFreeModule):
     Element = LieAlgebraModuleElement
 
     @staticmethod
-    def __classcall_private__(cls, base_ring, basis_keys, lie_algebra, action, *options):
+    def __classcall_private__(cls, base_ring, basis_keys=None, lie_algebra=None, action=None, **kwargs):
         if isinstance(basis_keys, (list, tuple)):
             basis_keys = FiniteEnumeratedSet(basis_keys)
-        return super(LieAlgebraModule, cls).__classcall__(cls, base_ring, basis_keys, lie_algebra, action, *options)
+        return super(LieAlgebraModule, cls).__classcall__(cls, base_ring, basis_keys=basis_keys, lie_algebra=lie_algebra, action=action, **kwargs)
 
-    def __init__(self, base_ring, basis_keys, lie_algebra, action):
+    def __init__(self, base_ring, basis_keys=None, lie_algebra=None, action=None):
         self.lie_algebra = lie_algebra
         self._index_action = action
         self.basis_keys = basis_keys
@@ -416,3 +416,31 @@ class LieAlgebraModuleFactory:
         action_map = {'adjoint':self.adjoint_action,
                       'coadjoint': (lambda X,m: self.coadjoint_action(X, m, self.basis[subalgebra]))}
         return LieAlgebraModule(base_ring, self.basis[subalgebra], self.subalgebra[subalgebra], action_map[action])
+
+
+class WeightModuleWithRelations(LieAlgebraModule):
+
+    @staticmethod
+    def __classcall_private__(cls, base_ring, lie_alg_module=None, get_weight=None, relations=None, **kwargs):
+        if isinstance(relations, (list, tuple)):
+            relations = FiniteEnumeratedSet([tuple(r.items()) for r in relations])
+
+        basis_keys = lie_alg_module.basis_keys
+        lie_algebra = lie_alg_module.lie_algebra
+        action = lie_alg_module.action
+
+        return super(WeightModuleWithRelations, cls).__classcall__(cls, base_ring, basis_keys=basis_keys,
+                                                                   lie_algebra=lie_algebra, action=action,
+                                                                   lie_alg_module=lie_alg_module,
+                                                                   get_weight=get_weight,
+                                                                   relations=relations, **kwargs
+                                                                   )
+
+    def __init__(self, base_ring, lie_alg_module, get_weight, relations=None, **kwargs):
+        self.get_weight = get_weight
+        if relations is not None:
+            self.relations = [{x: y for x, y in r} for r in relations]
+        else:
+            self.relations = []
+        super(WeightModuleWithRelations, self).__init__(base_ring, lie_alg_module.basis_keys,
+                                                        lie_alg_module.lie_algebra, lie_alg_module._index_action)
