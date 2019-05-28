@@ -142,3 +142,5 @@ class BGGComplex:
             new_mu = w.action(mu + self.rho) - self.rho
             if new_mu.is_dominant():
                 return new_mu, w
+
+

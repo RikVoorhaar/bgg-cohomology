@@ -110,26 +110,6 @@ class QuantumFactory(object):
         else:
             return zero
 
-    def compute_weights(self,module, i=0):
-        all_weights = set()
-        for key in module.basis_keys:
-            weight = self.get_weight(key)
-            all_weights.add(weight)
-
-        regular_dominant = []
-        regular_non_dominant = []
-        for mu in all_weights:
-            if self.BGG.is_dot_regular(mu):
-                if mu.is_dominant():
-                    regular_dominant.append(mu)
-                else:
-                    mu_prime, w = self.BGG.make_dominant(mu)
-                    mu_prime = self.BGG.weight_to_alpha_sum(mu_prime)
-                    w = self.BGG.reduced_word_dic_reversed[w]
-                    if len(w) == max(i, 1):
-                        regular_non_dominant.append((mu, mu_prime, w))
-        return regular_dominant, regular_non_dominant
-
     def weight_module(self, j, k):
         return WeightModuleWithRelations(self.BGG.LA.base_ring(), self.M_module(j, k),
                                          self.get_weight, self.T_spanning_set(j, k))
