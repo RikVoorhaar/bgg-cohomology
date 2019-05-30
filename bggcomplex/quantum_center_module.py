@@ -55,7 +55,7 @@ class QuantumFactory(object):
                         if new_key.parity() != 0:
                             new_basis.append(DirectSum(index, m.replace(1, new_key)))
                     else:
-                        new_key = m[1].insert(b)
+                        new_key = m[1].insert(b).sort()
                         if new_key.parity() != 0:
                             new_basis.append(DirectSum(index, m.replace(1, new_key)))
         return new_basis
@@ -79,10 +79,14 @@ class QuantumFactory(object):
                         if num_n == 0:
                             new_key = key2
                         elif num_n == 1:
-                            new_key = AlternatingProduct(key2, m[-1]).sort()
+                            new_key = AlternatingProduct(key2, m[-1])
+                            coeff *= new_key.parity()
+                            new_key.sort()
                         else:
-                            new_key = m[-1].insert(key2).sort()
-                        if num_n == 0 or new_key.parity() != 0:
+                            new_key = m[-1].insert(key2)
+                            coeff *= new_key.parity()
+                            new_key.sort()
+                        if coeff != 0:
                             new_m = new_m.replace(-1, new_key)
                             new_dict[new_m] = coeff
                     if len(new_dict) > 0:

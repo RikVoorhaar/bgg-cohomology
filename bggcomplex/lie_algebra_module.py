@@ -8,6 +8,8 @@ from sage.sets.finite_enumerated_set import FiniteEnumeratedSet
 from sage.rings.rational_field import RationalField
 from sage.algebras.lie_algebras.subalgebra import LieSubalgebra_finite_dimensional_with_basis
 from sage.sets.family import Family
+from sage.matrix.constructor import matrix
+from sage.rings.integer_ring import ZZ
 
 class LieAlgebraModuleElement(IndexedFreeModuleElement):
     """Element class of LieAlgebraModule. We only modify __repr__ here for clear display"""
@@ -329,6 +331,7 @@ def direct_sum_map(index, dic):
 
 
 class LieAlgebraModuleFactory:
+    """s"""
     def __init__(self, lie_algebra):
         self.lie_algebra = lie_algebra
         self.lattice = lie_algebra.weyl_group().domain().root_system.root_lattice()
@@ -386,11 +389,11 @@ class LieAlgebraModuleFactory:
     def adjoint_action(self, X, m):
         """Takes X and element of the Lie algebra, and m an index of the basis of the Lie algebra, and outputs
         the adjoint action of X on the corresponding basis element"""
-        #lie_algebra = self.subalgebra[subalgebra]
         bracket = self.lie_algebra.bracket(X, self.string_to_lie_algebra(m))
         return self.lie_alg_to_module_basis(bracket)
 
     def _init_dual_root_dict(self):
+        """"Create dictionary mapping roots to their dual"""
         dual_root_dict = dict()
         for root in self.e_roots + self.f_roots:
             dual_root_dict[self.root_to_string[-root]] = self.root_to_string[root]
@@ -399,30 +402,47 @@ class LieAlgebraModuleFactory:
         return dual_root_dict
 
     def pairing(self, X, Y):
+        """Natural pairing in the Chevallay basis. It is defined by (e_I,f_I)=1, (h_i,h_i)=1, and 0 otherwise"""
         return sum(c1 * c2 for x1, c1 in X.items() for x2, c2 in Y.items() if x1 == self.dual_root_dict[x2])
 
     def coadjoint_action(self, X, m, basis):
-        output = dict()
+        """ Uses pairing and adjoint action to define coadjoint action corestricted to a subspace defined by `basis`.
+         The coadjoint action is defined by
+        coad(X)(m) = - sum( pairing(m,ad(X, dual(alpha))*alpha for alpha in basis)"""
+        output = dict()  # Output is a dictionary of monomials
         for alpha in basis:
             alpha_dual = self.string_to_lie_algebra(self.dual_root_dict[alpha])
             bracket = self.lie_algebra.bracket(X, alpha_dual)
-            bracket = self.lie_alg_to_module_basis(bracket)
+            bracket = self.lie_alg_to_module_basis(bracket)  # Compute bracket and convert to dictionary of monomials
             inn_product = self.pairing(bracket, {m: 1})
             if inn_product != 0: 
-                output[alpha] = -inn_product
+                output[alpha] = -inn_product  # If the action on alpha is non-zero, add it to the output dictionary
         return output
 
     def construct_module(self, base_ring=RationalField(), subalgebra='g', action='adjoint'):
+        """Return a LieAlgebraModule with basis some subalgebra of g, and with either adjoint or coadjoint action.
+        These form the 'building blocks' for more complicated modules."""
         action_map = {'adjoint':self.adjoint_action,
                       'coadjoint': (lambda X,m: self.coadjoint_action(X, m, self.basis[subalgebra]))}
         return LieAlgebraModule(base_ring, self.basis[subalgebra], self.subalgebra[subalgebra], action_map[action])
 
 
 class WeightModuleWithRelations(LieAlgebraModule):
+    """Class for taking care of weight modules with relations. The class constructor takes
+    a LieAlgebraModule together with a map that gives a 'weight' for each basis key (in principle
+    the weights can be any hashable object). The class generates a list weight_dic sending weights to
+    all the basis elements with this weight.
+
+    The class also takes an optional third argument
+    which is a list with dictionaries of form {..., key:integer, ...}, where key has to be
+    in the basis of the LieAlgebraModule. These are the relations, and we assume that each element of the
+    list of relations has a well-defined weight. The class generates a dictionary relations_weight_dic
+    containing all the relations for a specified weight, and for each weight it defines a section from
+    the quotient module M/R -> M. """
 
     @staticmethod
     def __classcall_private__(cls, base_ring, lie_alg_module=None, get_weight=None, relations=None, **kwargs):
-        if isinstance(relations, (list, tuple)):
+        if isinstance(relations, (list, tuple)):  # ensure that the relations argument is hashable
             relations = FiniteEnumeratedSet([tuple(r.items()) for r in relations])
 
         basis_keys = lie_alg_module.basis_keys
@@ -438,9 +458,85 @@ class WeightModuleWithRelations(LieAlgebraModule):
 
     def __init__(self, base_ring, lie_alg_module, get_weight, relations=None, **kwargs):
         self.get_weight = get_weight
-        if relations is not None:
+        if relations is not None:  # turn relations back from a FiniteEnumeratedSet of tuples into a dictionary
             self.relations = [{x: y for x, y in r} for r in relations]
         else:
             self.relations = []
+
         super(WeightModuleWithRelations, self).__init__(base_ring, lie_alg_module.basis_keys,
                                                         lie_alg_module.lie_algebra, lie_alg_module._index_action)
+
+        # Initialize dictionary of weights
+        self.weight_dic = dict()
+        for key in self.basis_keys:
+            weight = self.get_weight(key)
+            if weight not in self.weight_dic:
+                self.weight_dic[weight] = [key]
+            else:
+                self.weight_dic[weight] += [key]
+
+        # Initialize dictionary of weights for the relations
+        self.relations_weight_dic = {weight: [] for weight in self.weight_dic.keys()}
+        for dic in self.relations:
+            weight = self.get_weight(dic.keys()[0])
+            self.relations_weight_dic[weight] += [dic]
+
+        # Initialize the sections from the quotient module
+        self.section = dict()
+        for weight in self.weight_dic.keys():
+            self.section[weight] = self.get_section(weight)
+
+    @staticmethod
+    def vectorize_relations(keys, relations):
+        """Given a set of keys and relations, return a matrix encoding the relations in the basis given by the keys"""
+        output = matrix(ZZ, len(keys), len(relations), 0)
+        index_dict = dict()
+        for index, key in enumerate(keys):
+            index_dict[key] = index
+        for row, dic in enumerate(relations):
+            for key, value in dic.items():
+                output[index_dict[key], row] = value
+        return output
+
+    def get_section(self, weight):
+        """Compute a section of the quotient module for the given weight"""
+        relations = list()
+        single_keys = set()  # Store the keys which come from a relation with only a single key
+        for dic in self.relations_weight_dic[weight]:
+            if len(dic) == 1:
+                key = dic.keys()[0]
+                if key not in single_keys:  # Only need to store one copy of single keys
+                    relations.append({key: 1})
+                    single_keys.add(key)
+            else:
+                relations.append(dic)  # If the relation contains multiple keys store it in any case
+
+        def _rem_single_keys(dic_):  # Removes keys from a relation which are in the list of single keys.
+            if len(dic_) > 1:
+                dic_ = {k: v for k, v in dic_.items() if k not in single_keys}
+                if len(dic_) == 1:
+                    single_keys.add(dic.keys()[0])
+            return dic_
+
+        # The removal of single keys may introduce new dictionaries of length one, so we need to repeat this
+        # procedure until there is no more change.
+        while True:
+            old_relations_length = len(relations)
+            old_single_keys_length = len(single_keys)
+            relations = [_rem_single_keys(dic) for dic in relations]
+            relations = [dic for dic in relations if len(dic)>0]
+            if len(relations) == old_relations_length and len(single_keys) == old_single_keys_length:
+                break
+        relations = [dic for dic in relations if len(dic) > 1]  # Store the multiple key relations separately
+
+        # The single keys automatically get killed in the quotient, so we are only interested in basis
+        # keys which are not single keys.
+        remaining_keys = [s for s in self.weight_dic[weight] if s not in single_keys]
+
+        rel = self.vectorize_relations(remaining_keys, relations)  # Vectorize the relations with multiple keys
+        section = []
+        for row in rel.left_kernel().basis():  # Compute kernel, and turn the result back into a dictionary
+            section.append({k: c for k, c in list(zip(remaining_keys, row)) if c != 0})
+
+        return section
+

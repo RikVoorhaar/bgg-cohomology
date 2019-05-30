@@ -143,4 +143,14 @@ class BGGComplex:
             if new_mu.is_dominant():
                 return new_mu, w
 
+    def compute_weights(self, weight_module):
+        all_weights = weight_module.weight_dic.keys()
 
+        regular_weights = []
+        for mu in all_weights:
+            if self.is_dot_regular(mu):
+                mu_prime, w = self.make_dominant(mu)
+                mu_prime = self.weight_to_alpha_sum(mu_prime)
+                w = self.reduced_word_dic_reversed[w]
+                regular_weights.append((mu, mu_prime, len(w)))
+        return all_weights, regular_weights
