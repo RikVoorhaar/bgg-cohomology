@@ -28,6 +28,10 @@ class QuantumFactory(object):
 
     def _init_phi(self):
         self.phi_image = [fm for fm in [self.phi(m) for m in self.modules['b'].lie_algebra_basis] if len(fm) > 0]
+        bbasis = self.factory.basis['b']
+        b_roots = [self.factory.string_to_root[b] for b in bbasis]
+        b_lie_alg_basis = [self.modules['b'].lie_algebra_basis[br] for br in b_roots]
+        self.phi_b_pairs = [(b, self.phi(m)) for b, m in zip(bbasis,b_lie_alg_basis)]
 
     def _M_r(self, j, k, r):
         u_part = self.modules['u'].symmetric_power(j + k / 2 - r)
@@ -94,10 +98,62 @@ class QuantumFactory(object):
                         new_basis.append(new_dict)
         return new_basis
 
+    def _insert_both(self, Mjk):
+        new_basis = []
+        for (num_u, num_g, num_n), module in Mjk:
+            index = num_g + 1
+            basis = module.basis_keys
+            for b, phi_dict in self.phi_b_pairs:
+                for m in basis:
+                    new_dict = defaultdict(int)
+
+                    # insert b part
+                    if num_g == 0:
+                        new_dict[DirectSum(index, m.replace(1, b))] += 1
+                    elif num_g == 1:
+                        new_key = AlternatingProduct(b, m[1])
+                        if new_key.parity() != 0:
+                            new_dict[DirectSum(index, m.replace(1, new_key.sort()))] += new_key.parity()
+                    else:
+                        new_key = m[1].insert(b)
+                        if new_key.parity() != 0:
+                            new_dict[DirectSum(index, m.replace(1, new_key.sort()))] += new_key.parity()
+
+                    # insert phi part
+                    for (key2, key1), coeff in phi_dict.items():
+                        if num_u == 0:
+                            new_key = key1
+                        elif num_u == 1:
+                            new_key = SymmetricProduct(key1, m[0])
+                        else:
+                            new_key = m[0].insert(key1)
+                        new_m = m.replace(0, new_key)
+
+                        if num_n == 0:
+                            new_key = key2
+                        elif num_n == 1:
+                            new_key = AlternatingProduct(key2, m[-1])
+                            coeff *= new_key.parity()
+                            new_key.sort()
+                        else:
+                            new_key = m[-1].insert(key2)
+                            coeff *= new_key.parity()
+                            new_key.sort()
+
+                        if coeff != 0:
+                            new_m = new_m.replace(-1, new_key)
+                            new_dict[DirectSum(num_g, new_m)] += coeff
+
+                    if len(new_dict) > 0:
+                        #new_dict = {DirectSum(num_g, k): v for k, v in new_dict.items()}
+                        new_basis.append(dict(new_dict))
+        return new_basis
+
     def T_spanning_set(self, j, k):
         Mjk = self._M_module_list(j - 1, k)
-        T_span = self._phi_insert(Mjk)
-        T_span += [{b: 1} for b in self._b_insert(Mjk)]
+        #T_span = self._phi_insert(Mjk)
+        #T_span += [{b: 1} for b in self._b_insert(Mjk)]
+        T_span = self._insert_both(Mjk)
         return T_span
 
     def get_weight(self, obj):

@@ -1,6 +1,6 @@
 # -*- coding: utf8 -*-
 
-from collections import Counter
+from collections import Counter, defaultdict
 from sympy.utilities.iterables import subsets
 from sage.modules.with_basis.indexed_element import IndexedFreeModuleElement
 from sage.combinat.free_module import CombinatorialFreeModule
@@ -127,8 +127,10 @@ class LieAlgebraModule(CombinatorialFreeModule):
             out_dict = Counter()
             for index, key in enumerate(m):
                 action_on_term = modules[index]._index_action(X, key)
-                index_dict = Counter({m.replace(index, t): c for t, c in action_on_term.items()})
-                out_dict += index_dict
+                #index_dict = Counter({m.replace(index, t): c for t, c in action_on_term.items()})
+                #out_dict += index_dict
+                for t, c in action_on_term.items():
+                    out_dict[m.replace(index, t)] += c
             return out_dict
         return LieAlgebraModule(modules[0].base_ring(), new_basis, modules[0].lie_algebra, action)
 
@@ -140,19 +142,21 @@ class LieAlgebraModule(CombinatorialFreeModule):
         instance of the same LieAlgebraModule."""
 
         if n == 0:
-            return LieAlgebraModule(self.base_ring(), [1], self.lie_algebra, lambda X, k: {})
+            return LieAlgebraModule(self.base_ring(), [1], self.lie_algebra, lambda X, k: dict())
         if n == 1:
             return LieAlgebraModule(self.base_ring(), self.basis_keys, self.lie_algebra, self._index_action)
 
         new_basis = subsets(self.basis_keys, n, repetition=True)
         new_basis = [SymmetricProduct(*i) for i in new_basis]
 
-        def action(self, X, m):
+        def action(X, m):
             out_dict = Counter()
             for index, key in enumerate(m):
                 action_on_term = self._index_action(X, key)
-                index_dict = Counter({m.replace(index, t): c for t, c in action_on_term.items()})
-                out_dict += index_dict
+                #index_dict = Counter({m.replace(index, t): c for t, c in action_on_term.items()})
+                #out_dict += index_dict
+                for t, c in action_on_term.items():
+                    out_dict[m.replace(index, t)] += c
             return out_dict
 
         return LieAlgebraModule(self.base_ring(), new_basis, self.lie_algebra, action)
@@ -214,6 +218,10 @@ class DirectSum(object):
 
     def __repr__(self):
         return str(self.key)
+
+
+def direct_sum_map(index, dic):
+    return {DirectSum(index, k): v for k, v in dic.items()}
 
 
 class TensorProduct(object):
@@ -326,8 +334,7 @@ class AlternatingProduct(object):
         return self
 
 
-def direct_sum_map(index, dic):
-    return {DirectSum(index, k): v for k, v in dic.items()}
+
 
 
 class LieAlgebraModuleFactory:
@@ -482,9 +489,10 @@ class WeightModuleWithRelations(LieAlgebraModule):
             self.relations_weight_dic[weight] += [dic]
 
         # Initialize the sections from the quotient module
-        self.section = dict()
+        self.section = defaultdict(list)
         for weight in self.weight_dic.keys():
-            self.section[weight] = self.get_section(weight)
+            # self.section[weight] = self.get_section(weight)
+            self.section[weight] = self.get_section_simple(weight)
 
     @staticmethod
     def vectorize_relations(keys, relations):
@@ -540,3 +548,12 @@ class WeightModuleWithRelations(LieAlgebraModule):
 
         return section
 
+    def get_section_simple(self,weight):
+        relations = self.relations_weight_dic[weight]
+        keys = self.weight_dic[weight]
+        vectorized_relations = self.vectorize_relations(keys, relations)
+        section = []
+        for row in vectorized_relations.left_kernel().basis():  # Compute kernel, and turn the result back into a dictionary
+            section.append({k: c for k, c in list(zip(keys, row)) if c != 0})
+
+        return section

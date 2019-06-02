@@ -7,6 +7,8 @@ from numpy import array
 from compute_signs import compute_signs
 from compute_maps import BGGMapSolver
 
+from collections import defaultdict
+
 
 class BGGComplex:
     """A class encoding all the things we need of the BGG complex"""
@@ -28,7 +30,6 @@ class BGGComplex:
         self.neg_roots = sorted([-array(self._weight_to_tuple(r)) for r in self.domain.negative_roots()],
                                 key=lambda l: (sum(l), tuple(l)))
         self.zero_root = self.domain.zero()
-        # self.allowed_tuples = {(self._root_to_list(self._weight_to_tuple(r))) for r in self.W.domain().negative_roots()}
         
     def _compute_weyl_dictionary(self):
         """Construct a dictionary enumerating all of the elements of the Weyl group.
@@ -36,6 +37,11 @@ class BGGComplex:
         self.reduced_word_dic={''.join([str(s) for s in g.reduced_word()]):g for g in self.W}
         self.reduced_word_dic_reversed=dict([[v,k] for k,v in self.reduced_word_dic.items()])
         self.reduced_words = sorted(self.reduced_word_dic.keys(),key=len) #sort the reduced words by their length
+
+        self.column = defaultdict(list)
+        for red_word in self.reduced_words:
+            length = len(red_word)
+            self.column[length] += [red_word]
     
     def _construct_BGG_graph(self):
         """Find all the arrows in the BGG Graph.
