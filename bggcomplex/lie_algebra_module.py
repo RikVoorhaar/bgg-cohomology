@@ -488,15 +488,17 @@ class WeightModuleWithRelations(LieAlgebraModule):
             weight = self.get_weight(dic.keys()[0])
             self.relations_weight_dic[weight] += [dic]
 
+        # precomputing sections is expensive, so let's not do it.
         # Initialize the sections from the quotient module
-        self.section = defaultdict(list)
-        for weight in self.weight_dic.keys():
-            # self.section[weight] = self.get_section(weight)
-            self.section[weight] = self.get_section_simple(weight)
+        self._sections = dict()
+        # for weight in self.weight_dic.keys():
+        # self.section[weight] = self.get_section(weight)
+        # self.section[weight] = self.get_section_simple(weight)
 
     @staticmethod
     def vectorize_relations(keys, relations):
-        """Given a set of keys and relations, return a matrix encoding the relations in the basis given by the keys"""
+        """Given a set of keys and relations, return a matrix encoding the (transpose of the)
+         relations in the basis given by the keys"""
         output = matrix(ZZ, len(keys), len(relations), 0)
         index_dict = dict()
         for index, key in enumerate(keys):
@@ -506,54 +508,75 @@ class WeightModuleWithRelations(LieAlgebraModule):
                 output[index_dict[key], row] = value
         return output
 
-    def get_section(self, weight):
-        """Compute a section of the quotient module for the given weight"""
-        relations = list()
-        single_keys = set()  # Store the keys which come from a relation with only a single key
-        for dic in self.relations_weight_dic[weight]:
-            if len(dic) == 1:
-                key = dic.keys()[0]
-                if key not in single_keys:  # Only need to store one copy of single keys
-                    relations.append({key: 1})
-                    single_keys.add(key)
-            else:
-                relations.append(dic)  # If the relation contains multiple keys store it in any case
+    # def get_section(self, weight):
+    #     """--- Deprecated ---
+    #     Compute a section of the quotient module for the given weight"""
+    #
+    #     relations = list()
+    #     single_keys = set()  # Store the keys which come from a relation with only a single key
+    #     for dic in self.relations_weight_dic[weight]:
+    #         if len(dic) == 1:
+    #             key = dic.keys()[0]
+    #             if key not in single_keys:  # Only need to store one copy of single keys
+    #                 relations.append({key: 1})
+    #                 single_keys.add(key)
+    #         else:
+    #             relations.append(dic)  # If the relation contains multiple keys store it in any case
+    #
+    #     def _rem_single_keys(dic_):  # Removes keys from a relation which are in the list of single keys.
+    #         if len(dic_) > 1:
+    #             dic_ = {k: v for k, v in dic_.items() if k not in single_keys}
+    #             if len(dic_) == 1:
+    #                 single_keys.add(dic.keys()[0])
+    #         return dic_
+    #
+    #     # The removal of single keys may introduce new dictionaries of length one, so we need to repeat this
+    #     # procedure until there is no more change.
+    #     while True:
+    #         old_relations_length = len(relations)
+    #         old_single_keys_length = len(single_keys)
+    #         relations = [_rem_single_keys(dic) for dic in relations]
+    #         relations = [dic for dic in relations if len(dic)>0]
+    #         if len(relations) == old_relations_length and len(single_keys) == old_single_keys_length:
+    #             break
+    #     relations = [dic for dic in relations if len(dic) > 1]  # Store the multiple key relations separately
+    #
+    #     # The single keys automatically get killed in the quotient, so we are only interested in basis
+    #     # keys which are not single keys.
+    #     remaining_keys = [s for s in self.weight_dic[weight] if s not in single_keys]
+    #
+    #     rel = self.vectorize_relations(remaining_keys, relations)  # Vectorize the relations with multiple keys
+    #     section = []
+    #     for row in rel.left_kernel().basis():  # Compute kernel, and turn the result back into a dictionary
+    #         section.append({k: c for k, c in list(zip(remaining_keys, row)) if c != 0})
+    #
+    #     return section
 
-        def _rem_single_keys(dic_):  # Removes keys from a relation which are in the list of single keys.
-            if len(dic_) > 1:
-                dic_ = {k: v for k, v in dic_.items() if k not in single_keys}
-                if len(dic_) == 1:
-                    single_keys.add(dic.keys()[0])
-            return dic_
+    def get_section(self,weight):
+        """Compute a section of the quotient module for the given weight. The section is computed by
+        computing the kernel of the transpose of the matrix defining the relations."""
+        # Use cached result if available
+        if weight in self._sections:
+            return self._sections[weight]
 
-        # The removal of single keys may introduce new dictionaries of length one, so we need to repeat this
-        # procedure until there is no more change.
-        while True:
-            old_relations_length = len(relations)
-            old_single_keys_length = len(single_keys)
-            relations = [_rem_single_keys(dic) for dic in relations]
-            relations = [dic for dic in relations if len(dic)>0]
-            if len(relations) == old_relations_length and len(single_keys) == old_single_keys_length:
-                break
-        relations = [dic for dic in relations if len(dic) > 1]  # Store the multiple key relations separately
+        # If the weight is not in the module, section is automatically trivial
+        if weight not in self.weight_dic:
+            return []
 
-        # The single keys automatically get killed in the quotient, so we are only interested in basis
-        # keys which are not single keys.
-        remaining_keys = [s for s in self.weight_dic[weight] if s not in single_keys]
+        # If there are no relations for this weight, section is just the original weight space.
+        if weight not in self.relations_weight_dic:
+            return self.weight_dic[weight]
 
-        rel = self.vectorize_relations(remaining_keys, relations)  # Vectorize the relations with multiple keys
-        section = []
-        for row in rel.left_kernel().basis():  # Compute kernel, and turn the result back into a dictionary
-            section.append({k: c for k, c in list(zip(remaining_keys, row)) if c != 0})
-
-        return section
-
-    def get_section_simple(self,weight):
         relations = self.relations_weight_dic[weight]
         keys = self.weight_dic[weight]
         vectorized_relations = self.vectorize_relations(keys, relations)
         section = []
-        for row in vectorized_relations.left_kernel().basis():  # Compute kernel, and turn the result back into a dictionary
+
+        # Compute kernel of transpose of relations, and turn the result back into a dictionary
+        for row in vectorized_relations.left_kernel().basis():
             section.append({k: c for k, c in list(zip(keys, row)) if c != 0})
+
+        # Cache the result
+        self._sections[weight] = section
 
         return section
