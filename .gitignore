@@ -1,6 +1,4 @@
-Ma
 *.pyc
-Mathematica notebooks/*
 .idea
 bggcomplex/.idea
 bggcomplex/.ipynb_checkpoints

@@ -89,18 +89,34 @@ class BGGComplex:
             # enumerate all paths of length 2, a->b->c, where length goes +1,+1
             self.cycles=chain.from_iterable([[a+(v,) for v in outgoing[a[-1]]] for a in self.arrows])
 
-            # enumerate all paths of length 3, a->b->c->b' such that b' != b and length goes +1,+1,-1
-            self.cycles=chain.from_iterable([[a+(v,) for v in incoming[a[-1]] if v != a[1]] for a in self.cycles])
+            # enumerate all paths of length 3, a->b->c->b' such that b' != b,
+            # b<b' in lexicographic order (to avoid duplicates) and length goes +1,+1,-1
+            self.cycles=chain.from_iterable([[a+(v,) for v in incoming[a[-1]] if v > a[1]] for a in self.cycles])
+
+            # Sort such that b<b' in lexicographic order
+            #self.cycles = [(a[0],a[3],a[2],a[1]) for a in self.cycles if a[1] > a[3]]
+
+            # Remove duplicates
+            #self.cycles= list(set(self.cycles))
 
             # enumerate all cycles of length 4, a->b->c->b'->a such that b'!=b and length goes +1,+1,-1,-1
             self.cycles=[a+(a[0],) for a in self.cycles if a[0] in incoming[a[-1]]]
 
+
+
         return self.cycles
 
-    def compute_signs(self):
+    def compute_signs(self, force_recompute=False):
         """Computes signs for all the edges so that the product of signs around any admissible cycle is -1.
         Returns a dictionary with the edges as keys and the signs as values."""
+        if not force_recompute:
+            try:  # Not super pythonic, but alright
+                return self.signs
+            except AttributeError:
+                pass
+
         self.signs = compute_signs(self)
+        return self.signs
 
     def compute_maps(self,root):
         """Initialize an instance of the map solver"""

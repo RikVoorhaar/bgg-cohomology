@@ -140,12 +140,12 @@ class QuantumFactory(object):
                             coeff *= new_key.parity()
                             new_key.sort()
 
-                        if coeff != 0:
+                        if coeff != 0 and new_key.parity() != 0:
                             new_m = new_m.replace(-1, new_key)
                             new_dict[DirectSum(num_g, new_m)] += coeff
 
                     if len(new_dict) > 0:
-                        #new_dict = {DirectSum(num_g, k): v for k, v in new_dict.items()}
+                        # new_dict = {DirectSum(num_g, k): v for k, v in new_dict.items()}
                         new_basis.append(dict(new_dict))
         return new_basis
 
