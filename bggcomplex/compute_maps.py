@@ -4,6 +4,10 @@ from scipy.linalg import solve,lstsq
 from time import time
 from multiprocessing import cpu_count
 from sage.parallel.decorate import parallel
+from sage.matrix.constructor import matrix
+from sage.rings.integer_ring import ZZ
+from sage.modules.free_module_element import vector
+from collections import defaultdict
 
 class BGGMapSolver:
     """A class encoding the methods to compute all the maps in the BGG complex"""
@@ -16,7 +20,7 @@ class BGGMapSolver:
         self._compute_initial_maps()
         self.problem_dic = {}
 
-        self.timer = {'linalg':0,'mult':0,'vect':0,'basis':0,'index':0}
+        self.timer = defaultdict(int)
 
     def _compute_initial_maps(self):
         """If the difference the dot action between source and target vertex is a multiple of a simple root,
@@ -44,25 +48,29 @@ class BGGMapSolver:
                     problem['deg']=self.action_dic[edg[0][0]] - self.action_dic[edg[0][1]]
                     problem['side']='left'
                     problem['known_LHS']=self.maps[edg[1]]
-                    problem['RHS']=self.maps[edg[2]] * self.maps[edg[3]]
+                    # problem['RHS']=self.maps[edg[2]] * self.maps[edg[3]]
+                    problem['RHS'] = self.maps[edg[3]] * self.maps[edg[2]]
                 if mask.index(False) == 1:
                     problem['edge']=edg[1]
                     problem['deg']=self.action_dic[edg[1][0]] - self.action_dic[edg[1][1]]
                     problem['side']='right'
                     problem['known_LHS']=self.maps[edg[0]]
-                    problem['RHS']=self.maps[edg[2]] * self.maps[edg[3]]
+                    # problem['RHS']=self.maps[edg[2]] * self.maps[edg[3]]
+                    problem['RHS'] = self.maps[edg[3]] * self.maps[edg[2]]
                 if mask.index(False) == 2:
                     problem['edge']=edg[2]
                     problem['deg']=self.action_dic[edg[2][0]] - self.action_dic[edg[2][1]]
                     problem['side']='left'
                     problem['known_LHS']=self.maps[edg[3]]
-                    problem['RHS']=self.maps[edg[0]] * self.maps[edg[1]]
+                    # problem['RHS']=self.maps[edg[0]] * self.maps[edg[1]]
+                    problem['RHS']=self.maps[edg[1]] * self.maps[edg[0]]
                 if mask.index(False) == 3:
                     problem['edge']=edg[3]
                     problem['deg']=self.action_dic[edg[3][0]] - self.action_dic[edg[3][1]]
                     problem['side']='right'
                     problem['known_LHS']=self.maps[edg[2]]
-                    problem['RHS']=self.maps[edg[0]] * self.maps[edg[1]]
+                    # problem['RHS']=self.maps[edg[0]] * self.maps[edg[1]]
+                    problem['RHS'] = self.maps[edg[1]] * self.maps[edg[0]]
 
                 #only store the problem if either we didn't have a problem for this edge,
                 #or the problem we had for this edge was of higher degree
@@ -138,10 +146,19 @@ class BGGMapSolver:
     def vectorize_polynomial(polynomial,monomial_to_index):
         """given a dictionary of monomial->index, turn a polynomial into a vector"""
         coeffs = polynomial.monomial_coefficients()
-        vector = zeros(len(monomial_to_index), dtype=int16)
+        #vector = zeros(len(monomial_to_index), dtype=int16)
+        vectorized = vector(ZZ,len(monomial_to_index))
         for monomial, coefficient in coeffs.items():
-            vector[monomial_to_index[str(monomial)]] = coefficient
-        return vector
+            vectorized[monomial_to_index[str(monomial)]] = coefficient
+        return vectorized
+
+    @staticmethod
+    def vectorize_polynomials_list(polynomial_list,monomial_to_index):
+        vectorized = matrix(ZZ,len(polynomial_list),len(monomial_to_index))
+        for row_index, polynomial in enumerate(polynomial_list):
+            for monomial, coefficient in polynomial.monomial_coefficients().items():
+                vectorized[row_index,monomial_to_index[str(monomial)]] = coefficient
+        return vectorized
 
     def solve_problem(self,problem):
         """solve the division problem in PBW basis"""
@@ -152,9 +169,11 @@ class BGGMapSolver:
 
         t =time()
         if problem['side'] == 'right':
-            LHS = [problem['known_LHS'] * p for p in basis]
+            # LHS = [problem['known_LHS'] * p for p in basis]
+            LHS = [p* problem['known_LHS'] for p in basis]
         if problem['side'] == 'left':
-            LHS = [p * problem['known_LHS'] for p in basis]
+            # LHS = [p * problem['known_LHS'] for p in basis]
+            LHS = [problem['known_LHS'] * p for p in basis]
         self.timer['mult']+=time()-t
 
 
@@ -169,16 +188,21 @@ class BGGMapSolver:
         self.timer['index']=time()-t
 
         t=time()
-        A = array([self.vectorize_polynomial(p, monomial_to_index) for p in LHS]).T
-        b = self.vectorize_polynomial(problem['RHS'], monomial_to_index)
+        #A = array([self.vectorize_polynomial(p, monomial_to_index) for p in LHS]).T
+        #b = self.vectorize_polynomial(problem['RHS'], monomial_to_index)
+        A = self.vectorize_polynomials_list(LHS,monomial_to_index)
+        b = self.vectorize_polynomial(problem['RHS'],monomial_to_index)
+
         self.timer['vect']+=time()-t
 
         t = time()
-        if A.shape[0] == A.shape[1]:
-            sol = around(solve(A, b)).astype(int16)
-        else:
-            sol = lstsq(A, b)
-            sol = around(sol[0]).astype(int16) #without the 'around' type conversion goes wrong for whatever reason
+
+        sol = A.T.solve_right(b)
+        #if A.shape[0] == A.shape[1]:
+        #    sol = around(solve(A, b)).astype(int16)
+        #else:
+        #    sol = lstsq(A, b)
+        #    sol = around(sol[0]).astype(int16) #without the 'around' type conversion goes wrong for whatever reason
 
         output = sum(int(c) * basis[i] for i, c in enumerate(sol))
         self.timer['linalg']+=time()-t
@@ -196,7 +220,7 @@ class BGGMapSolver:
         problems_found = False
         for c in self.BGG.cycles:
             edg = (c[0:2], c[1:3], c[4:2:-1], c[3:1:-1])
-            if self.maps[edg[0]]*self.maps[edg[1]]!=self.maps[edg[2]]*self.maps[edg[3]]:
+            if self.maps[edg[1]]*self.maps[edg[0]]!=self.maps[edg[3]]*self.maps[edg[2]]:
                 print("Problem found at cycle",c)
                 problems_found=True
         if not problems_found:

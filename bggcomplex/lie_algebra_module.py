@@ -1,6 +1,6 @@
 # -*- coding: utf8 -*-
 
-from collections import Counter, defaultdict
+from collections import defaultdict
 from sympy.utilities.iterables import subsets
 from sage.modules.with_basis.indexed_element import IndexedFreeModuleElement
 from sage.combinat.free_module import CombinatorialFreeModule
@@ -124,7 +124,7 @@ class LieAlgebraModule(CombinatorialFreeModule):
         new_basis = LieAlgebraModule._tensor_product_basis(*[module.basis_keys for module in modules])
 
         def action(X, m):
-            out_dict = Counter()
+            out_dict = defaultdict(int)
             for index, key in enumerate(m):
                 action_on_term = modules[index]._index_action(X, key)
                 #index_dict = Counter({m.replace(index, t): c for t, c in action_on_term.items()})
@@ -150,7 +150,7 @@ class LieAlgebraModule(CombinatorialFreeModule):
         new_basis = [SymmetricProduct(*i) for i in new_basis]
 
         def action(X, m):
-            out_dict = Counter()
+            out_dict = defaultdict(int)
             for index, key in enumerate(m):
                 action_on_term = self._index_action(X, key)
                 #index_dict = Counter({m.replace(index, t): c for t, c in action_on_term.items()})
@@ -180,7 +180,7 @@ class LieAlgebraModule(CombinatorialFreeModule):
         new_basis = [AlternatingProduct(*i) for i in new_basis]
 
         def action(X, m):
-            out_dict = Counter()
+            out_dict = defaultdict(int)
             for index, key in enumerate(m):
                 action_on_term = self._index_action(X, key)
                 for t, c in action_on_term.items():
@@ -385,7 +385,7 @@ class LieAlgebraModuleFactory:
 
     def lie_alg_to_module_basis(self, X):
         """Takes an element of the Lie algebra and writes it out as a dict in the module basis"""
-        out_dict = Counter()
+        out_dict = defaultdict(int)
         for t, c in X.monomial_coefficients().items():
             out_dict[self.root_to_string[t]] = c
         return out_dict
@@ -493,9 +493,9 @@ class WeightModuleWithRelations(LieAlgebraModule):
         """Given a set of keys and relations, return a matrix encoding the (transpose of the)
          relations in the basis given by the keys"""
         output = matrix(ZZ, len(keys), len(relations), 0)
-        index_dict = dict()
-        for index, key in enumerate(keys):
-            index_dict[key] = index
+        index_dict = {key:index for index,key in enumerate(keys)}
+        #for index, key in enumerate(keys):
+        #    index_dict[key] = index
         for row, dic in enumerate(relations):
             for key, value in dic.items():
                 output[index_dict[key], row] = value
