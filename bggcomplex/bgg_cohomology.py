@@ -2,6 +2,7 @@ from collections import defaultdict
 from sage.matrix.constructor import matrix
 from sage.rings.integer_ring import ZZ
 from itertools import chain
+from time import time
 
 
 class BGGCohomologyComputer(object):
@@ -9,8 +10,13 @@ class BGGCohomologyComputer(object):
         self.BGG = BGG
         self.BGG.compute_signs() # we definitely need the signs for this computation
         self.weight_module = weight_module
+        self.timer = defaultdict(int)
+        timer = time()
         self.all_weights, self.regular_weights = self.BGG.compute_weights(self.weight_module)
+        self.timer['BGG_weights']+=time()-timer
+
         self.maps = dict()
+
 
     def get_vertex_weights(self,weight):
         vertex_weights = dict()
@@ -21,13 +27,17 @@ class BGGCohomologyComputer(object):
 
     def bgg_differential(self, weight, i):
         """Compute the BGG differential delta_i: E_i\to E_{i+1} on the quotient weight module."""
+        timer = time()
         vertex_weights = self.get_vertex_weights(weight)
+        self.timer['vertex_weights']+=time()-timer
 
+        timer = time()
         if weight in self.maps:
             maps = self.maps[weight]
         else:
             self.maps[weight] = self.BGG.compute_maps(weight)
             maps = self.maps[weight]
+        self.timer['compute_maps']+=time()-timer
 
         # Get vertices of the ith column
         column = self.BGG.column[i]
@@ -40,7 +50,9 @@ class BGGCohomologyComputer(object):
 
         for initial_vertex, arrows in delta_i_arrows:
             # Get the section for the initial weight w
+            timer=time()
             initial_section = self.weight_module.get_section(vertex_weights[initial_vertex])
+            self.timer['get_section']+=time()-timer
 
             # Initialize output dic
             for row_index, _ in enumerate(initial_section):
@@ -50,8 +62,12 @@ class BGGCohomologyComputer(object):
             for a in arrows:
                 sign = self.BGG.signs[a]
                 pbw = maps[a]
-                final_section = self.weight_module.get_section(vertex_weights[a[1]])
 
+                timer=time()
+                final_section = self.weight_module.get_section(vertex_weights[a[1]])
+                self.timer['get_section']+=time()-timer
+
+                timer=time()
                 # Compute image for each row of the initial_section, add results together
                 for index, row in enumerate(initial_section):
 
@@ -74,12 +90,24 @@ class BGGCohomologyComputer(object):
                         final_image = self.section_transpose_image(final_section, image_before_section, a[1])
                         for mon_key, mon_coeff in final_image.items():
                             output_dic[(initial_vertex, index)][mon_key] += mon_coeff
+                self.timer['compute_image']+=time()-timer
 
+        timer=time()
         output_keys = [(w, row_index)for w in self.BGG.column[i+1]
                        for row_index, _ in enumerate(self.weight_module.get_section(vertex_weights[w]))
                        ]
         delta_i_matrix = self.vectorize_dictionaries(output_dic, key_list=output_keys)
+
+        self.timer['vectorizer']+=time()-timer
         return delta_i_matrix
+
+    def compute_cohomology(self,weight,i):
+        diff_i = self.bgg_differential(weight, i)
+        diff_i_1 = self.bgg_differential(weight, i - 1)
+        timer = time()
+        cohom_dim= diff_i.dimensions()[0] - diff_i.rank() - diff_i_1.rank()
+        self.timer['matrix_rank']=time()-timer
+        return cohom_dim
 
     @staticmethod
     def section_transpose_image(section, monomial_coeffs, section_index):

@@ -30,6 +30,13 @@ class BGGComplex:
         self.neg_roots = sorted([-array(self._weight_to_tuple(r)) for r in self.domain.negative_roots()],
                                 key=lambda l: (sum(l), tuple(l)))
         self.zero_root = self.domain.zero()
+
+        self._maps = dict()
+
+        self.dot_action_dic = dict()
+        for s, w in self.reduced_word_dic.items():
+            self.dot_action_dic[s] = {i + 1: self.weight_to_alpha_sum(w.action(mu + self.rho) - self.rho)
+                                      for i, mu in enumerate(self.simple_roots)}
         
     def _compute_weyl_dictionary(self):
         """Construct a dictionary enumerating all of the elements of the Weyl group.
@@ -120,9 +127,15 @@ class BGGComplex:
 
     def compute_maps(self,root):
         """Initialize an instance of the map solver"""
-        self.find_cycles()
-        MapSolver = BGGMapSolver(self,  root)
-        return MapSolver.solve()
+
+        # If the maps are not in the cache, compute them and cache the result
+        if root not in self._maps:
+            self.find_cycles()
+
+            MapSolver = BGGMapSolver(self,  root)
+            self._maps[root] = MapSolver.solve()
+
+        return self._maps[root]
 
     def _weight_to_tuple(self,weight):
         """Decompose a weight into a tuple encoding the weight as a linear combination of the simple roots"""
@@ -151,19 +164,20 @@ class BGGComplex:
 
     def is_dot_regular(self, mu):
         stab_counter = 0
-        for w in self.W:
-            if w.action(mu + self.rho) - self.rho == mu:
-                stab_counter += 1
-        if stab_counter <= 1:
-            return True
+        # for w in self.W:
+            # if w.action(mu + self.rho) - self.rho == mu:
+        for w in self.reduced_words:
+            if self.fast_dot_action(w,mu)==mu:
+                return False
         else:
-            return False
+            return True
 
     def make_dominant(self, mu):
         for w in self.W:
             new_mu = w.action(mu + self.rho) - self.rho
             if new_mu.is_dominant():
                 return new_mu, w
+        raise Exception('The weight %s can not be made dominant. Probably it is not dot-regular.' % mu)
 
     def compute_weights(self, weight_module):
         all_weights = weight_module.weight_dic.keys()
@@ -176,3 +190,7 @@ class BGGComplex:
                 w = self.reduced_word_dic_reversed[w]
                 regular_weights.append((mu, mu_prime, len(w)))
         return all_weights, regular_weights
+
+    def fast_dot_action(self, w, mu):
+        action = self.dot_action_dic[w]
+        return sum([action[i] * c for i, c in mu.monomial_coefficients().items()], self.lattice.zero())
