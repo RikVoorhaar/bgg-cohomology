@@ -11,11 +11,13 @@ from collections import defaultdict
 
 class BGGMapSolver:
     """A class encoding the methods to compute all the maps in the BGG complex"""
-    def __init__(self,BGG,root):
+    def __init__(self,BGG,weight):
         self.BGG= BGG
 
-        self.action_dic = {red_word: array(BGG.dot_action(w, root)) for red_word, w in
-                      BGG.reduced_word_dic.items()}
+        # self.action_dic = {red_word: array(BGG.dot_action(w, root)) for red_word, w in
+        #              BGG.reduced_word_dic.items()}
+        self.action_dic = {w:BGG.alpha_sum_to_array(BGG.fast_dot_action(w,weight)) for w in BGG.reduced_words}
+
         self.maps = {}
         self._compute_initial_maps()
         self.problem_dic = {}

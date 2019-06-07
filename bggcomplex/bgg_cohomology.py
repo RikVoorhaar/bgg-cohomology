@@ -32,11 +32,7 @@ class BGGCohomologyComputer(object):
         self.timer['vertex_weights']+=time()-timer
 
         timer = time()
-        if weight in self.maps:
-            maps = self.maps[weight]
-        else:
-            self.maps[weight] = self.BGG.compute_maps(weight)
-            maps = self.maps[weight]
+        maps = self.BGG.compute_maps(weight)
         self.timer['compute_maps']+=time()-timer
 
         # Get vertices of the ith column
@@ -108,6 +104,30 @@ class BGGCohomologyComputer(object):
         cohom_dim= diff_i.dimensions()[0] - diff_i.rank() - diff_i_1.rank()
         self.timer['matrix_rank']=time()-timer
         return cohom_dim
+
+    def compute_full_cohomology(self,i):
+        length_i_weights = [triplet for triplet in self.regular_weights if triplet[2] == i]
+
+        dominant_non_trivial = set()
+        dominant_trivial = []
+        for w, w_dom, _ in length_i_weights:
+            for _, w_prime_dom, l in self.regular_weights:
+                if w_prime_dom == w_dom and (l == i + 1 or l == i - 1):
+                    dominant_non_trivial.add(w_dom)
+                    break
+            else:
+                dominant_trivial.append((w,w_dom))
+        cohomology = defaultdict(int)
+
+        for w,w_dom in dominant_trivial:
+            cohom_dim = len(self.weight_module.get_section(w))
+            if cohom_dim>0:
+                cohomology[w_dom]+= cohom_dim
+        for w in dominant_non_trivial:
+            cohom_dim = self.compute_cohomology(w, i)
+            if cohom_dim>0:
+                cohomology[w]+= cohom_dim
+        return sorted(cohomology.items(),key=lambda t:t[-1])
 
     @staticmethod
     def section_transpose_image(section, monomial_coeffs, section_index):

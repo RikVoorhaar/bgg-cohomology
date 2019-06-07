@@ -21,26 +21,32 @@ class BGGComplex:
         self.lattice = self.domain.root_system.root_lattice()
         self.S = self.W.simple_reflections()
         self.T = self.W.reflections()
-        
+
         self._compute_weyl_dictionary()
         self._construct_BGG_graph()
-        
-        self.rho = self.domain.rho()
+
         self.simple_roots = self.domain.simple_roots().values()
+        self.rank = len(self.simple_roots)
         self.neg_roots = sorted([-array(self._weight_to_tuple(r)) for r in self.domain.negative_roots()],
                                 key=lambda l: (sum(l), tuple(l)))
         self.zero_root = self.domain.zero()
 
         self._maps = dict()
 
-        self.dot_action_dic = dict()
+        self.rho = self.domain.rho()
+        #self.rho_alpha = self.weight_to_alpha_sum(self.rho)
+
+        self._action_dic = dict()
         for s, w in self.reduced_word_dic.items():
-            self.dot_action_dic[s] = {i + 1: self.weight_to_alpha_sum(w.action(mu + self.rho) - self.rho)
-                                      for i, mu in enumerate(self.simple_roots)}
+            self._action_dic[s] = {i: self.weight_to_alpha_sum(w.action(mu))
+                                      for i, mu in dict(self.domain.simple_roots()).items()}
+        self._rho_action_dic = dict()
+        for s, w in self.reduced_word_dic.items():
+            self._rho_action_dic[s] = self.weight_to_alpha_sum(w.action(self.rho)-self.rho)
         
     def _compute_weyl_dictionary(self):
         """Construct a dictionary enumerating all of the elements of the Weyl group.
-        The keys are recuced words of the elements"""
+        The keys are reduced words of the elements"""
         self.reduced_word_dic={''.join([str(s) for s in g.reduced_word()]):g for g in self.W}
         self.reduced_word_dic_reversed=dict([[v,k] for k,v in self.reduced_word_dic.items()])
         self.reduced_words = sorted(self.reduced_word_dic.keys(),key=len) #sort the reduced words by their length
@@ -126,7 +132,7 @@ class BGGComplex:
         return self.signs
 
     def compute_maps(self,root):
-        """Initialize an instance of the map solver"""
+        """For the given weight, compute the maps of the BGG complex"""
 
         # If the maps are not in the cache, compute them and cache the result
         if root not in self._maps:
@@ -143,13 +149,22 @@ class BGGComplex:
         b=matrix(b).transpose()
         A=[list(a.to_vector()) for a in self.simple_roots]
         A=matrix(A).transpose()
+
         return transpose(A.solve_right(b)).list()
 
     def weight_to_alpha_sum(self,weight):
+        """Express a weight in the lattice as a linear combination of alpha[i]'s. These objects form the keys
+        for elements of the Lie algebra, and for factors in the universal enveloping algebra."""
         tuple = self._weight_to_tuple(weight)
         alpha = self.lattice.alpha()
         zero = self.lattice.zero()
         return sum((int(c)*alpha[i+1] for i, c in enumerate(tuple)), zero)
+
+    def alpha_sum_to_array(self,weight):
+        output = array(vector(ZZ,self.rank))
+        for i,c in weight.monomial_coefficients().items():
+            output[i-1]=c
+        return output
 
     def _tuple_to_weight(self,t):
         """Turn a tuple encoding a linear combination of simple roots back into a weight"""
@@ -163,21 +178,20 @@ class BGGComplex:
         return self._weight_to_tuple(new_weight)
 
     def is_dot_regular(self, mu):
-        # stab_counter = 0
-        # for w in self.W:
-            # if w.action(mu + self.rho) - self.rho == mu:
-        for w in self.reduced_words:
-            if self.fast_dot_action(w,mu)==mu:
+        """Check if a weight is dot-regular by checking that it has trivial stabilizer"""
+        for w in self.reduced_words[1:]:
+            if self.fast_dot_action(w,mu)==mu: # Stabilizer is non-empty, mu is not dot regular
                 return False
         else:
             return True
 
     def make_dominant(self, mu):
-        for w in self.W:
-            new_mu = w.action(mu + self.rho) - self.rho
+        for w in self.reduced_words:
+            new_mu = self.fast_dot_action(w,mu)
             if new_mu.is_dominant():
                 return new_mu, w
-        raise Exception('The weight %s can not be made dominant. Probably it is not dot-regular.' % mu)
+        else:
+            raise Exception('The weight %s can not be made dominant. Probably it is not dot-regular.' % mu)
 
     def compute_weights(self, weight_module):
         all_weights = weight_module.weight_dic.keys()
@@ -186,11 +200,12 @@ class BGGComplex:
         for mu in all_weights:
             if self.is_dot_regular(mu):
                 mu_prime, w = self.make_dominant(mu)
-                mu_prime = self.weight_to_alpha_sum(mu_prime)
-                w = self.reduced_word_dic_reversed[w]
+                # mu_prime = self.weight_to_alpha_sum(mu_prime)
+                # w = self.reduced_word_dic_reversed[w]
                 regular_weights.append((mu, mu_prime, len(w)))
         return all_weights, regular_weights
 
     def fast_dot_action(self, w, mu):
-        action = self.dot_action_dic[w]
-        return sum([action[i] * c for i, c in mu.monomial_coefficients().items()], self.lattice.zero())
+        action = self._action_dic[w]
+        mu_action = sum([action[i] * int(c) for i, c in mu.monomial_coefficients().items()], self.lattice.zero())
+        return mu_action + self._rho_action_dic[w]
