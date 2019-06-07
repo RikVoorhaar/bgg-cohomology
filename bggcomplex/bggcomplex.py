@@ -163,7 +163,7 @@ class BGGComplex:
         return self._weight_to_tuple(new_weight)
 
     def is_dot_regular(self, mu):
-        stab_counter = 0
+        # stab_counter = 0
         # for w in self.W:
             # if w.action(mu + self.rho) - self.rho == mu:
         for w in self.reduced_words:

@@ -1,4 +1,6 @@
 from lie_algebra_module import *
+from collections import defaultdict
+from time import time
 
 
 class QuantumFactory(object):
@@ -6,8 +8,13 @@ class QuantumFactory(object):
     among other things."""
 
     def __init__(self, BGG):
+        self.timer = defaultdict(int)
+        timer = time()
+
         self.BGG = BGG
         self.factory = LieAlgebraModuleFactory(BGG.LA)
+
+
 
         self.modules = dict()
         self.modules['g'] = self.factory.construct_module(subalgebra='g', action='adjoint')
@@ -16,6 +23,8 @@ class QuantumFactory(object):
         self.modules['b'] = self.factory.construct_module(subalgebra='b', action='adjoint')
 
         self._init_phi()
+
+        self.timer['init'] = time() - timer
 
     def phi(self, m):
         out = dict()
@@ -40,12 +49,24 @@ class QuantumFactory(object):
         return LieAlgebraModule.tensor_product(u_part, g_part, n_part)
 
     def _M_module_list(self, j, k):
-        return [((j + k / 2 - r, r, j - r), self._M_r(j, k, r)) for r in range(j + k / 2 + 1)]
+
+        timer=time()
+        module_list = []
+        for r in range(j+k/2 +1):
+            module_list.append(((j + k / 2 - r, r, j - r), self._M_r(j, k, r)))
+        self.timer['M_module_list']+=time()-timer
+
+        return module_list
 
     def M_module(self, j, k):
-        return LieAlgebraModule.direct_sum(*[m for _, m in self._M_module_list(j, k)])
+        timer=time()
+        module= LieAlgebraModule.direct_sum(*[m for _, m in self._M_module_list(j, k)])
+        self.timer['lie algebra direct sum']+=time()-timer
+
+        return module
 
     def _b_insert(self, Mjk):
+        """deprecated"""
         new_basis = []
         for (num_u, num_g, num_n), module in Mjk:
             index = num_g + 1
@@ -65,6 +86,7 @@ class QuantumFactory(object):
         return new_basis
 
     def _phi_insert(self, Mjk):
+        """deprecated"""
         new_basis = []
         for (num_u, num_g, num_n), module in Mjk:
             basis = module.basis_keys
@@ -99,6 +121,8 @@ class QuantumFactory(object):
         return new_basis
 
     def _insert_both(self, Mjk):
+        timer = time()
+
         new_basis = []
         for (num_u, num_g, num_n), module in Mjk:
             index = num_g + 1
@@ -147,6 +171,8 @@ class QuantumFactory(object):
                     if len(new_dict) > 0:
                         # new_dict = {DirectSum(num_g, k): v for k, v in new_dict.items()}
                         new_basis.append(dict(new_dict))
+
+        self.timer['relation insertion']+=time()-timer
         return new_basis
 
     def T_spanning_set(self, j, k):
@@ -171,5 +197,8 @@ class QuantumFactory(object):
             return zero
 
     def weight_module(self, j, k):
-        return WeightModuleWithRelations(self.BGG.LA.base_ring(), self.M_module(j, k),
+        timer=time()
+        wtmod= WeightModuleWithRelations(self.BGG.LA.base_ring(), self.M_module(j, k),
                                          self.get_weight, self.T_spanning_set(j, k))
+        self.timer['quantum weight module creation']+=time()-timer
+        return wtmod
