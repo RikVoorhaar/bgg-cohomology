@@ -360,6 +360,27 @@ class LieAlgebraModuleFactory:
 
         self.dual_root_dict = self._init_dual_root_dict()
 
+    def parabolic_p_module(self, subset, base_ring=RationalField()):
+        e_roots_in_span = [r for r in self.e_roots if set(r.monomial_coefficients().keys()).issubset(subset)]
+        basis = self.basis['b']+sorted([self.root_to_string[r] for r in e_roots_in_span])
+        subalgebra = self._basis_to_subalgebra(basis)
+        return basis, LieAlgebraModule(base_ring, basis, subalgebra, self.adjoint_action)
+
+    def parabolic_n_module(self, subset, base_ring=RationalField()):
+        f_roots_not_in_span = [r for r in self.f_roots if not set(r.monomial_coefficients().keys()).issubset(subset)]
+        basis = [self.root_to_string[r] for r in f_roots_not_in_span]
+        basis = sorted(basis)
+        subalgebra = self._basis_to_subalgebra(basis)
+        return  basis, LieAlgebraModule(base_ring, basis, subalgebra, self.adjoint_action)
+
+    def parabolic_u_module(self, subset, base_ring=RationalField()):
+        e_roots_not_in_span = [r for r in self.e_roots if not set(r.monomial_coefficients().keys()).issubset(subset)]
+        basis = [self.root_to_string[r] for r in e_roots_not_in_span]
+        basis = sorted(basis)
+        subalgebra = self._basis_to_subalgebra(basis)
+        coadjoint_action = lambda X, m: self.coadjoint_action(X, m, basis)
+        return  basis, LieAlgebraModule(base_ring, basis, subalgebra, coadjoint_action)
+
     def _initialize_root_dictionary(self):
         def root_dict_to_string(root_dict):
             return ''.join(''.join([str(k)] * abs(v)) for k, v in root_dict.items())

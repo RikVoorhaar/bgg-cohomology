@@ -7,20 +7,22 @@ class QuantumFactory(object):
     """Class for building the module M_jk, T_jk needed for computing the center of the small quantum group,
     among other things."""
 
-    def __init__(self, BGG):
+    def __init__(self, BGG, simple_root_subset = set()):
         self.timer = defaultdict(int)
         timer = time()
 
         self.BGG = BGG
         self.factory = LieAlgebraModuleFactory(BGG.LA)
 
-
-
         self.modules = dict()
+        self.basis = dict()
         self.modules['g'] = self.factory.construct_module(subalgebra='g', action='adjoint')
-        self.modules['n'] = self.factory.construct_module(subalgebra='n', action='adjoint')
-        self.modules['u'] = self.factory.construct_module(subalgebra='u', action='coadjoint')
-        self.modules['b'] = self.factory.construct_module(subalgebra='b', action='adjoint')
+        #self.modules['n'] = self.factory.construct_module(subalgebra='n', action='adjoint')
+        #self.modules['u'] = self.factory.construct_module(subalgebra='u', action='coadjoint')
+        self.basis['n'], self.modules['n'] = self.factory.parabolic_n_module(simple_root_subset)
+        self.basis['u'], self.modules['u'] = self.factory.parabolic_u_module(simple_root_subset)
+        self.basis['p'], self.modules['p'] = self.factory.parabolic_p_module(simple_root_subset)
+        #self.modules['p'] = self.factory.construct_module(subalgebra='b', action='adjoint')
 
         self._init_phi()
 
@@ -36,10 +38,10 @@ class QuantumFactory(object):
         return out
 
     def _init_phi(self):
-        self.phi_image = [fm for fm in [self.phi(m) for m in self.modules['b'].lie_algebra_basis] if len(fm) > 0]
-        bbasis = self.factory.basis['b']
+        self.phi_image = [fm for fm in [self.phi(m) for m in self.modules['p'].lie_algebra_basis] if len(fm) > 0]
+        bbasis = self.basis['p']
         b_roots = [self.factory.string_to_root[b] for b in bbasis]
-        b_lie_alg_basis = [self.modules['b'].lie_algebra_basis[br] for br in b_roots]
+        b_lie_alg_basis = [self.modules['p'].lie_algebra_basis[br] for br in b_roots]
         self.phi_b_pairs = [(b, self.phi(m)) for b, m in zip(bbasis,b_lie_alg_basis)]
 
     def _M_r(self, j, k, r):
@@ -64,61 +66,6 @@ class QuantumFactory(object):
         self.timer['lie algebra direct sum']+=time()-timer
 
         return module
-
-    def _b_insert(self, Mjk):
-        """deprecated"""
-        new_basis = []
-        for (num_u, num_g, num_n), module in Mjk:
-            index = num_g + 1
-            basis = module.basis_keys
-            for b in self.factory.basis['b']:
-                for m in basis:
-                    if num_g == 0:
-                        new_basis.append(DirectSum(index, m.replace(1, b)))
-                    elif num_g == 1:
-                        new_key = AlternatingProduct(b, m[1]).sort()
-                        if new_key.parity() != 0:
-                            new_basis.append(DirectSum(index, m.replace(1, new_key)))
-                    else:
-                        new_key = m[1].insert(b).sort()
-                        if new_key.parity() != 0:
-                            new_basis.append(DirectSum(index, m.replace(1, new_key)))
-        return new_basis
-
-    def _phi_insert(self, Mjk):
-        """deprecated"""
-        new_basis = []
-        for (num_u, num_g, num_n), module in Mjk:
-            basis = module.basis_keys
-            for m in basis[:]:
-                for phi_dict in self.phi_image:
-                    new_dict = dict()
-                    for (key2, key1), coeff in phi_dict.items():
-                        if num_u == 0:
-                            new_key = key1
-                        elif num_u == 1:
-                            new_key = SymmetricProduct(key1, m[0])
-                        else:
-                            new_key = m[0].insert(key1)
-                        new_m = m.replace(0, new_key)
-
-                        if num_n == 0:
-                            new_key = key2
-                        elif num_n == 1:
-                            new_key = AlternatingProduct(key2, m[-1])
-                            coeff *= new_key.parity()
-                            new_key.sort()
-                        else:
-                            new_key = m[-1].insert(key2)
-                            coeff *= new_key.parity()
-                            new_key.sort()
-                        if coeff != 0:
-                            new_m = new_m.replace(-1, new_key)
-                            new_dict[new_m] = coeff
-                    if len(new_dict) > 0:
-                        new_dict = {DirectSum(num_g, k): v for k, v in new_dict.items()}
-                        new_basis.append(new_dict)
-        return new_basis
 
     def _insert_both(self, Mjk):
         timer = time()
