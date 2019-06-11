@@ -1,4 +1,5 @@
 from lie_algebra_module import *
+from bgg_cohomology import  BGGCohomologyComputer
 from collections import defaultdict
 from time import time
 
@@ -149,3 +150,34 @@ class QuantumFactory(object):
                                          self.get_weight, self.T_spanning_set(j, k))
         self.timer['quantum weight module creation']+=time()-timer
         return wtmod
+
+    @staticmethod
+    def ijk(a,b):
+        return (int((a-b)/2),int((a+b)/2),-a)
+
+    def compute_cohomology(self,a,b):
+        i,j,k =self.ijk(a,b)
+        timer = time()
+        wtmod = self.weight_module(j,k)
+        print('made a weight module of size: %d, with %d relations)' %
+              (len(wtmod.basis()), len(wtmod.relations))
+              )
+        self.timer['weight_mod']+=time()-timer
+
+        cohomology_computer = BGGCohomologyComputer(self.BGG,wtmod)
+        cohomology= cohomology_computer.compute_full_cohomology(i)
+        for key,value in cohomology_computer.timer.items():
+            self.timer[key]+=value
+        return cohomology
+
+    def compute_cohomology_block(self):
+        max_j = len(self.modules['u'].basis())
+        all_a_b = [(2 * a, 2 * b) for a in range(0, max_j + 1) for b in range(0, min(a, max_j + 1 - a))]
+        all_a_b = sorted(all_a_b, key=lambda x: x[1])
+        cohom_dict = dict()
+        for a, b in all_a_b:
+            print(a, b)
+            cohom_dim = self.compute_cohomology(a, b)
+            print(a, b, cohom_dim)
+            cohom_dict[(a, b)] = cohom_dim
+        return cohom_dict
