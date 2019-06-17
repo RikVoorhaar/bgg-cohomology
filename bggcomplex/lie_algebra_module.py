@@ -339,6 +339,7 @@ class LieAlgebraModuleFactory:
     def __init__(self, lie_algebra):
         self.lie_algebra = lie_algebra
         self.lattice = lie_algebra.weyl_group().domain().root_system.root_lattice()
+        self.lie_algebra_basis = self.lie_algebra.basis()
 
         self.f_roots = list(self.lattice.negative_roots())
         self.e_roots = list(self.lattice.positive_roots())
@@ -352,6 +353,13 @@ class LieAlgebraModuleFactory:
         self.basis['n'] = sorted([self.root_to_string[r] for r in self.f_roots])
         self.basis['b'] = sorted(self.basis['n'] + [self.root_to_string[r] for r in self.h_roots])
 
+        self._bracket_dict = dict()
+        for X in self.lie_algebra_basis:
+            for Y in self.lie_algebra_basis:
+                self._bracket_dict[(X,Y)]=lie_algebra.bracket(X,Y)
+
+        self._coadjoint_dict_cache = dict()
+
         self.subalgebra = dict()
         self.subalgebra['g'] = self.lie_algebra
         self.subalgebra['u'] = self._basis_to_subalgebra(self.basis['u'])
@@ -364,21 +372,23 @@ class LieAlgebraModuleFactory:
         e_roots_in_span = [r for r in self.e_roots if set(r.monomial_coefficients().keys()).issubset(subset)]
         basis = self.basis['b']+sorted([self.root_to_string[r] for r in e_roots_in_span])
         subalgebra = self._basis_to_subalgebra(basis)
-        return basis, LieAlgebraModule(base_ring, basis, subalgebra, self.adjoint_action)
+        return basis, LieAlgebraModule(base_ring, basis, subalgebra, self.fast_adjoint_action)
 
     def parabolic_n_module(self, subset, base_ring=RationalField()):
         f_roots_not_in_span = [r for r in self.f_roots if not set(r.monomial_coefficients().keys()).issubset(subset)]
         basis = [self.root_to_string[r] for r in f_roots_not_in_span]
         basis = sorted(basis)
         subalgebra = self._basis_to_subalgebra(basis)
-        return  basis, LieAlgebraModule(base_ring, basis, subalgebra, self.adjoint_action)
+        return  basis, LieAlgebraModule(base_ring, basis, subalgebra, self.fast_adjoint_action)
 
     def parabolic_u_module(self, subset, base_ring=RationalField()):
         e_roots_not_in_span = [r for r in self.e_roots if not set(r.monomial_coefficients().keys()).issubset(subset)]
         basis = [self.root_to_string[r] for r in e_roots_not_in_span]
         basis = sorted(basis)
         subalgebra = self._basis_to_subalgebra(basis)
-        coadjoint_action = lambda X, m: self.coadjoint_action(X, m, basis)
+        key = tuple(['u',tuple(subset)])
+        self.compute_coadjoint_dict(basis,key)
+        coadjoint_action = lambda X, m: self.fast_coadjoint_action(X, m, key)
         return  basis, LieAlgebraModule(base_ring, basis, subalgebra, coadjoint_action)
 
     def _initialize_root_dictionary(self):
@@ -398,10 +408,10 @@ class LieAlgebraModuleFactory:
         self.root_to_string = {r: i for i, r in self.string_to_root.items()}
 
     def string_to_lie_algebra(self, m):
-        return self.lie_algebra.basis()[self.string_to_root[m]]
+        return  self.lie_algebra_basis[self.string_to_root[m]]
 
     def _basis_to_subalgebra(self, basis):
-        basis = [self.lie_algebra.basis()[self.string_to_root[r]] for r in basis]
+        basis = [self.lie_algebra_basis[self.string_to_root[r]] for r in basis]
         return self.lie_algebra.subalgebra(basis)
 
     def lie_alg_to_module_basis(self, X):
@@ -416,6 +426,19 @@ class LieAlgebraModuleFactory:
         the adjoint action of X on the corresponding basis element"""
         bracket = self.lie_algebra.bracket(X, self.string_to_lie_algebra(m))
         return self.lie_alg_to_module_basis(bracket)
+
+    def fast_adjoint_action(self,X,m):
+        output = self.lie_algebra.zero()
+        Y = self.string_to_lie_algebra(m)
+        try:
+            for monomial,coefficient in X.monomial_coefficients().items():
+                output+=coefficient*self._bracket_dict[(self.lie_algebra_basis[monomial],Y)]
+        except Exception as error:
+            print('these guys gave an error: %s, %s, %s' % (X,Y,m))
+            print('monomial_coefficients is: %s ' % X.monomial_coefficients())
+            print('type is %s' % type(X))
+            raise error
+        return self.lie_alg_to_module_basis(output)
 
     def _init_dual_root_dict(self):
         """"Create dictionary mapping roots to their dual"""
@@ -444,11 +467,41 @@ class LieAlgebraModuleFactory:
                 output[alpha] = -inn_product  # If the action on alpha is non-zero, add it to the output dictionary
         return output
 
+    def compute_coadjoint_dict(self,basis,key):
+        """Precomputes the coadjoint action on a basis corestricted to a subalgebra, and caches the results.
+        Returns a function that takes in X,m, like coadjoint_action or adjoint_action"""
+        if key in self._coadjoint_dict_cache:
+            return self._coadjoint_dict_cache[key]
+        else:
+            coadjoint_dict=dict()
+            for X in self.lie_algebra_basis:
+                for Y in self.lie_algebra_basis:
+                    coadjoint_bracket = self.lie_algebra.zero()
+                    m = self.lie_alg_to_module_basis(Y)
+                    for alpha in basis:
+                        alpha_dual = self.string_to_lie_algebra(self.dual_root_dict[alpha])
+                        bracket = self.lie_algebra.bracket(X, alpha_dual)
+                        bracket = self.lie_alg_to_module_basis(bracket)
+                        inn_product = self.pairing(bracket, m)
+                        if inn_product != 0:
+                            coadjoint_bracket += -inn_product*self.string_to_lie_algebra(alpha)
+                    coadjoint_dict[(X,Y)]=coadjoint_bracket
+            self._coadjoint_dict_cache[key] = coadjoint_dict
+            return coadjoint_dict
+
+    def fast_coadjoint_action(self,X,m,key):
+        output = self.lie_algebra.zero()
+        Y = self.string_to_lie_algebra(m)
+        for monomial,coefficient in X.monomial_coefficients().items():
+            output+=coefficient*self._coadjoint_dict_cache[key][(self.lie_algebra_basis[monomial], Y)]
+        return self.lie_alg_to_module_basis(output)
+
+
     def construct_module(self, base_ring=RationalField(), subalgebra='g', action='adjoint'):
         """Return a LieAlgebraModule with basis some subalgebra of g, and with either adjoint or coadjoint action.
         These form the 'building blocks' for more complicated modules."""
-        action_map = {'adjoint':self.adjoint_action,
-                      'coadjoint': (lambda X,m: self.coadjoint_action(X, m, self.basis[subalgebra]))}
+        action_map = {'adjoint':self.fast_adjoint_action,
+                      'coadjoint': (lambda X,m: self.fast_coadjoint_action(X, m, subalgebra))}
         return LieAlgebraModule(base_ring, self.basis[subalgebra], self.subalgebra[subalgebra], action_map[action])
 
 

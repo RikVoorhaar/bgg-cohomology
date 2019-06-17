@@ -72,6 +72,8 @@ class BGGCohomologyComputer(object):
 
                     # Compute the action of the PBW element on each of the basis components
                     # of the row of the section and add the result together
+
+                    timer2 = time()
                     for key, coeff in row.items():
                         action_on_element = self.weight_module.pbw_action(pbw, self.weight_module.basis()[key])
 
@@ -80,6 +82,7 @@ class BGGCohomologyComputer(object):
 
                         for mon_key, mon_coeff in monomial_coeffs.items():
                             image_before_section[mon_key] += mon_coeff
+                    self.timer['image_before_section']+=time()-timer2
 
                     # Compute the image of the row under the transpose section, add the result to the output
                     if len(image_before_section) > 0:
