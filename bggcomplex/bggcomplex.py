@@ -150,7 +150,7 @@ class BGGComplex:
         A=[list(a.to_vector()) for a in self.simple_roots]
         A=matrix(A).transpose()
 
-        return transpose(A.solve_right(b)).list()
+        return tuple(transpose(A.solve_right(b)).list())
 
     def weight_to_alpha_sum(self,weight):
         """Express a weight in the lattice as a linear combination of alpha[i]'s. These objects form the keys
@@ -168,7 +168,7 @@ class BGGComplex:
 
     def _tuple_to_weight(self,t):
         """Turn a tuple encoding a linear combination of simple roots back into a weight"""
-        return sum(a*b for a, b in zip(t,self.simple_roots))
+        return sum(int(a)*b for a, b in zip(t,self.simple_roots))
 
     def dot_action(self,reflection,weight):
         """Compute the dot action of a reflection on a weight. The reflection should be an element of the Weyl group
