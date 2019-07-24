@@ -1,4 +1,6 @@
 *.pyc
 .idea
+.project
+.pydevproject
 bggcomplex/.idea
 bggcomplex/.ipynb_checkpoints
