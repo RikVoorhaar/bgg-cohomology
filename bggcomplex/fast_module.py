@@ -434,7 +434,8 @@ class FastModuleFactory:
 
 class WeightSet:
     """Class to do simple computations with the weights of a weight module. Elements of the Weyl group
-    are wherever possible encoded as a string encoding it as a product of simple reflections."""
+    are wherever possible encoded as a string encoding it as a product of simple reflections.
+    The class needs an instance of BGGComplex to instantiate. """
 
     def __init__(self, BGG):
         self.reduced_words = BGG.reduced_words
@@ -507,8 +508,8 @@ class WeightSet:
         return self.tuple_to_weight(mu).is_dominant()
 
     def make_dominant(self, mu):
-        """For a dot regular weight mu, iterate over all w in W and check if w.mu is dominant. It is known
-        that such a w always exists and is unique."""
+        """For a dot regular weight mu, iterate over all w in W and check if w.mu is dominant. Once found,
+         return w.mu and w. It is known that such a w always exists and is unique."""
 
         for w in self.reduced_words:
             new_mu = self.dot_action(w, mu)
@@ -528,32 +529,53 @@ class WeightSet:
 
 
 class BGGCohomology:
+    """Class for computing the BGG cohomology of a module. This is a seperate class because it needs to comunicate
+    between the module and the BGG complex.
+    Input is a BGGComplex instance, and a FastLieAlgebraCompositeModule instance."""
+
     def __init__(self, BGG, weight_module):
         self.BGG = BGG
-        self.BGG.compute_signs()
+        self.BGG.compute_signs()  # Make sure BGG signs are computed.
         self.weight_module = weight_module
         self.weights = weight_module.weight_components.keys()
         self.weight_set = WeightSet(BGG)
 
-        self.regular_weights = self.weight_set.compute_weights(self.weights)
+        self.regular_weights = self.weight_set.compute_weights(self.weights)  # Find dot-regular weights
 
     def compute_differential(self, mu, i):
-        vertex_weights = self.weight_set.get_vertex_weights(mu)
+        """Given a dominant weight mu, compute the BGG differential at degree i. The resulting matrix
+        does not contain any zero rows, but has the same image as the true differential, and has therefore the
+        same rank as the true differential.
+        This method outputs a tuple consisting of the matrix of the differential and the dimension of the source
+        space (of the true differential)."""
+
+        if not self.weight_set.is_dominant(mu):  # Assert the weight is dominant to prevent further errors.
+            raise ValueError('Input weight %s is not dominant' % str(mu))
+
+        vertex_weights = self.weight_set.get_vertex_weights(mu)  # Compute dot orbit of mu
+
+        # Weights need to be in the right format for BGG.compute maps. This will hopefully be fixed in the future.
         maps = self.BGG.compute_maps(self.BGG.weight_to_alpha_sum(self.BGG._tuple_to_weight(mu)))
-        column = self.BGG.column[i]
+
+        column = self.BGG.column[i]  # Elements of Weyl group in ith column
+
+        # For each w in the ith column, find all arrows w->w' for some w' (of longer length)
         delta_i_arrows = [(w, [arrow for arrow in self.BGG.arrows if arrow[0] == w]) for w in column]
 
+        # Count the total dimension of all the weight components associated to the ith column.
         source_dim = 0
         for w in column:
             initial_vertex = vertex_weights[w]
             if initial_vertex in self.weights:
                 source_dim += self.weight_module.dimensions[initial_vertex]
 
+        # For each arrow a: w->w', we compute the action of the PBW element associated to w->w'.
+        # We then multiply the result by the sign associated to w->w' in the BGG complex.
+        # Finally we concatenate all these in a list.
         output = []
-
         for w, arrows in delta_i_arrows:
-            initial_vertex = vertex_weights[w]
-            if initial_vertex in self.weights:
+            initial_vertex = vertex_weights[w]  # Get weight w.mu
+            if initial_vertex in self.weights:  # Weight component may be empty
                 for a in arrows:
                     sign = self.BGG.signs[a]
                     self.weight_module.set_pbw_action_matrix(maps[a])
@@ -562,34 +584,45 @@ class BGGCohomology:
                         if len(key_pairs) > 0:
                             output.append((key_pairs, sign * coefficients))
 
+        # Make a list of rows in the matrix. Each row is encoded as two numpy vectors.
+        # The first vector encodes the hashes of the indices of the image
+        # The second vector encodes the coefficients.
         row_list = []
         for key_pairs, coefficients in output:
             gb = npi.group_by(key_pairs[:, 0])
             rows = zip(gb.split_array_as_list(key_pairs[:, 1]), gb.split_array_as_list(coefficients))
             row_list += rows
 
+        # Make a set of all the occurring hashes, enumerate them, and make a dictionary sending hashes to new indices
         all_hashes = []
         for columns, _ in row_list:
             all_hashes += list(columns)
         hash_dic = {h: i for i, h in enumerate(set(all_hashes))}
 
+        # For each row in row_list, replace hashes by new indices, and then sort new indices and reorder coefficients.
         def convert_and_sort(input):
             input_columns, input_data = input
             converted_columns = np.array([hash_dic[c] for c in input_columns], dtype=np.uint32)
             indices = np.argsort(converted_columns)
             return converted_columns[indices], input_data[indices]
-
         row_list = map(convert_and_sort, row_list)
 
+        # Create a dictionary of all non-zero entries of the matrix of the differential
+        # Keys are pairs (row, column), values are the coefficients.
         sparse_dic = dict()
         for row, (columns, data) in enumerate(row_list):
             for column, entry in zip(columns, data):
                 sparse_dic[(row, column)] = entry
+
+        # Use the dictionary above to build a sparse matrix
         differential_matrix = matrix(ZZ, len(row_list), len(hash_dic), sparse_dic, sparse=True)
 
+        # Return the sparse matrix as well as the dimension of the source space (because zero rows are omitted).
         return differential_matrix, source_dim
 
     def cohomology_component(self, mu, i):
+        """Compute cohomology BGG_i(mu)"""
+
         d_i, chain_dim = self.compute_differential(mu, i)
         d_i_minus_1, _ = self.compute_differential(mu, i - 1)
         rank_1 = d_i.rank()
@@ -597,8 +630,19 @@ class BGGCohomology:
         return chain_dim - rank_1 - rank_2
 
     def cohomology(self, i):
+        """Compute full block of cohomology by computing BGG_i(mu) for all dot-regular mu appearing in
+        the weight module of length i.
+        For a given weight mu, if there are no other weights mu' of length i +/- 1 with the
+        same associated dominant, then the weight component mu is isolated and the associated
+        cohomology is the entire weight module.
+        The cohomology is returned as a list of highest weight vectors appearing in the
+        cohomology, together with their multiplicities."""
+
+        # Find all dot-regular weights of lenght i, together with their associated dominants.
         length_i_weights = [triplet for triplet in self.regular_weights if triplet[2] == i]
 
+        # Split the set of dominant weights in those which are isolated, and therefore don't require
+        # us to run the BGG machinery, and those which are not isolated and require the BGG machinery.
         dominant_non_trivial = set()
         dominant_trivial = []
         for w, w_dom, _ in length_i_weights:
@@ -608,35 +652,59 @@ class BGGCohomology:
                     break
             else:
                 dominant_trivial.append((w, w_dom))
+
         cohomology = defaultdict(int)
 
+        # For isolated weights, multiplicity is just the module dimension
         for w, w_dom in dominant_trivial:
             cohom_dim = self.weight_module.dimensions[w]
             if cohom_dim > 0:
                 cohomology[w_dom] += cohom_dim
+
+        # For non-isolated weights, multiplicity is computed through the BGG differential
         for w in dominant_non_trivial:
             cohom_dim = self.cohomology_component(w, i)
-            # print(w,cohom_dim)
             if cohom_dim > 0:
                 cohomology[w] += cohom_dim
+
+        # Return cohomology as sorted list of highest weight vectors and multiplicities.
         return sorted(cohomology.items(), key=lambda t: t[-1])
 
     def cohomology_LaTeX(self, i, complex_string='', only_non_zero=False):
+        """In a notebook we can use pretty display of cohomology output.
+        Only displays cohomology, does not return anything.
+        Input is degree i,
+        complex_string, an optional string to cohom as H^i(complex_string) = ...
+        only_non_zero, a bool indicating whether to print non-zero cohomologies."""
+
+        # compute cohomology. If cohomology is trivial and only_non_zero is true, return.
         cohom = self.cohomology(i)
         if only_non_zero and len(cohom) == 0:
             return None
+
+        # Get LaTeX string of the highest weights + multiplicities
         latex = self.cohom_to_latex(cohom)
+
+        # If there is a complex_string, insert it between brackets, otherwise no brackets.
         if len(complex_string) > 0:
             display_string = r'(%s)=' % complex_string
         else:
             display_string = r'='
+
+        # Display the cohomology in the notebook using LaTeX rendering
         display(Math(r'\mathrm H^%d' % i + display_string + latex))
 
     def tuple_to_latex(self, (mu, mult)):
+        """LaTeX string representing a tuple of highest weight vector and it's multiplicity"""
+
+        # Each entry mu_i in the tuple mu represents a simple root. We display it as mu_i alpha_i
         alphas = []
         for i, m in enumerate(mu):
             if m != 0:
                 alphas.append(r'%d\alpha_{%d}' % (m, i + 1))
+
+        # If all entries are zero, we just display the string '0' to represent zero weight,
+        # otherwise we join the mu_i alpha_i together with a + operator in between
         if len(alphas) == 0:
             return r'%s \cdot 0' % mult
         else:
@@ -644,6 +712,10 @@ class BGGCohomology:
             return r'%d \cdot\left(%s\right)' % (mult, alphas_string)
 
     def cohom_to_latex(self, cohom):
+        """String together the tuple_to_latex function multiple times to turn a list of mu, multiplicity
+        into one big LaTeX string."""
+
+        # If there is no cohomology just print the string '0'
         if len(cohom) > 0:
             return r'+'.join(map(self.tuple_to_latex, cohom))
         else:

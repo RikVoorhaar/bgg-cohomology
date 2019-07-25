@@ -1,1 +1,1 @@
-__all__ = ['bggcomplex','lie_algebra_module','quantum_center_module']
+__all__ = ['bggcomplex','lie_algebra_module','quantum_center_module','fast_module']
