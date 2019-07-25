@@ -1,5 +1,10 @@
 # -*- coding: utf8 -*-
 
+"""
+Deprecated. fast_module.py provides similar functionality (except for support of quotients),
+but with much higher performance.
+"""
+
 from collections import defaultdict
 from sympy.utilities.iterables import subsets
 from sage.modules.with_basis.indexed_element import IndexedFreeModuleElement

@@ -1,3 +1,7 @@
+"""
+Deprecated and replaced by fast_module.py as soon as quotients are implemented into fast_module.py
+"""
+
 from collections import defaultdict
 from sage.matrix.constructor import matrix
 from sage.rings.integer_ring import ZZ

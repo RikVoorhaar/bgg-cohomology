@@ -1,3 +1,11 @@
+"""
+Lie algebra modules with weight decomposition and their BGG cohomology
+
+Provides functionality to construct weight modules with a Lie algebra action. Given a BGG complex, it can
+subsequently compute the cohomology of the module. See the example notebooks on https://github.com/RikVoorhaar/BGG
+for explanation of usage.
+"""
+
 import numpy_indexed as npi
 from IPython.display import display, Math, Latex
 from sympy.utilities.iterables import subsets

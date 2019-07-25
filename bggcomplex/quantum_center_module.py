@@ -1,3 +1,8 @@
+"""
+Deprecated, depends on lie_algebra_module.py, which replaced with fast_module.py. A new version of this module will be
+released which is compatible with fast_module.py.
+"""
+
 from lie_algebra_module import *
 from bgg_cohomology import  BGGCohomologyComputer
 from collections import defaultdict

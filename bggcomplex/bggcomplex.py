@@ -1,3 +1,10 @@
+"""
+Implement the BGG complex
+
+Uses compute_maps.py and compute_signs.py to obtain the maps with associated signs of the BGG complex.
+To use the BGG complex to compute cohomology we can use fast_module.
+"""
+
 from itertools import groupby,chain
 
 from sage.all import *

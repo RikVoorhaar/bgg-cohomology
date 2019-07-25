@@ -1,3 +1,8 @@
+"""
+Compute signs for the BGG complex.
+"""
+
+
 from numpy.random import randint,choice
 from itertools import chain
 

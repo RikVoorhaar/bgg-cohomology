@@ -1,3 +1,11 @@
+"""
+Compute the maps in the BGG complex.
+
+Uses a PBW basis for the universal envoloping algebra of n together with some basic linear algebra.
+Works for any dominant weight.
+"""
+
+
 from numpy import array,int16,zeros,around,greater_equal,array_equal
 
 from scipy.linalg import solve,lstsq
