@@ -14,6 +14,7 @@ import itertools
 from sage.matrix.constructor import matrix
 from collections import defaultdict
 import numpy as np
+import warnings
 
 
 class FastLieAlgebraCompositeModule:
@@ -31,9 +32,14 @@ class FastLieAlgebraCompositeModule:
 
         # length of all the indices occurring in any module
         self.len_basis = len(set(itertools.chain.from_iterable(self.modules.values())))
+        self.max_index = max(itertools.chain.from_iterable(self.modules.values()))
+
+        if self.len_basis*5<self.max_index:
+            warnings.warn("""Maximum index %d is much higher than length of module basis %d. 
+                This may cause slowdown""" % (self.max_index,self.len_basis))
 
         # To compute the hash fast, cache a power of 33 for each basis element mod 2^32
-        self.pow_array = 33 ** np.arange(self.len_basis, dtype=np.int32)
+        self.pow_array = 33 ** np.arange(self.max_index+1, dtype=np.int32)
 
         # For each direct sum component, compute a list of prime powers of 7919 incrementing at each tensor component
         self.component_primes = [self.compute_component_primes(index) for index in range(len(self.components))]
