@@ -1,6 +1,5 @@
 # BGG
 
-
 The plan is to write a module in Python/Sage to compute the cohomology of the BGG complex for certain modules to compute the center of the small quantum group. 
 We did this in Mathematica for G2, but we want to be able to do it for a larger class of Lie algebras. We will do this in Python/Sage for the following reasons:
 - Mathematica is closed source, as opposed to Sage and Python.
@@ -19,3 +18,7 @@ The computation of the BGG cohomology consists of several steps.
 - We need to define the action of these maps on the weight modules
 - We compute a basis for all the relevant weight modules
 - We compute the cohomology of the complex
+
+$$\mathfrak g$$
+
+So markdown doens't support math!?
