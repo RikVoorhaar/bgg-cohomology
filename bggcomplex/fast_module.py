@@ -71,6 +71,13 @@ class FastLieAlgebraCompositeModule:
                 start_slice = end_slice
             self.slice_lists.append(slice_list)
 
+
+        self.hash_dic = dict()
+        for comps in self.weight_components.values():
+            for comp in comps:
+                for h, v in zip(self.get_hash(comp), comp[1]):
+                    self.hash_dic[h] = v
+
     def construct_component(self, component):
         """Given a list of tuples representing tensor components, return an np array of integers. Each row
         represents one basis element of the tensor product"""
@@ -128,7 +135,7 @@ class FastLieAlgebraCompositeModule:
         comp_primes = []
         for i, n in enumerate(comp_type):
             comp_primes += [i + 1] * n
-        return 7919 ** np.array(comp_primes, dtype=np.int32)
+        return 7919 ** np.array(comp_primes, dtype=np.int32)  # * (541)**index
 
     def get_hash(self, weight_component, check_conflict=False):
         """Compute the hash function for each weight component. Optionally check for hash conflicts."""
@@ -187,8 +194,7 @@ class FastLieAlgebraCompositeModule:
 
             for old_index, new_index, coefficient in action_queue:
                 # Changing the hash by this number gives the hash of the output
-                hash_modifier = np.multiply(column_hash_modifier,
-                                            (self.pow_array[new_index] - self.pow_array[old_index]))
+                hash_modifier = column_hash_modifier*(self.pow_array[new_index] - self.pow_array[old_index])
                 new_hashes = hashes[split_indices[old_index]] + hash_modifier
 
                 # Compute the signs for each of the rows. There are no signs for symmetric powers.
@@ -235,6 +241,15 @@ class FastLieAlgebraCompositeModule:
 
         # Take only non-zero coefficients, output result
         nonzero_coefficients = coefficients.nonzero()
+        print(image[nonzero_coefficients])
+        for h in image[:,1]:
+            if h in self.hash_dic:
+                print(self.hash_dic[h])
+            else:
+                print('uknown hash')
+        print(hashes)
+        print([self.hash_dic[h] for h in hashes])
+        print('+'*10)
         return image[nonzero_coefficients], coefficients[nonzero_coefficients]
 
 
@@ -309,7 +324,9 @@ class FastModuleFactory:
         self.basis['g'] = sorted(self.root_to_index.keys())
         self.basis['u'] = sorted([self.root_to_index[r] for r in self.e_roots])
         self.basis['n'] = sorted([self.root_to_index[r] for r in self.f_roots])
+        self.basis['h'] = sorted([self.root_to_index[r] for r in self.h_roots])
         self.basis['b'] = sorted(self.basis['n'] + [self.root_to_index[r] for r in self.h_roots])
+        self.basis['b+'] = sorted(self.basis['u'] + [self.root_to_index[r] for r in self.h_roots])
 
         # Make a dictionary mapping a root to its dual
         self.dual_root_dict = dict()
@@ -417,7 +434,7 @@ class FastModuleFactory:
         return action
 
     def build_component(self, subalgebra, action_type='ad', subset=None, acting_lie_algebra='n'):
-        """Given a subalgebra (either 'g','n','u' or 'p'), a type of action (either 'ad' or 'coad'),
+        """Given a subalgebra (either 'g','n','u','b' or 'p'), a type of action (either 'ad' or 'coad'),
         a subset (a list of indices, corresponding to parabolic subalgebras) and an acting lie algebra
         (same type as subalgebra argument), returns a FastModuleComponent corresponding to the
         Lie algebra module of the input."""
@@ -428,7 +445,10 @@ class FastModuleFactory:
         module_dic = {'g': self.g_basis,
                       'n': self.parabolic_n_basis(subset),
                       'u': self.parabolic_u_basis(subset),
-                      'p': self.parabolic_p_basis(subset)}
+                      'p': self.parabolic_p_basis(subset),
+                      'h': self.basis['h'],
+                      'b+': self.basis['b+'],
+                      'b': self.parabolic_p_basis(None)}
         if subalgebra not in module_dic.keys():
             raise ValueError('Unknown subalgebra \'%s\'' % subalgebra)
         if acting_lie_algebra not in module_dic.keys():
@@ -597,6 +617,8 @@ class BGGCohomology:
                         key_pairs, coefficients = self.weight_module.compute_pbw_action(weight_comp)
                         if len(key_pairs) > 0:
                             output.append((key_pairs, sign * coefficients))
+                            print(key_pairs, coefficients, a, maps[a])
+                            print('-' * 10)
 
         # Make a list of rows in the matrix. Each row is encoded as two numpy vectors.
         # The first vector encodes the hashes of the indices of the image
@@ -606,6 +628,9 @@ class BGGCohomology:
             gb = npi.group_by(key_pairs[:, 0])
             rows = zip(gb.split_array_as_list(key_pairs[:, 1]), gb.split_array_as_list(coefficients))
             row_list += rows
+
+        print(row_list)
+        print('-' * 10)
 
         # Make a set of all the occurring hashes, enumerate them, and make a dictionary sending hashes to new indices
         all_hashes = []
@@ -621,12 +646,17 @@ class BGGCohomology:
             return converted_columns[indices], input_data[indices]
         row_list = map(convert_and_sort, row_list)
 
+        print(row_list)
+        print('-' * 10)
+
         # Create a dictionary of all non-zero entries of the matrix of the differential
         # Keys are pairs (row, column), values are the coefficients.
         sparse_dic = dict()
         for row, (columns, data) in enumerate(row_list):
             for column, entry in zip(columns, data):
                 sparse_dic[(row, column)] = entry
+        print(sparse_dic)
+        print('-' * 10)
 
         # Use the dictionary above to build a sparse matrix
         differential_matrix = matrix(ZZ, len(row_list), len(hash_dic), sparse_dic, sparse=True)
@@ -706,7 +736,7 @@ class BGGCohomology:
             display_string = r'='
 
         # Display the cohomology in the notebook using LaTeX rendering
-        display(Math(r'\mathrm H^%d' % i + display_string + latex))
+        display(Math(r'\mathrm H^{%d}' % i + display_string + latex))
 
     def tuple_to_latex(self, (mu, mult)):
         """LaTeX string representing a tuple of highest weight vector and it's multiplicity"""
