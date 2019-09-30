@@ -138,7 +138,7 @@ class BGGComplex:
         self.signs = compute_signs(self)
         return self.signs
 
-    def compute_maps(self,root):
+    def compute_maps(self,root,check=False):
         """For the given weight, compute the maps of the BGG complex"""
 
         # If the maps are not in the cache, compute them and cache the result
@@ -147,6 +147,10 @@ class BGGComplex:
 
             MapSolver = BGGMapSolver(self,  root)
             self._maps[root] = MapSolver.solve()
+            if check:
+                maps_OK = MapSolver.check_maps()
+                if not maps_OK:
+                    raise ValueError('For root %s the map solver produced something wrong' % root)
 
         return self._maps[root]
 

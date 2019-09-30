@@ -226,12 +226,10 @@ class BGGMapSolver:
         return None
 
     def check_maps(self):
-        """Check for each cycle whether it commutes, for debugging purposes"""
-        problems_found = False
+        """Checks whether the squares commute. Returns True if there are no problems, False otherwise."""
         for c in self.BGG.cycles:
             edg = (c[0:2], c[1:3], c[4:2:-1], c[3:1:-1])
             if self.maps[edg[1]]*self.maps[edg[0]]!=self.maps[edg[3]]*self.maps[edg[2]]:
-                print("Problem found at cycle",c)
-                problems_found=True
-        if not problems_found:
-            print("checked %d cycles, with no problems found!"%len(self.BGG.cycles))
+                return False
+        else:
+            return True
