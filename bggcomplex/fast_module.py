@@ -16,7 +16,7 @@ from collections import defaultdict
 import numpy as np
 import warnings
 
-INT_PRECISION = np.int64
+INT_PRECISION = np.int32
 
 class FastLieAlgebraCompositeModule:
     """Class encoding a Lie algebra weight module. Input:
@@ -135,17 +135,17 @@ class FastLieAlgebraCompositeModule:
         comp_type = [s[1] for s in self.components[index]]
         comp_primes = []
         for i, n in enumerate(comp_type):
-            comp_primes += [i + 1] * n
+            comp_primes += [i] * n
         return 7919 ** np.array(comp_primes, dtype=INT_PRECISION)  # * (541)**index
 
     def get_hash(self, weight_component, check_conflict=True):
-        """Compute the hash function for each weight component. O/ptionally check for hash conflicts. """
+        """Compute the hash function for each weight component. Optionally check for hash conflicts. """
         index, vector_list = weight_component
 
         comp_primes = self.component_primes[index]
 
         hashes = comp_primes * self.pow_array[vector_list]
-        hashes = np.sum(hashes, axis=1,dtype=INT_PRECISION)
+        hashes = np.sum(hashes, axis=1, dtype=INT_PRECISION)
 
         if check_conflict:
             hash_conflicts = len(hashes) - len(set(hashes))
@@ -222,7 +222,10 @@ class FastLieAlgebraCompositeModule:
                     coefficient_array = coefficient * permutation_signs
 
                 # append the resulting source tensor indices, output hashes, coefficients to an output list
-                output_basis.append(split_indices[old_index].reshape(-1))
+
+                #output_basis.append(split_indices[old_index].reshape(-1))
+                output_basis.append(hashes[split_indices[old_index]])
+
                 output_hashes.append(new_hashes)
                 output_coefficients.append(coefficient_array)
 
@@ -244,7 +247,7 @@ class FastLieAlgebraCompositeModule:
         nonzero_coefficients = coefficients.nonzero()
 
         #check that the algorithm did not produce any garbage hashes
-        for hash in output_hashes:
+        for hash in output_hashes[nonzero_coefficients]:
             if hash not in self.hash_dic:
                 raise ValueError('hash %s is unknown.' % hash)
 
@@ -308,7 +311,11 @@ class FastModuleFactory:
         self.lie_algebra_basis = dict(self.lie_algebra.basis())
 
         # Associate to each root in the Lie algebra basis a unique index to be used as a basis subsequently.
-        self.root_to_index = {k: i for i, k in enumerate(self.lie_algebra_basis.keys())}
+        # For practical reasons we want the subspace `n` to have indices 0,...,dim(n)-1
+        # Since those elements are the only with negative coefficients in the roots,
+        # we can just sort by the first coefficient of the root to ensure this.
+        sorted_basis = sorted(self.lie_algebra_basis.keys(), key=lambda k: k.coefficients()[0])
+        self.root_to_index = {k: i for i, k in enumerate(sorted_basis)}
         self.g_basis = sorted(self.root_to_index.values())
         self.index_to_lie_algebra = {i: self.lie_algebra_basis[k] for k, i in self.root_to_index.items()}
 
@@ -604,27 +611,44 @@ class BGGCohomology:
         # For each arrow a: w->w', we compute the action of the PBW element associated to w->w'.
         # We then multiply the result by the sign associated to w->w' in the BGG complex.
         # Finally we concatenate all these in a list.
-        output = []
+        #output = []
+        diff_keys = []
+        diff_coeffs = []
         for w, arrows in delta_i_arrows:
             initial_vertex = vertex_weights[w]  # Get weight w.mu
             if initial_vertex in self.weights:  # Weight component may be empty
                 for a in arrows:
+                    print('->')
+                    print(maps[a])
                     sign = self.BGG.signs[a]
                     self.weight_module.set_pbw_action_matrix(maps[a])
                     for weight_comp in self.weight_module.weight_components[initial_vertex]:
                         key_pairs, coefficients = self.weight_module.compute_pbw_action(weight_comp)
+                        print(len(key_pairs))
                         if len(key_pairs) > 0:
-                            output.append((key_pairs, sign * coefficients))
+                            diff_keys.append(key_pairs)
+                            diff_coeffs.append(sign*coefficients)
+                            #output.append((key_pairs, sign * coefficients))
+        if len(diff_keys)>0:
+            diff_keys = np.concatenate(diff_keys)
+            diff_coeffs = np.concatenate(diff_coeffs)
 
+            print(diff_keys)
+            print(diff_coeffs)
+            print('-' * 10)
 
-        # Make a list of rows in the matrix. Each row is encoded as two numpy vectors.
-        # The first vector encodes the hashes of the indices of the image
-        # The second vector encodes the coefficients.
-        row_list = []
-        for key_pairs, coefficients in output:
-            gb = npi.group_by(key_pairs[:, 0])
-            rows = zip(gb.split_array_as_list(key_pairs[:, 1]), gb.split_array_as_list(coefficients))
-            row_list += rows
+            # Make a list of rows in the matrix. Each row is encoded as two numpy vectors.
+            # The first vector encodes the hashes of the indices of the image
+            # The second vector encodes the coefficients.
+            row_list = []
+            # for key_pairs, coefficients in output:
+            gb = npi.group_by(diff_keys[:, 0])
+            row_list = zip(gb.split_array_as_list(diff_keys[:, 1]), gb.split_array_as_list(diff_coeffs))
+            # row_list += rows
+
+            print(row_list)
+        else:
+            row_list=[]
 
 
         # Make a set of all the occurring hashes, enumerate them, and make a dictionary sending hashes to new indices
@@ -653,6 +677,8 @@ class BGGCohomology:
 
         # Use the dictionary above to build a sparse matrix
         differential_matrix = matrix(ZZ, len(row_list), len(hash_dic), sparse_dic, sparse=True)
+
+        print(differential_matrix)
 
         # Return the sparse matrix as well as the dimension of the source space (because zero rows are omitted).
         return differential_matrix, source_dim
