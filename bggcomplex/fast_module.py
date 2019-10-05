@@ -246,7 +246,7 @@ class FastLieAlgebraCompositeModule:
         # Take only non-zero coefficients, output result
         nonzero_coefficients = coefficients.nonzero()
 
-        #check that the algorithm did not produce any garbage hashes
+        # check that the algorithm did not produce any garbage hashes
         for hash in output_hashes[nonzero_coefficients]:
             if hash not in self.hash_dic:
                 raise ValueError('hash %s is unknown.' % hash)
@@ -343,7 +343,7 @@ class FastModuleFactory:
         # Make a dictionary encoding the associated weight for each basis element.
         # Weight is encoded as a np.array with length self.rank and dtype int.
         self.weight_dic = dict()
-        for i, r in enumerate(self.lie_algebra_basis.keys()):
+        for i, r in enumerate(sorted_basis):
             if r.parent() == self.lattice:  # If root is an e_root or f_root weight is just the monomial_coefficients
                 self.weight_dic[i] = self.dic_to_vec(r.monomial_coefficients(), self.rank)
             else:  # If the basis element comes from the Cartan, the weight is zero
@@ -618,13 +618,10 @@ class BGGCohomology:
             initial_vertex = vertex_weights[w]  # Get weight w.mu
             if initial_vertex in self.weights:  # Weight component may be empty
                 for a in arrows:
-                    print('->')
-                    print(maps[a])
                     sign = self.BGG.signs[a]
                     self.weight_module.set_pbw_action_matrix(maps[a])
                     for weight_comp in self.weight_module.weight_components[initial_vertex]:
                         key_pairs, coefficients = self.weight_module.compute_pbw_action(weight_comp)
-                        print(len(key_pairs))
                         if len(key_pairs) > 0:
                             diff_keys.append(key_pairs)
                             diff_coeffs.append(sign*coefficients)
@@ -633,9 +630,6 @@ class BGGCohomology:
             diff_keys = np.concatenate(diff_keys)
             diff_coeffs = np.concatenate(diff_coeffs)
 
-            print(diff_keys)
-            print(diff_coeffs)
-            print('-' * 10)
 
             # Make a list of rows in the matrix. Each row is encoded as two numpy vectors.
             # The first vector encodes the hashes of the indices of the image
@@ -646,7 +640,6 @@ class BGGCohomology:
             row_list = zip(gb.split_array_as_list(diff_keys[:, 1]), gb.split_array_as_list(diff_coeffs))
             # row_list += rows
 
-            print(row_list)
         else:
             row_list=[]
 
