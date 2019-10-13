@@ -6,7 +6,7 @@ subsequently compute the cohomology of the module. See the example notebooks on 
 for explanation of usage.
 """
 
-import numpy_indexed as npi
+#import numpy_indexed as npi+
 from IPython.display import display, Math, Latex
 from sympy.utilities.iterables import subsets
 from sage.rings.integer_ring import ZZ
@@ -116,15 +116,35 @@ class FastLieAlgebraCompositeModule:
 
         return output
 
+    # def compute_weight_components(self, direct_sum_component):
+    #     """Compute the weight for each basis element, group the basis by weight.
+    #     returns a dictionary mapping tuples of weights to basis of weight component."""
+    #     weight_mat = np.array([s[1] for s in sorted(self.weight_dic.items(), key=lambda t: t[0])], dtype=INT_PRECISION)
+    #     total_weight = np.sum(weight_mat[direct_sum_component], axis=1)
+    #
+    #     groupby = npi.group_by(total_weight)
+    #     return {tuple(w): l for w, l in
+    #             zip(groupby.unique, groupby.split_array_as_list(direct_sum_component))}
+
     def compute_weight_components(self, direct_sum_component):
         """Compute the weight for each basis element, group the basis by weight.
-        returns a dictionary mapping tuples of weights to basis of weight component."""
-        weight_mat = np.array([s[1] for s in sorted(self.weight_dic.items(), key=lambda t: t[0])], dtype=INT_PRECISION)
-        total_weight = np.sum(weight_mat[direct_sum_component], axis=1)
+           returns a dictionary mapping tuples of weights to basis of weight component."""
+        weight_mat = np.array([s[1] for s in sorted(self.weight_dic.items(), key=lambda t: t[0])], dtype=np.int64)
 
-        groupby = npi.group_by(total_weight)
-        return {tuple(w): l for w, l in
-                zip(groupby.unique, groupby.split_array_as_list(direct_sum_component))}
+        tot_weight = np.sum(weight_mat[direct_sum_component], axis=1)
+        argsort = np.lexsort(np.transpose(tot_weight))
+        split_dic = {}
+        last_weight = tot_weight[0]
+        current_inds = []
+        for i in argsort:
+            if np.all(np.equal(tot_weight[i], last_weight)):
+                current_inds.append(i)
+            else:
+                split_dic[tuple(last_weight)] = direct_sum_component[current_inds]
+                current_inds = [i]
+                last_weight = tot_weight[i]
+        return split_dic
+
 
     def initialize_weight_components(self):
         """Compute a basis for each direct sum component, and compute basis for each weight component"""
