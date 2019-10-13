@@ -16,6 +16,10 @@ from collections import defaultdict
 import numpy as np
 import warnings
 
+#import pyximport
+#pyximport.install(language_level=2)
+import cohomology
+
 INT_PRECISION = np.int32
 
 class FastLieAlgebraCompositeModule:
@@ -25,10 +29,11 @@ class FastLieAlgebraCompositeModule:
     the key of component_dic, the power (an int) and a string either 'wedge' or 'sym'
     - `component_dic`: a dictionary with values instances of FastModuleComponent"""
 
-    def __init__(self, weight_dic, components, component_dic):
+    def __init__(self, factory, components, component_dic):
         self.components = components
         self.component_dic = component_dic
-        self.weight_dic = weight_dic
+        self.factory = factory
+        self.weight_dic = factory.weight_dic
         self.modules = {k: component_dic[k].basis for k in component_dic.keys()} #basis of each component type
 
         # length of all the indices occurring in any module
@@ -78,6 +83,10 @@ class FastLieAlgebraCompositeModule:
             for comp in comps:
                 for h, v in zip(self.get_hash(comp), comp[1]):
                     self.hash_dic[h] = v
+
+        self.action_tensor_dic = dict()
+        for key, mod in self.component_dic.items():
+            self.action_tensor_dic[key] = self.get_action_tensor(mod)
 
     def construct_component(self, component):
         """Given a list of tuples representing tensor components, return an np array of integers. Each row
@@ -153,6 +162,46 @@ class FastLieAlgebraCompositeModule:
                 raise ValueError('Found %d hash conflict(s)!' % hash_conflicts)
 
         return hashes
+
+    def get_action_tensor(self, component):
+        action_mat = component.action
+        max_ind = max(component.basis)+1
+        #max_ind = 0
+        #for _, j in action_mat.keys():
+        #    if j > max_ind:
+        #        max_ind = j
+        #max_ind += 1
+
+        dim_n = len(self.factory.basis['n'])
+
+        extra_rows = [0] * max_ind
+        for (_, j), v in action_mat.items():
+            if len(v) > 1:
+                extra_rows[j] += len(v) - 1
+        n_extra_rows = max(extra_rows)
+
+        action_tensor = np.zeros((dim_n + n_extra_rows, max_ind, 3), np.int64)
+        s_values = np.zeros(max_ind, np.int64) + dim_n
+        for (i, j), v in action_mat.items():
+            l = len(v)
+            if l == 1:
+                k, C_ijk = v.items()[0]
+                action_tensor[i, j] = (-1, k, C_ijk)
+            else:  # l>0
+                s = s_values[j]
+                s_values[j] += 1
+                k, C_ijk = v.items()[0]
+                action_tensor[i, j] = (s, k, C_ijk)
+                count = 0
+                for k, C_ijk in v.items()[1:]:
+                    count += 1
+                    if count >= l - 1:
+                        action_tensor[s, j] = (-1, k, C_ijk)
+                    else:
+                        action_tensor[s, j] = (s + 1, k, C_ijk)
+                    s = s_values[j]
+                    s_values[j] += 1
+        return action_tensor
 
     def set_pbw_action_matrix(self, pbw_elt):
         """Given a PBW element, cache a matrix encoding the PBW action for each type of component in component_dic"""
@@ -679,9 +728,12 @@ class BGGCohomology:
     def cohomology_component(self, mu, i):
         """Compute cohomology BGG_i(mu)"""
 
-        d_i, chain_dim = self.compute_differential(mu, i)
-        d_i_minus_1, _ = self.compute_differential(mu, i - 1)
-        rank_1 = d_i.rank()
+        #d_i, chain_dim = self.compute_differential(mu, i)
+        #d_i_minus_1, _ = self.compute_differential(mu, i - 1)
+
+        d_i, chain_dim = cohomology.compute_diff(self,mu,i)
+        d_i_minus_1, _ = cohomology.compute_diff(self,mu,i-1)
+
         rank_1 = d_i.rank()
         rank_2 = d_i_minus_1.rank()
         return chain_dim - rank_1 - rank_2

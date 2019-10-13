@@ -1,5 +1,7 @@
+#cython: language_level=2
+
 import numpy as np
-cimport numpy as np
+#cimport numpy as np  # pyximport fails to compile when loading external C libraries...
 
 from sage.matrix.constructor import matrix
 from sage.rings.integer_ring import ZZ
@@ -107,6 +109,8 @@ cdef sort_cols(module, action_image,comp_num):
         col_min+=cols
 
 cpdef action_on_basis(pbw_elt,wmbase,module,factory,comp_num):
+    """Computes the action on a basis"""
+
     num_cols = wmbase.shape[1]
     action_list = []
     action_source = np.zeros((wmbase.shape[0], num_cols+2),np.int64)
@@ -118,11 +122,14 @@ cpdef action_on_basis(pbw_elt,wmbase,module,factory,comp_num):
         action_image[:,-1]*=coefficient
         for term in monomial.to_word_list()[::-1]:
             index = factory.root_to_index[term]
-            action_image = compute_action(index, action_image,module)
+            action_image = compute_action(index, action_image, module)
         action_list.append(action_image)
     action_image = np.concatenate(action_list)
-    sort_cols(module,action_image,comp_num)
-    return sort_merge(action_image)
+    if len(action_image)==0: # merging gives errors for empty matrices
+        return action_image
+    else:
+        sort_cols(module,action_image,comp_num)
+        return sort_merge(action_image)
 
 
 
@@ -153,18 +160,30 @@ def compute_diff(cohom,mu,i):
                 max_ind = 0
                 for a in arrows:
                     sign = BGG.signs[a]
-                    weight_comp = module.weight_components[initial_vertex][comp_num][-1]
-                    action_images.append(action_on_basis(maps[a]*sign,weight_comp,module,factory,comp_num))
-                    max_ind = max(max_ind,action_images[-1][-1,-2])
-                sub_diff = np.concatenate(action_images)
-                sub_diff[:,-2]+=offset
-                offset+=max_ind+1
-                total_diff.append(sub_diff)
-        total_diff = np.concatenate(total_diff)
-        total_diff = total_diff[np.lexsort(np.transpose(total_diff[:,:-2]))]
-        total_diff_list.append(total_diff)
+
+                    # Find the right direct sum component. If direct sum doesn't have this weight, do nothing.
+                    for wc in module.weight_components[initial_vertex]:
+                        if wc[0]==comp_num:
+                            weight_comp = wc[-1]
+                            basis_action = action_on_basis(maps[a]*sign,weight_comp,module,factory,comp_num)
+                            if len(basis_action)>0:
+                                max_ind = max(max_ind,basis_action[-1,-2])
+                                action_images.append(basis_action)
+                            break
+
+                if len(action_images)>0:
+                    sub_diff = np.concatenate(action_images)
+                    sub_diff[:,-2]+=offset
+                    offset+=max_ind+1
+                    total_diff.append(sub_diff)
+        if len(total_diff)>0:
+            total_diff = np.concatenate(total_diff)
+            total_diff = total_diff[np.lexsort(np.transpose(total_diff[:,:-2]))]
+            total_diff_list.append(total_diff)
 
     total_length = sum(len(diff) for diff in total_diff_list)
+    if total_length ==0:
+        return matrix(ZZ,0,0),source_dim
     diff_entries = np.zeros((total_length,3),np.int64)
     j = -1
     offset=0
@@ -185,4 +204,4 @@ def compute_diff(cohom,mu,i):
     for i in range(len(diff_entries)):
         d_dense[diff_entries[i,0],diff_entries[i,1]] = diff_entries[i,2]
 
-    return d_dense
+    return d_dense, source_dim

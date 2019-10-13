@@ -7,3 +7,6 @@ bggcomplex/.ipynb_checkpoints
 bggcomplex/python2.7.exe.stackdump
 bggcomplex/python2.7.exe.stackdump
 *.stackdump
+*.dll
+*.c
+*.o
