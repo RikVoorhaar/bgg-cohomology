@@ -128,18 +128,24 @@ class FastLieAlgebraCompositeModule:
 
     def compute_weight_components(self, direct_sum_component):
         """Compute the weight for each basis element, group the basis by weight.
-           returns a dictionary mapping tuples of weights to basis of weight component."""
+           returns a dictionary mapping tuples of weights to basis of weight component.
+           This version doesn't use npi as dependency"""
+        # Matrix of weights associated to each lie algebra basis element
         weight_mat = np.array([s[1] for s in sorted(self.weight_dic.items(), key=lambda t: t[0])], dtype=np.int64)
 
+        # Total weight for each element of the direct sum component
         tot_weight = np.sum(weight_mat[direct_sum_component], axis=1)
+
+        # We will group by weight, so first we do a sort
+        # Then we split every time the weight changes, and store in a dictionary
         argsort = np.lexsort(np.transpose(tot_weight))
         split_dic = {}
-        last_weight = tot_weight[0]
+        last_weight = tot_weight[0]  # Keep track of weight
         current_inds = []
         for i in argsort:
-            if np.all(np.equal(tot_weight[i], last_weight)):
+            if np.all(np.equal(tot_weight[i], last_weight)): # If weight is the same
                 current_inds.append(i)
-            else:
+            else: # If weight is different than before, store old basis elements in dict
                 split_dic[tuple(last_weight)] = direct_sum_component[current_inds]
                 current_inds = [i]
                 last_weight = tot_weight[i]
@@ -168,7 +174,8 @@ class FastLieAlgebraCompositeModule:
         return 7919 ** np.array(comp_primes, dtype=INT_PRECISION)  # * (541)**index
 
     def get_hash(self, weight_component, check_conflict=True):
-        """Compute the hash function for each weight component. Optionally check for hash conflicts. """
+        """ <<This functionality is deprecated.>>
+        Compute the hash function for each weight component. Optionally check for hash conflicts. """
         index, vector_list = weight_component
 
         comp_primes = self.component_primes[index]
@@ -184,53 +191,72 @@ class FastLieAlgebraCompositeModule:
         return hashes
 
     def get_action_tensor(self, component):
+        """Computes a tensor encoding the action for a given tensor component.
+         The shape of the tensor is (dim(n)+m, max_ind, 3),
+        where m is some (typically small integer),
+        dim(n) is the dimension of  the lie algebra n<g,
+        max_ind is the largest index occurring in the tensor component.
+        The last axis stores a triple (s, k, C_ijk) for each pair i,j.
+        If i<dim(n), then C_ijk is the structure coefficient, similarly for k.
+        If C_ijk is zero for all k, then the tuple is (0,0,0).
+        For some i,j there are multiple non-zero C_ijk. If this happens, then
+        s gives the row of the next non-zero C_ijk (the column is still j).
+        If s = -1 then there are no further non-zero structure coefficients.
+        The integer m is then the smallest such that the tensor is big enough."""
+
+        # Previously we implemented the action as a dictionary, this will be our starting point
         action_mat = component.action
+
+        # max index is largest index occurring in basis (+1 because of counting starting at 0)
         max_ind = max(component.basis)+1
-        #max_ind = 0
-        #for _, j in action_mat.keys():
-        #    if j > max_ind:
-        #        max_ind = j
-        #max_ind += 1
 
         dim_n = len(self.factory.basis['n'])
 
+        # number of extra rows is largest number of non-zero C_ijk for any fixed i,j.
         extra_rows = [0] * max_ind
         for (_, j), v in action_mat.items():
             if len(v) > 1:
                 extra_rows[j] += len(v) - 1
         n_extra_rows = max(extra_rows)
 
+        # Initialize tensor of the correct shape
         action_tensor = np.zeros((dim_n + n_extra_rows, max_ind, 3), np.int64)
+
+        # Keep track of the max index for each i.
         s_values = np.zeros(max_ind, np.int64) + dim_n
+
+        # action matrix is of form (i,j):v, where v is a list of pairs (k,C_ijk)
         for (i, j), v in action_mat.items():
             l = len(v)
-            if l == 1:
+            if l == 1: # s=-1, and we can just store the triple in location i,j
                 k, C_ijk = v.items()[0]
                 action_tensor[i, j] = (-1, k, C_ijk)
-            else:  # l>0
-                s = s_values[j]
+            else:  # Multiple non-zero C_ijk for this i,j
+                s = s_values[j] # Look up number of extra rows already added to this column
                 s_values[j] += 1
                 k, C_ijk = v.items()[0]
-                action_tensor[i, j] = (s, k, C_ijk)
+                action_tensor[i, j] = (s, k, C_ijk) # First one is still at position (i,j)
                 count = 0
-                for k, C_ijk in v.items()[1:]:
+                for k, C_ijk in v.items()[1:]: # Other ones will be in the extra rows
                     count += 1
-                    if count >= l - 1:
+                    if count >= l - 1: # For the last in the chain s=-1
                         action_tensor[s, j] = (-1, k, C_ijk)
-                    else:
+                    else: # There is another non-zero C_ijk, and it will be stored in row s+1
                         action_tensor[s, j] = (s + 1, k, C_ijk)
                     s = s_values[j]
                     s_values[j] += 1
         return action_tensor
 
     def set_pbw_action_matrix(self, pbw_elt):
-        """Given a PBW element, cache a matrix encoding the PBW action for each type of component in component_dic"""
+        """<<DEPRECATED>>
+        Given a PBW element, cache a matrix encoding the PBW action for each type of component in component_dic"""
         self.action_matrix = dict()
         for key, component in self.component_dic.items():
             self.action_matrix[key] = component.pbw_action_matrix(pbw_elt)
 
     def compute_pbw_action(self, weight_comp):
-        """Compute the action of a PBW element on the basis of a weight component.
+        """<<DEPRECATED>>
+        Compute the action of a PBW element on the basis of a weight component.
         The action is computed column-wise as a list of hashes and coefficients.
         In the end the coefficients of the rows with the same hashes are summed.
         Returns a tuple of tensor indices of source, hashes of targets, coefficients.

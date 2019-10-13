@@ -1,4 +1,8 @@
 #cython: language_level=2
+"""
+Module to compute the differentials of the BGG complex. Implemented in Cython for extra speed, since it
+is relatively critical for performance.
+"""
 
 import numpy as np
 #cimport numpy as np  # pyximport fails to compile when loading external C libraries...
@@ -7,33 +11,41 @@ from sage.matrix.constructor import matrix
 from sage.rings.integer_ring import ZZ
 
 cdef compute_action(acting_element, action_source, module):
+    """Computes action of a single lie algebra element on a list of elements of the module. 
+    Outputs a new array where indices and coefficients are replaced as per the action. 
+    The output is unsorted, and may contain duplicate entries. """
+
+    # Initialize array for output
     action_image = np.zeros_like(action_source)
+
+    # Get component types. Each type has a different action of the Lie algebra
     type_list = module.type_lists[0]
-    cdef image_row = 0
+    cdef image_row = 0 # counter for which row to edit in output
     cdef max_rows = len(action_image)
 
     cdef int row,j
-    for col,mod_type in enumerate(type_list):
-        action_tensor = module.action_tensor_dic[mod_type]
+    for col,mod_type in enumerate(type_list): # compute the action one column at a time
+        action_tensor = module.action_tensor_dic[mod_type] # retrieve the structure coefficient tensor
         for row in range(len(action_source)):
             j = action_source[row,col]
             s,k,Cijk = action_tensor[acting_element,j]
-            while s!=0:
-                new_row = action_source[row].copy()
+            while s!=0: # if s=0, then there are no non-zero structure coeffs
+                new_row = action_source[row].copy() # copy row, and change index to k
                 new_row[col] = k
-                new_row[-1]*=Cijk
+                new_row[-1]*=Cijk # multiply coefficient of element by structure coefficient C_ijk
                 action_image[image_row] = new_row
-                if s==-1:
+                if s==-1: # end of the chain, break out of loop
                     s=0
-                else:
+                else: # still more non-zero C_ijk's to deal with
                     s,k,Cijk = action_tensor[s,j]
                 image_row+=1
                 if image_row>=max_rows: # double size of image matrix if we run out of space
                     action_image = np.concatenate([action_image,np.zeros_like(action_image)])
                     max_rows = len(action_image)
-    return action_image[:image_row]
+    return action_image[:image_row] # Only return non-zero rows
 
 cdef check_equal(long [:] row1,long [:] row2,int num_cols):
+    """fast check to see if two arrays of given length are equal"""
     cdef int i
     for i in range(num_cols):
         if row1[i]!=row2[i]:
@@ -42,7 +54,7 @@ cdef check_equal(long [:] row1,long [:] row2,int num_cols):
         return True
 
 cdef col_nonzero(long [:] col, int num_rows):
-    """return non-zero indices of a column. np.nonzero doesn't seem to work well with memoryviews."""
+    """returns non-zero indices of a column. np.nonzero doesn't seem to work well with memoryviews."""
 
     indices = np.zeros(num_rows,np.int32)
     cdef int i
@@ -54,6 +66,8 @@ cdef col_nonzero(long [:] col, int num_rows):
     return indices[:j]
 
 cdef merge_sorted_image(long [:,:] action_image):
+    """Given sorted array, merges adjacent rows which are equal except for last column, 
+    and adds the values of the last column"""
     merged_image = np.zeros_like(action_image)
 
     cdef long[:] old_row
@@ -68,32 +82,36 @@ cdef merge_sorted_image(long [:,:] action_image):
     for i in range(num_rows):
         row = action_image[i]
         if row[-1]!=0:
-            if check_equal(row,old_row,num_cols):
+            if check_equal(row,old_row,num_cols): # if previous and current row are equal, add last column to result
                 merged_image[row_number,-1] += row[-1]
             else:
                 row_number+=1
                 merged_image[row_number]=row
                 old_row = row
     row_number+=1
-    non_zero_inds = col_nonzero(merged_image[:row_number,-1],row_number)
+    non_zero_inds = col_nonzero(merged_image[:row_number,-1],row_number) # Only return rows where column is non-zero
     return merged_image[non_zero_inds,:]
 
 def sort_merge(action_image):
+    """Sorts array, ignoring last column and merges rows which are equal, summing in the last column"""
     action_image = action_image[np.lexsort(np.transpose(action_image[:,:-1]))]
     return merge_sorted_image(action_image)
 
 cdef permutation_sign(long [:] row,int num_cols):
+    """Computes the sign of a permutation using bubble sort (efficient for extremely short inputs)"""
     cdef int sign = 1
     cdef int i,j
     for i in range(num_cols):
         for j in range(i+1,num_cols):
-            if row[i]==row[j]:
+            if row[i]==row[j]: # if there are duplicate entries then sign is 0 per definition
                 return 0
-            elif row[i]>row[j]:
+            elif row[i]>row[j]: # For each swap we have to do, the sign changes by -1.
                 sign*=-1
     return sign
 
 cdef sort_cols(module, action_image,comp_num):
+    """Sort all the entries of each tensor component. If tensor component is a wedge power, then
+    mutliply coefficient by sign of permutation sorting the row."""
     cdef int col_min = 0
     cdef int num_rows = len(action_image)
     cdef int i
@@ -104,12 +122,14 @@ cdef sort_cols(module, action_image,comp_num):
             if mod_type == 'wedge':
                 for i in range(num_rows):
                     row = action_image[i,col_min:col_min+cols]
-                    action_image[i,-1]*=permutation_sign(row,cols)
-            action_image[:,col_min:col_min+cols] = np.sort(action_image[:,col_min:col_min+cols])
+                    action_image[i,-1]*=permutation_sign(row,cols) # Change coefficient by sign of permutation
+            action_image[:,col_min:col_min+cols] = np.sort(action_image[:,col_min:col_min+cols]) # sort the rows
         col_min+=cols
 
 cpdef action_on_basis(pbw_elt,wmbase,module,factory,comp_num):
-    """Computes the action on a basis"""
+    """Computes the action of an element of U(n) in PBW order on a basis of the weight component.
+    Input is the PBW element, the basis of the weight component,
+    the factory that created the module, and the number of the direct sum component"""
 
     num_cols = wmbase.shape[1]
     action_list = []
@@ -117,54 +137,70 @@ cpdef action_on_basis(pbw_elt,wmbase,module,factory,comp_num):
     action_source[:,:num_cols] = wmbase
     action_source[:,num_cols] = np.arange(len(wmbase))
     action_source[:,-1] = 1
+
+    # Compute action for each monomial seperately, and then sum results
     for monomial,coefficient in pbw_elt.monomial_coefficients().items():
         action_image = action_source.copy()
-        action_image[:,-1]*=coefficient
-        for term in monomial.to_word_list()[::-1]:
-            index = factory.root_to_index[term]
-            action_image = compute_action(index, action_image, module)
+        action_image[:,-1]*=coefficient # mutliply results by coefficient of monomial
+        for term in monomial.to_word_list()[::-1]: # Right action, so we take terms of the monomial in inverse order
+            index = factory.root_to_index[term] # get the index of the term
+            action_image = compute_action(index, action_image, module) # compute the action
         action_list.append(action_image)
-    action_image = np.concatenate(action_list)
+    action_image = np.concatenate(action_list) # concatenate and merge is equivalent to summing the results.
     if len(action_image)==0: # merging gives errors for empty matrices
         return action_image
     else:
-        sort_cols(module,action_image,comp_num)
+        sort_cols(module,action_image,comp_num) # Sort and merge
         return sort_merge(action_image)
 
 
 
 def compute_diff(cohom,mu,i):
+    """"
+    Computes the BGG differential associated to a BGGCohomology object, weight mu and degree i.
+    The matrix produced is of the correct rank, but omits some rows consisting entirely of zeros.
+    In order to correctly compute kernel, the dimension of the source space is therefore also returned.
+    """
+    # aliases
     BGG = cohom.BGG
     module = cohom.weight_module
-    factory =  module.component_dic.values()[0].factory
+    factory =  module.factory
 
+    # weights associated to each vertex of the Bruhat graph
     vertex_weights = cohom.weight_set.get_vertex_weights(mu)
+
+    # maps of the BGG complex
     maps = BGG.compute_maps(BGG.weight_to_alpha_sum(BGG._tuple_to_weight(mu)),check=True)
+
+    # for each vertex, get the arrows in the Bruhat graph going out of it.
     column = BGG.column[i]
     delta_i_arrows = [(w, [arrow for arrow in BGG.arrows if arrow[0] == w]) for w in column]
 
+    # Compute dimension of source space by adding dimensions of weight components in the column
     source_dim = 0
     for w in column:
         initial_vertex = vertex_weights[w]
         if initial_vertex in cohom.weights:
             source_dim += cohom.weight_module.dimensions[initial_vertex]
 
+
     offset = 0
     total_diff_list = []
-    for comp_num in range(len(module.components)):
+    for comp_num in range(len(module.components)):  # iterate over direct sum components
         total_diff=[]
         for w, arrows in delta_i_arrows:
-            initial_vertex = vertex_weights[w]
-            if initial_vertex in cohom.weights: # Ensure weight component isn't empty
+            initial_vertex = vertex_weights[w]  # weight of vertex
+            if initial_vertex in cohom.weights:  # Ensure weight component isn't empty
                 action_images = []
-                max_ind = 0
-                for a in arrows:
-                    sign = BGG.signs[a]
+                max_ind = 0  # Keep track of biggest index
+                for a in arrows: # Compute image for each arrow
+                    sign = BGG.signs[a] # Multiply everything by the sign of the map in BGG complex
 
-                    # Find the right direct sum component. If direct sum doesn't have this weight, do nothing.
+                    # Find the right direct sum component. If direct sum component doesn't have this weight, do nothing.
                     for wc in module.weight_components[initial_vertex]:
                         if wc[0]==comp_num:
                             weight_comp = wc[-1]
+                            # compute the action of the PBW element
                             basis_action = action_on_basis(maps[a]*sign,weight_comp,module,factory,comp_num)
                             if len(basis_action)>0:
                                 max_ind = max(max_ind,basis_action[-1,-2])
@@ -172,34 +208,46 @@ def compute_diff(cohom,mu,i):
                             break
 
                 if len(action_images)>0:
+                    # Concatenate images for each arrow to get total image
                     sub_diff = np.concatenate(action_images)
+
+                    # Each basis element of weight component gets index
+                    # Because we have multiple weight components, we need to add a number to this index
+                    # So that index remains unique across multiple components
                     sub_diff[:,-2]+=offset
                     offset+=max_ind+1
                     total_diff.append(sub_diff)
-        if len(total_diff)>0:
-            total_diff = np.concatenate(total_diff)
-            total_diff = total_diff[np.lexsort(np.transpose(total_diff[:,:-2]))]
+        if len(total_diff)>0: # Sometimes action is trivial, would otherwise raise errors
+            total_diff = np.concatenate(total_diff)  # concatenate maps for each vertex in column
+            total_diff = total_diff[np.lexsort(np.transpose(total_diff[:,:-2]))]  # Sort by rows
             total_diff_list.append(total_diff)
 
-    total_length = sum(len(diff) for diff in total_diff_list)
-    if total_length ==0:
+    total_length = sum(len(diff) for diff in total_diff_list)  # Compute maximum shape of differential
+
+    if total_length ==0: # Trivial differential
         return matrix(ZZ,0,0),source_dim
+
+     # encode as sparse matrix. each entry is triple of two indices and the value at the two indices
     diff_entries = np.zeros((total_length,3),np.int64)
     j = -1
-    offset=0
+    offset=0 # Offset counting the number of rows already populated
+
+    # If two entries represent the same element in source column, put them in same row j.
+    # This loop merges this an populates a sparse matrix with correct row numbers.
     for total_diff in total_diff_list:
-        prev_row = np.zeros_like(total_diff[0,:-2])-1
+        prev_row = np.zeros_like(total_diff[0,:-2])-1  # every row is different from this one
         for i in range(len(total_diff)):
             row_num = i+offset
             row = total_diff[i,:-2]
-            if np.any(np.not_equal(row,prev_row)):
+            if np.any(np.not_equal(row,prev_row)): # if row is different, it will have different index
                 j+=1
                 prev_row = row
-            diff_entries[row_num,0] = j
+            diff_entries[row_num,0] = j # populate sparse matrix
             diff_entries[row_num,1:] = total_diff[i,-2:]
         offset+=len(total_diff)
     j+=1
 
+    # turn sparse differential matrix into dense one.
     d_dense = matrix(ZZ,j,max(diff_entries[:,1])+1)
     for i in range(len(diff_entries)):
         d_dense[diff_entries[i,0],diff_entries[i,1]] = diff_entries[i,2]
