@@ -549,13 +549,22 @@ class FastModuleFactory:
                       'h': self.basis['h'],
                       'b+': self.basis['b+'],
                       'b': self.parabolic_p_basis(None)}
+
+        # The acting module shouldn't be parabolic. We could make this a feature.
+        acting_module_dic = {'g': self.g_basis,
+                      'n': self.parabolic_n_basis(None),
+                      'u': self.parabolic_u_basis(None),
+                      'p': self.parabolic_p_basis(None),
+                      'h': self.basis['h'],
+                      'b+': self.basis['b+'],
+                      'b': self.parabolic_p_basis(None)}
         if subalgebra not in module_dic.keys():
             raise ValueError('Unknown subalgebra \'%s\'' % subalgebra)
         if acting_lie_algebra not in module_dic.keys():
             raise ValueError('Unknown subalgebra \'%s\'' % acting_lie_algebra)
 
         module = module_dic[subalgebra]
-        lie_alg = module_dic[acting_lie_algebra]
+        lie_alg = acting_module_dic[acting_lie_algebra]
 
         if action_type == 'ad':
             action = self.adjoint_action_tensor(lie_alg, module)
