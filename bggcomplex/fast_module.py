@@ -851,7 +851,7 @@ class BGGCohomology:
 
         # compute cohomology. If cohomology is trivial and only_non_zero is true, return.
         if i is None:
-            cohoms = [self.cohomology(i) for i in range(BGG.max_word_length)]
+            cohoms = [self.cohomology(i) for i in range(self.BGG.max_word_length)]
             max_len = max([len(cohom) for cohom in cohoms])
             if max_len==0:
                 display(Math(r'\mathrm H^\bullet' + display_string))
@@ -859,11 +859,11 @@ class BGGCohomology:
         else:
             cohoms = [self.cohomology(i)]
 
-        for cohom in cohoms:
+        for i,cohom in enumerate(cohoms):
             if (not only_non_zero) or (len(cohom)>0):
                 # Get LaTeX string of the highest weights + multiplicities
                 latex = self.cohom_to_latex(cohom)
-        
+
                 # Display the cohomology in the notebook using LaTeX rendering
                 display(Math(r'\mathrm H^{%d}' % i + display_string + latex))
 
