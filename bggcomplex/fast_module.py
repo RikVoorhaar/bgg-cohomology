@@ -16,8 +16,6 @@ from collections import defaultdict
 import numpy as np
 import warnings
 
-#import pyximport
-#pyximport.install(language_level=2)
 import cohomology
 
 INT_PRECISION = np.int32
@@ -40,7 +38,7 @@ class FastLieAlgebraCompositeModule:
         self.len_basis = len(set(itertools.chain.from_iterable(self.modules.values())))
         self.max_index = max(itertools.chain.from_iterable(self.modules.values()))
 
-        if self.len_basis*5<self.max_index:
+        if self.len_basis*5 < self.max_index:
             warnings.warn("""Maximum index %d is much higher than length of module basis %d. 
                 This may cause slowdown""" % (self.max_index,self.len_basis))
 
@@ -103,6 +101,10 @@ class FastLieAlgebraCompositeModule:
                                  dtype=INT_PRECISION)
                     )
                 elif tensor_type == 'wedge':  # Wedge power
+                    mod_dim = len(self.modules[module])  # Raise error if wedge power is too high
+                    if n_inputs > mod_dim:
+                        raise ValueError('Cannot take %d-fold wedge power of %d-dimensional module \'%s\'' %
+                                         (n_inputs, mod_dim, module))
                     tensor_components.append(
                         np.array(list(itertools.combinations(self.modules[module], n_inputs)), dtype=INT_PRECISION)
                     )
