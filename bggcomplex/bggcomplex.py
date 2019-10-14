@@ -59,10 +59,13 @@ class BGGComplex:
         self.reduced_words = sorted(self.reduced_word_dic.keys(),key=len) #sort the reduced words by their length
 
         self.column = defaultdict(list)
+        max_len = 0
         for red_word in self.reduced_words:
             length = len(red_word)
+            max_len=max(max_len, length)
             self.column[length] += [red_word]
-    
+        self.max_word_length = max_len
+
     def _construct_BGG_graph(self):
         """Find all the arrows in the BGG Graph.
         There is an arrow w->w' if len(w')=len(w)+1 and w' = t.w for some t in T."""

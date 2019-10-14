@@ -836,20 +836,12 @@ class BGGCohomology:
         # Return cohomology as sorted list of highest weight vectors and multiplicities.
         return sorted(cohomology.items(), key=lambda t: t[-1])
 
-    def cohomology_LaTeX(self, i, complex_string='', only_non_zero=False):
+    def cohomology_LaTeX(self, i=None, complex_string='', only_non_zero=True):
         """In a notebook we can use pretty display of cohomology output.
         Only displays cohomology, does not return anything.
         Input is degree i,
         complex_string, an optional string to cohom as H^i(complex_string) = ...
         only_non_zero, a bool indicating whether to print non-zero cohomologies."""
-
-        # compute cohomology. If cohomology is trivial and only_non_zero is true, return.
-        cohom = self.cohomology(i)
-        if only_non_zero and len(cohom) == 0:
-            return None
-
-        # Get LaTeX string of the highest weights + multiplicities
-        latex = self.cohom_to_latex(cohom)
 
         # If there is a complex_string, insert it between brackets, otherwise no brackets.
         if len(complex_string) > 0:
@@ -857,8 +849,23 @@ class BGGCohomology:
         else:
             display_string = r'='
 
-        # Display the cohomology in the notebook using LaTeX rendering
-        display(Math(r'\mathrm H^{%d}' % i + display_string + latex))
+        # compute cohomology. If cohomology is trivial and only_non_zero is true, return.
+        if i is None:
+            cohoms = [self.cohomology(i) for i in range(BGG.max_word_length)]
+            max_len = max([len(cohom) for cohom in cohoms])
+            if max_len==0:
+                display(Math(r'\mathrm H^\bullet' + display_string))
+                return None
+        else:
+            cohoms = [self.cohomology(i)]
+
+        for cohom in cohoms:
+            if (not only_non_zero) or (len(cohom)>0):
+                # Get LaTeX string of the highest weights + multiplicities
+                latex = self.cohom_to_latex(cohom)
+        
+                # Display the cohomology in the notebook using LaTeX rendering
+                display(Math(r'\mathrm H^{%d}' % i + display_string + latex))
 
     def tuple_to_latex(self, (mu, mult)):
         """LaTeX string representing a tuple of highest weight vector and it's multiplicity"""
