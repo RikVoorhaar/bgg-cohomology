@@ -5,7 +5,6 @@ is relatively critical for performance.
 """
 
 import numpy as np
-#cimport numpy as np  # pyximport fails to compile when loading external C libraries...
 
 from sage.matrix.constructor import matrix
 from sage.rings.integer_ring import ZZ
