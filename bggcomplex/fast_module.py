@@ -142,7 +142,7 @@ class FastLieAlgebraCompositeModule:
         # Then we split every time the weight changes, and store in a dictionary
         argsort = np.lexsort(np.transpose(tot_weight))
         split_dic = {}
-        last_weight = tot_weight[0]  # Keep track of weight
+        last_weight = tot_weight[argsort[0]]  # Keep track of weight, initial weight is first weight.
         current_inds = []
         for i in argsort:
             if np.all(np.equal(tot_weight[i], last_weight)): # If weight is the same
@@ -151,6 +151,9 @@ class FastLieAlgebraCompositeModule:
                 split_dic[tuple(last_weight)] = direct_sum_component[current_inds]
                 current_inds = [i]
                 last_weight = tot_weight[i]
+        # Also register the very last weight in consideration
+        split_dic[tuple(last_weight)] = direct_sum_component[current_inds]
+
         return split_dic
 
 
@@ -849,12 +852,12 @@ class BGGCohomology:
         else:
             display_string = r'='
 
-        # compute cohomology. If cohomology is trivial and only_non_zero is true, return.
+        # compute cohomology. If cohomology is trivial and only_non_zero is true, return nothing.
         if i is None:
             cohoms = [self.cohomology(i) for i in range(self.BGG.max_word_length)]
             max_len = max([len(cohom) for cohom in cohoms])
             if max_len==0:
-                display(Math(r'\mathrm H^\bullet' + display_string))
+                display(Math(r'\mathrm H^\bullet' + display_string+'0'))
                 return None
         else:
             cohoms = [self.cohomology(i)]
