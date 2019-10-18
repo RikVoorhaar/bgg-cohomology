@@ -591,6 +591,7 @@ class WeightSet:
         self.simple_roots = BGG.simple_roots
         self.rho = BGG.rho
         self.rank = BGG.rank
+        self.pos_roots = [self.tuple_to_weight(w) for w in BGG.neg_roots]
 
         # Matrix of all simple roots, for faster matrix solving
         self.simple_root_matrix = matrix([list(s.to_vector()) for s in self.simple_roots]).transpose()
@@ -674,6 +675,17 @@ class WeightSet:
         for w in self.reduced_words:
             vertex_weights[w] = tuple(self.dot_action(w, mu))
         return vertex_weights
+
+    def highest_weight_rep_dim(self, mu):
+        """Uses the Weyl dimension formula to obtain the dimension of the highest weight
+        representation of a integral dominant weight `mu`."""
+        mu_weight = self.tuple_to_weight(mu)
+        numerator = 1
+        denominator = 1
+        for alpha in self.pos_roots:
+            numerator *= (mu_weight+self.rho).dot_product(alpha)
+            denominator *= (self.rho.dot_product(alpha))
+        return numerator//denominator
 
 
 class BGGCohomology:
@@ -837,9 +849,21 @@ class BGGCohomology:
                 cohomology[w] += cohom_dim
 
         # Return cohomology as sorted list of highest weight vectors and multiplicities.
-        return sorted(cohomology.items(), key=lambda t: t[-1])
+        # The sorting order is the same as how we normally sort weights
+        return sorted(cohomology.items(), key=lambda t: (sum(t[0]), t[0][::-1]))
 
-    def cohomology_LaTeX(self, i=None, complex_string='', only_non_zero=True):
+    def betti_number(self, cohomology):
+        """Given a list of highest weight vectors + multiplicities, compute
+        the associated betti numbers by taking a weighted sum of the dimensions of
+        the associated highest weight representations.
+        """
+        betti_num = 0
+        for mu, mult in cohomology:
+            dim = self.weight_set.highest_weight_rep_dim(mu)
+            betti_num+=dim*mult
+        return betti_num
+
+    def cohomology_LaTeX(self, i=None, complex_string='', only_non_zero=True, print_betti=True):
         """In a notebook we can use pretty display of cohomology output.
         Only displays cohomology, does not return anything.
         Input is degree i,
@@ -869,6 +893,10 @@ class BGGCohomology:
 
                 # Display the cohomology in the notebook using LaTeX rendering
                 display(Math(r'\mathrm H^{%d}' % i + display_string + latex))
+                if print_betti:
+                    betti_num = self.betti_number(cohom)
+                    display(Math(r'\mathrm b^{%d}' % i + display_string + str(betti_num)))
+
 
     def tuple_to_latex(self, (mu, mult)):
         """LaTeX string representing a tuple of highest weight vector and it's multiplicity"""
