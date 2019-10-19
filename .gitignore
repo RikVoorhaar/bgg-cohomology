@@ -2,6 +2,7 @@
 .idea
 .project
 .pydevproject
+plan.md
 bggcomplex/.idea
 bggcomplex/.ipynb_checkpoints
 bggcomplex/build
