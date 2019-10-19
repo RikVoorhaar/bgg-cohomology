@@ -863,12 +863,15 @@ class BGGCohomology:
             betti_num+=dim*mult
         return betti_num
 
-    def cohomology_LaTeX(self, i=None, complex_string='', only_non_zero=True, print_betti=True):
+    def cohomology_LaTeX(self, i=None, complex_string='', only_non_zero=True, print_betti=True, print_modules= True):
         """In a notebook we can use pretty display of cohomology output.
         Only displays cohomology, does not return anything.
-        Input is degree i,
-        complex_string, an optional string to cohom as H^i(complex_string) = ...
-        only_non_zero, a bool indicating whether to print non-zero cohomologies."""
+        We have the following options:
+        i = None, degree to compute cohomology. If none, compute in all degrees
+        complex_string ='', an optional string to cohom as H^i(complex_string) = ...
+        only_non_zero = True, a bool indicating whether to print non-zero cohomologies.
+        print_betti = True, print the Betti numbers
+        print_modules = True, print the decomposition of cohomology into highest weight reps"""
 
         # If there is a complex_string, insert it between brackets, otherwise no brackets.
         if len(complex_string) > 0:
@@ -888,11 +891,15 @@ class BGGCohomology:
 
         for i,cohom in enumerate(cohoms):
             if (not only_non_zero) or (len(cohom)>0):
-                # Get LaTeX string of the highest weights + multiplicities
-                latex = self.cohom_to_latex(cohom)
+                # Print the decomposition into highest weight modules.
+                if print_modules:
+                    # Get LaTeX string of the highest weights + multiplicities
+                    latex = self.cohom_to_latex(cohom)
 
-                # Display the cohomology in the notebook using LaTeX rendering
-                display(Math(r'\mathrm H^{%d}' % i + display_string + latex))
+                    # Display the cohomology in the notebook using LaTeX rendering
+                    display(Math(r'\mathrm H^{%d}' % i + display_string + latex))
+
+                # Print just dimension of cohomology
                 if print_betti:
                     betti_num = self.betti_number(cohom)
                     display(Math(r'\mathrm b^{%d}' % i + display_string + str(betti_num)))

@@ -14,7 +14,11 @@ from numpy import array
 from compute_signs import compute_signs
 from compute_maps import BGGMapSolver
 
+from fast_module import WeightSet
+
 from collections import defaultdict
+
+from IPython.display import display, Math, Latex
 
 
 class BGGComplex:
@@ -223,3 +227,60 @@ class BGGComplex:
         action = self._action_dic[w]
         mu_action = sum([action[i] * int(c) for i, c in mu.monomial_coefficients().items()], self.lattice.zero())
         return mu_action + self._rho_action_dic[w]
+
+    def display_pbw(self, f, notebook=True):
+        """Typesets an element of PBW of the universal enveloping algebra with LaTeX.
+        Options: notebook = True; uses IPython display with math if True, otherwise just returns the LaTeX code."""
+
+        map_string = []
+        first_term = True
+        for monomial, coefficient in f.monomial_coefficients().items():
+            alphas = monomial.dict().items()
+
+            if first_term:
+                if coefficient < 0:
+                    sign_string = '-'
+                else:
+                    sign_string = ''
+                first_term = False
+            else:
+                if coefficient < 0:
+                    sign_string = '-'
+                else:
+                    sign_string = '+'
+            if abs(coefficient) == 1:
+                coeff_string = ''
+            else:
+                coeff_string = str(abs(coefficient))
+            term_strings = [sign_string + coeff_string]
+            for alpha, power in alphas:
+                if power > 1:
+                    power_string = r'^{' + str(power) + r'}'
+                else:
+                    power_string = ''
+                alpha_string = ''.join(str(k) * int(-v) for k, v in alpha.monomial_coefficients().items())
+                term_strings.append(r'f_{' + alpha_string + r'}' + power_string)
+
+            map_string.append(r'\,'.join(term_strings))
+        if notebook:
+            display(Math(' '.join(map_string)))
+        else:
+            return ' '.join(map_string)
+
+    def _display_map(self, arrow, f):
+        """Displays a single arrow plus map of the BGG complex"""
+
+        f_string = self.display_pbw(f, notebook=False)
+        display(Math(r'\to'.join(arrow) + r',\,\,' + f_string))
+
+    def display_maps(self, mu):
+        """Displays all the maps of the BGG complex for a given mu, in appropriate order.
+        mu is assumed to be a tuple encoding it as a linear combination of weights."""
+
+        mu_weight = WeightSet(self).tuple_to_weight(mu)
+        if not mu_weight.is_dominant():
+            raise ValueError('The weight %s is not dominant.' % mu)
+        maps = self.compute_maps(self.weight_to_alpha_sum(mu_weight))
+        maps = sorted(maps.items(), key=lambda s: (len(s[0][0]), s[0]))
+        for arrow, f in maps:
+            self._display_map(arrow, f)
