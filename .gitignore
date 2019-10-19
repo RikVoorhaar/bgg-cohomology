@@ -4,6 +4,7 @@
 .pydevproject
 bggcomplex/.idea
 bggcomplex/.ipynb_checkpoints
+bggcomplex/build
 computations/.ipynb_checkpoints
 examples/.ipynb_checkpoints
 */.ipynb_checkpoints
