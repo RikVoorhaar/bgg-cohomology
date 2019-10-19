@@ -1,14 +1,18 @@
 ## bgg-cohomology
 
-This is an implementation of a computer algorithm to compute the BGG cohomology of a Lie algebra module. 
+This is an implementation of a computer algorithm to compute the BGG resolution and its cohomology 
+of a Verma module. 
 
-## Usage
+## Installation
 
-This module requires `sagemath`, and currently also `numpy-indexed`. 
-To install this module, clone or download the repository. Then use `import` statements in sage to 
-use the package. 
+Clone or download the repository, and run the following command in the `bggcomplex` folder to 
+compile the code before first usage.
+    
+    sage setup.py build_ext -i
 
-Examples of usage of this package are in the in the form of Jupyter notebooks in the `examples` directory. Do not hesitate to contact us if more detailed instructions are required. 
+There is a basic tutorial of how to use this module in the `examples` directory. 
+Furthermore the `computations` directory contains notebooks with the code we used
+for the results in our preprint. 
 
 ## To do
 
@@ -16,13 +20,13 @@ Several important features are currently in development.
 - Parallelize the computationally intensive parts of the algorithm
 - Add support for a wider class of Lie algebra modules. In particular kernels/cokernels/quotients.
 
-We welcome all feature requests for academic purposes. 
+We welcome all suggestions and feature requests for academic purposes. 
 
 ## Credit
 All the code has been written by **Rik Voorhaar**. 
- Additional credit goes to **Nicolas Hemelsoet** for many aspects of the algorithm implemented here, 
- and **Anna Lachowska** who gave a lot of advice on the mathematical aspects of this project. 
+ Additional credit goes to **Nicolas Hemelsoet** for many aspects of the algorithm implemented here.
  This work has been partially financially supported by **NCCR SwissMAP**. 
  
-This software is free to use and edit. When using this software for academic purposes, please cite the relevant paper on the arXiv. 
+This software is free to use and edit. When using this software for academic purposes, please cite 
+the relevant preprint on the arXiv. 
  (Link to be added once the paper is actually on the arXiv.)
