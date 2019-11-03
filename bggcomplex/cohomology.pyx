@@ -9,7 +9,7 @@ import numpy as np
 from sage.matrix.constructor import matrix
 from sage.rings.integer_ring import ZZ
 
-cdef compute_action(acting_element, action_source, module):
+cpdef compute_action(acting_element, action_source, module):
     """Computes action of a single lie algebra element on a list of elements of the module. 
     Outputs a new array where indices and coefficients are replaced as per the action. 
     The output is unsorted, and may contain duplicate entries. """
@@ -201,6 +201,11 @@ def compute_diff(cohom,mu,i):
                             weight_comp = wc[-1]
                             # compute the action of the PBW element
                             basis_action = action_on_basis(maps[a]*sign,weight_comp,module,factory,comp_num)
+                            if cohom.has_coker:
+                                ##(target_module, coker, action_image, mu0, mu1, component=0
+                                basis_action = coker_reduce(cohom.weight_module,cohom.coker, basis_action,
+                                                            initial_vertex, vertex_weights[a[1]],
+                                                            component=comp_num)
                             if len(basis_action)>0:
                                 max_ind = max(max_ind,basis_action[-1,-2])
                                 action_images.append(basis_action)
@@ -233,6 +238,7 @@ def compute_diff(cohom,mu,i):
 
     # If two entries represent the same element in source column, put them in same row j.
     # This loop merges this an populates a sparse matrix with correct row numbers.
+
     for total_diff in total_diff_list:
         prev_row = np.zeros_like(total_diff[0,:-2])-1  # every row is different from this one
         for i in range(len(total_diff)):
@@ -252,3 +258,66 @@ def compute_diff(cohom,mu,i):
         d_dense[diff_entries[i,0],diff_entries[i,1]] = diff_entries[i,2]
 
     return d_dense, source_dim
+
+def coker_reduce(target_module, coker, action_image, mu0, mu1, component=0):
+    """Projects source and target of an action in the coker quotient coker(f), f:M->N.
+    Returns action in the basis of the cokernel.
+    `source_module` is the module M
+    `target_module` is the module N
+    `coker` is a dictionary encoding a basis of the coker in each weight component of N
+    `action_image` is what action_on_basis returns.
+    `component` is the index of the direct sum component
+    We assume we acted with a map `mu0`->`mu1` in action_on_basis.
+    """
+    num_cols = action_image.shape[1]-2
+
+    if mu1 not in target_module.weight_components:
+        return []
+
+    if mu0 in coker:
+        new_images = np.zeros((action_image.shape[0]*coker[mu0].nrows(),action_image.shape[1]),dtype=action_image.dtype)
+        current_row = 0
+        for i,row in enumerate(coker[mu0].rows()):
+            for action_row in action_image:
+                j = action_row[-2]
+                if row[j]!=0:
+                    new_images[current_row] = action_row
+                    new_images[current_row][-2]=i
+                    new_images[current_row][-1]*=row[j]
+                    current_row+=1
+        action_image = new_images[:current_row]
+    for c,b in target_module.weight_components[mu1]:
+        if c == component:
+            target_basis = b
+    target_basis_dic = {tuple(row):i for i,row in enumerate(target_basis)}
+
+    action_image_coker = np.zeros((action_image.shape[0],3),dtype=action_image.dtype)
+    for i,row in enumerate(action_image):
+        j = target_basis_dic[tuple(row[:num_cols])]
+        action_image_coker[i][0]=j
+        action_image_coker[i][1:] = row[num_cols:]
+
+
+    if mu1 in coker:
+        new_image_coker = np.zeros((action_image_coker.shape[0]*coker[mu1].ncols(),3),dtype=action_image.dtype)
+        current_row = 0
+        for i,col in enumerate(coker[mu1].rows()):
+            for action_row in action_image_coker:
+                j = action_row[0]
+                try:
+                    if col[j]!=0:
+                        new_image_coker[current_row]=action_row
+                        new_image_coker[current_row][0]=i
+                        new_image_coker[current_row][2]*=col[j]
+                        current_row+=1
+                except IndexError as error:
+                    print(action_image_coker)
+                    print(target_basis_dic)
+                    print(coker[mu1])
+                    print(mu0,mu1)
+                    print(coker[mu1].nrows(),coker[mu1].ncols())
+                    raise error
+    else:
+        new_image_coker = action_image_coker
+        current_row = len(new_image_coker)
+    return sort_merge(new_image_coker[:current_row])

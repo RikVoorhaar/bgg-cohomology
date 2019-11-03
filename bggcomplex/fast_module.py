@@ -687,16 +687,21 @@ class WeightSet:
             denominator *= (self.rho.dot_product(alpha))
         return numerator//denominator
 
-
 class BGGCohomology:
     """Class for computing the BGG cohomology of a module. This is a seperate class because it needs to comunicate
     between the module and the BGG complex.
     Input is a BGGComplex instance, and a FastLieAlgebraCompositeModule instance."""
 
-    def __init__(self, BGG, weight_module):
+    def __init__(self, BGG, weight_module, coker=None):
         self.BGG = BGG
         self.BGG.compute_signs()  # Make sure BGG signs are computed.
         self.weight_module = weight_module
+        if coker is not None:
+            self.has_coker = True
+            self.coker = coker
+        else:
+            self.has_coker = False
+
         self.weights = weight_module.weight_components.keys()
         self.weight_set = WeightSet(BGG)
 
