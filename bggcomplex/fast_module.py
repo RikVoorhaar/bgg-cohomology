@@ -841,6 +841,7 @@ class BGGCohomology:
 
         cohomology = defaultdict(int)
 
+
         # For isolated weights, multiplicity is just the module dimension
         for w, w_dom in dominant_trivial:
             cohom_dim = self.weight_module.dimensions[w]
@@ -868,14 +869,14 @@ class BGGCohomology:
             betti_num+=dim*mult
         return betti_num
 
-    def cohomology_LaTeX(self, i=None, complex_string='', only_non_zero=True, print_betti=True, print_modules= True):
+    def cohomology_LaTeX(self, i=None, complex_string='', only_non_zero=True, print_betti=False, print_modules= True):
         """In a notebook we can use pretty display of cohomology output.
         Only displays cohomology, does not return anything.
         We have the following options:
         i = None, degree to compute cohomology. If none, compute in all degrees
         complex_string ='', an optional string to cohom as H^i(complex_string) = ...
         only_non_zero = True, a bool indicating whether to print non-zero cohomologies.
-        print_betti = True, print the Betti numbers
+        print_betti = False, print the Betti numbers
         print_modules = True, print the decomposition of cohomology into highest weight reps"""
 
         # If there is a complex_string, insert it between brackets, otherwise no brackets.
@@ -886,15 +887,15 @@ class BGGCohomology:
 
         # compute cohomology. If cohomology is trivial and only_non_zero is true, return nothing.
         if i is None:
-            cohoms = [self.cohomology(i) for i in range(self.BGG.max_word_length)]
-            max_len = max([len(cohom) for cohom in cohoms])
+            cohoms = [(j, self.cohomology(j)) for j in range(self.BGG.max_word_length+1)]
+            max_len = max([len(cohom) for _, cohom in cohoms])
             if max_len==0:
                 display(Math(r'\mathrm H^\bullet' + display_string+'0'))
                 return None
         else:
-            cohoms = [self.cohomology(i)]
+            cohoms = [(i, self.cohomology(i))]
 
-        for i,cohom in enumerate(cohoms):
+        for i, cohom in cohoms:
             if (not only_non_zero) or (len(cohom)>0):
                 # Print the decomposition into highest weight modules.
                 if print_modules:

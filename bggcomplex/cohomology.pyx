@@ -175,12 +175,28 @@ def compute_diff(cohom,mu,i):
     column = BGG.column[i]
     delta_i_arrows = [(w, [arrow for arrow in BGG.arrows if arrow[0] == w]) for w in column]
 
+    if cohom.has_coker:
+        target_column = BGG.column[i+1]
+        target_col_dic  = {w:vertex_weights[w] for w in target_column}
+
+        offset = 0
+        for w,mu in target_col_dic.items():
+            target_col_dic[w] = offset
+            if mu in cohom.coker:
+                offset+=cohom.coker[mu].nrows()
+            else:
+                if mu in cohom.weight_module.dimensions:
+                    offset+=cohom.weight_module.dimensions[mu]
+
     # Compute dimension of source space by adding dimensions of weight components in the column
     source_dim = 0
     for w in column:
         initial_vertex = vertex_weights[w]
         if initial_vertex in cohom.weights:
-            source_dim += cohom.weight_module.dimensions[initial_vertex]
+            if cohom.has_coker and (initial_vertex in cohom.coker):
+                source_dim += cohom.coker[initial_vertex].nrows()
+            else:
+                source_dim += cohom.weight_module.dimensions[initial_vertex]
 
 
     offset = 0
@@ -201,11 +217,17 @@ def compute_diff(cohom,mu,i):
                             weight_comp = wc[-1]
                             # compute the action of the PBW element
                             basis_action = action_on_basis(maps[a]*sign,weight_comp,module,factory,comp_num)
+
                             if cohom.has_coker:
                                 ##(target_module, coker, action_image, mu0, mu1, component=0
+
                                 basis_action = coker_reduce(cohom.weight_module,cohom.coker, basis_action,
                                                             initial_vertex, vertex_weights[a[1]],
                                                             component=comp_num)
+                                if len(basis_action)>0:
+                                    basis_action[:,0]+=target_col_dic[a[1]]
+
+
                             if len(basis_action)>0:
                                 max_ind = max(max_ind,basis_action[-1,-2])
                                 action_images.append(basis_action)
@@ -213,6 +235,7 @@ def compute_diff(cohom,mu,i):
 
                 if len(action_images)>0:
                     # Concatenate images for each arrow to get total image
+
                     sub_diff = np.concatenate(action_images)
 
                     # Each basis element of weight component gets index
@@ -275,7 +298,7 @@ def coker_reduce(target_module, coker, action_image, mu0, mu1, component=0):
         return []
 
     if mu0 in coker:
-        new_images = np.zeros((action_image.shape[0]*coker[mu0].nrows(),action_image.shape[1]),dtype=action_image.dtype)
+        new_images = np.zeros((action_image.shape[0]*coker[mu0].ncols(),action_image.shape[1]),dtype=action_image.dtype)
         current_row = 0
         for i,row in enumerate(coker[mu0].rows()):
             for action_row in action_image:
@@ -291,11 +314,14 @@ def coker_reduce(target_module, coker, action_image, mu0, mu1, component=0):
             target_basis = b
     target_basis_dic = {tuple(row):i for i,row in enumerate(target_basis)}
 
+
     action_image_coker = np.zeros((action_image.shape[0],3),dtype=action_image.dtype)
     for i,row in enumerate(action_image):
         j = target_basis_dic[tuple(row[:num_cols])]
         action_image_coker[i][0]=j
         action_image_coker[i][1:] = row[num_cols:]
+
+
 
 
     if mu1 in coker:
@@ -304,20 +330,14 @@ def coker_reduce(target_module, coker, action_image, mu0, mu1, component=0):
         for i,col in enumerate(coker[mu1].rows()):
             for action_row in action_image_coker:
                 j = action_row[0]
-                try:
-                    if col[j]!=0:
-                        new_image_coker[current_row]=action_row
-                        new_image_coker[current_row][0]=i
-                        new_image_coker[current_row][2]*=col[j]
-                        current_row+=1
-                except IndexError as error:
-                    print(action_image_coker)
-                    print(target_basis_dic)
-                    print(coker[mu1])
-                    print(mu0,mu1)
-                    print(coker[mu1].nrows(),coker[mu1].ncols())
-                    raise error
+                if col[j]!=0:
+                    new_image_coker[current_row]=action_row
+                    new_image_coker[current_row][0]=i
+                    new_image_coker[current_row][2]*=col[j]
+                    current_row+=1
     else:
         new_image_coker = action_image_coker
         current_row = len(new_image_coker)
+
+
     return sort_merge(new_image_coker[:current_row])
