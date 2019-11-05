@@ -28,5 +28,4 @@ All the code has been written by **Rik Voorhaar**.
  This work has been partially financially supported by **NCCR SwissMAP**. 
  
 This software is free to use and edit. When using this software for academic purposes, please cite 
-the relevant preprint on the arXiv. 
- (Link to be added once the paper is actually on the arXiv.)
+the following preprint: https://arxiv.org/abs/1911.00871
