@@ -5,8 +5,10 @@ of a Verma module.
 
 ## Installation
 
+Install sagemath. The code was developed in version 8.6, and has been tested to work with sage 8.9.
+
 Clone or download the repository, and run the following command in the `bggcomplex` folder to 
-compile the code before first usage.
+compile the code before first usage. 
     
     sage setup.py build_ext -i
 
@@ -17,8 +19,8 @@ for the results in our preprint.
 ## To do
 
 Several important features are currently in development.
-- Parallelize the computationally intensive parts of the algorithm
-- Add support for a wider class of Lie algebra modules. In particular kernels/cokernels/quotients.
+- Optimize the computation of BGG maps
+- Add support for a wider class of Lie algebra modules.
 
 We welcome all suggestions and feature requests for academic purposes. 
 
