@@ -6,7 +6,7 @@ subsequently compute the cohomology of the module. See the example notebooks on 
 for explanation of usage.
 """
 
-#import numpy_indexed as npi+
+# import numpy_indexed as npi
 from IPython.display import display, Math, Latex
 from sympy.utilities.iterables import subsets
 from sage.rings.integer_ring import ZZ
@@ -53,6 +53,28 @@ class FastLieAlgebraCompositeModule:
 
         # Compute the dimension of each weight component
         self.dimensions = {w: sum((len(c) for _, c in p)) for w, p in self.weight_components.items()}
+
+        # Compute the dimension of each weight component for each direct sum component
+        self.dimensions_components = [{w: sum((len(c) for c_num, c in p if c_num == j))
+                                       for w, p in self.weight_components.items()}
+                                      for j in range(len(self.components))]
+
+        # Creates a dictionary that assigns to each weight a dictionary sending row+direct sum component to an index.
+        self.weight_comp_index_numbers = dict()
+        self.weight_comp_direct_sum_index_numbers = dict()
+        for mu, components in self.weight_components.items():
+            i = 0
+            basis_dic = dict()
+            basis_dic_direct_sum = dict()
+            for c, basis in components:
+                j = 0
+                for b in basis:
+                    basis_dic[tuple(list(b) + [c])] = i
+                    basis_dic_direct_sum[tuple(list(b) + [c])] = j
+                    i += 1
+                    j += 1
+            self.weight_comp_index_numbers[mu] = basis_dic
+            self.weight_comp_direct_sum_index_numbers[mu] = basis_dic_direct_sum
 
         # for each direct sum component, store a list which lists the module type for each tensor slot
         self.type_lists = []
@@ -426,7 +448,6 @@ class FastModuleFactory:
 
         # Make a list of indices for the (non parabolic) 'g','u','n','b'
         self.basis = dict()
-        self.basis['g'] = sorted(self.root_to_index.keys())
         self.basis['u'] = sorted([self.root_to_index[r] for r in self.e_roots])
         self.basis['n'] = sorted([self.root_to_index[r] for r in self.f_roots])
         self.basis['h'] = sorted([self.root_to_index[r] for r in self.h_roots])
@@ -687,18 +708,25 @@ class WeightSet:
             denominator *= (self.rho.dot_product(alpha))
         return numerator//denominator
 
-
 class BGGCohomology:
     """Class for computing the BGG cohomology of a module. This is a seperate class because it needs to comunicate
     between the module and the BGG complex.
     Input is a BGGComplex instance, and a FastLieAlgebraCompositeModule instance."""
 
-    def __init__(self, BGG, weight_module):
+    def __init__(self, BGG, weight_module, coker=None):
         self.BGG = BGG
         self.BGG.compute_signs()  # Make sure BGG signs are computed.
         self.weight_module = weight_module
+        if coker is not None:
+            self.has_coker = True
+            self.coker = coker
+        else:
+            self.has_coker = False
+
         self.weights = weight_module.weight_components.keys()
         self.weight_set = WeightSet(BGG)
+
+        self.num_components = len(self.weight_module.components)
 
         self.regular_weights = self.weight_set.compute_weights(self.weights)  # Find dot-regular weights
 
@@ -792,8 +820,6 @@ class BGGCohomology:
         # Use the dictionary above to build a sparse matrix
         differential_matrix = matrix(ZZ, len(row_list), len(hash_dic), sparse_dic, sparse=True)
 
-        print(differential_matrix)
-
         # Return the sparse matrix as well as the dimension of the source space (because zero rows are omitted).
         return differential_matrix, source_dim
 
@@ -836,6 +862,7 @@ class BGGCohomology:
 
         cohomology = defaultdict(int)
 
+
         # For isolated weights, multiplicity is just the module dimension
         for w, w_dom in dominant_trivial:
             cohom_dim = self.weight_module.dimensions[w]
@@ -863,14 +890,14 @@ class BGGCohomology:
             betti_num+=dim*mult
         return betti_num
 
-    def cohomology_LaTeX(self, i=None, complex_string='', only_non_zero=True, print_betti=True, print_modules= True):
+    def cohomology_LaTeX(self, i=None, complex_string='', only_non_zero=True, print_betti=False, print_modules= True):
         """In a notebook we can use pretty display of cohomology output.
         Only displays cohomology, does not return anything.
         We have the following options:
         i = None, degree to compute cohomology. If none, compute in all degrees
         complex_string ='', an optional string to cohom as H^i(complex_string) = ...
         only_non_zero = True, a bool indicating whether to print non-zero cohomologies.
-        print_betti = True, print the Betti numbers
+        print_betti = False, print the Betti numbers
         print_modules = True, print the decomposition of cohomology into highest weight reps"""
 
         # If there is a complex_string, insert it between brackets, otherwise no brackets.
@@ -881,15 +908,15 @@ class BGGCohomology:
 
         # compute cohomology. If cohomology is trivial and only_non_zero is true, return nothing.
         if i is None:
-            cohoms = [self.cohomology(i) for i in range(self.BGG.max_word_length)]
-            max_len = max([len(cohom) for cohom in cohoms])
+            cohoms = [(j, self.cohomology(j)) for j in range(self.BGG.max_word_length+1)]
+            max_len = max([len(cohom) for _, cohom in cohoms])
             if max_len==0:
                 display(Math(r'\mathrm H^\bullet' + display_string+'0'))
                 return None
         else:
-            cohoms = [self.cohomology(i)]
+            cohoms = [(i, self.cohomology(i))]
 
-        for i,cohom in enumerate(cohoms):
+        for i, cohom in cohoms:
             if (not only_non_zero) or (len(cohom)>0):
                 # Print the decomposition into highest weight modules.
                 if print_modules:

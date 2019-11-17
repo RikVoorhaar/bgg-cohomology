@@ -14,6 +14,7 @@ from multiprocessing import cpu_count
 from sage.parallel.decorate import parallel
 from sage.matrix.constructor import matrix
 from sage.rings.integer_ring import ZZ
+from sage.rings.rational import Rational
 from sage.modules.free_module_element import vector
 from collections import defaultdict
 
@@ -214,7 +215,7 @@ class BGGMapSolver:
         #    sol = lstsq(A, b)
         #    sol = around(sol[0]).astype(int16) #without the 'around' type conversion goes wrong for whatever reason
 
-        output = sum(int(c) * basis[i] for i, c in enumerate(sol))
+        output = sum(Rational(c) * basis[i] for i, c in enumerate(sol))
         self.timer['linalg']+=time()-t
 
         self.maps[problem['edge']] = output

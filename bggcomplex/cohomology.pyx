@@ -8,8 +8,9 @@ import numpy as np
 
 from sage.matrix.constructor import matrix
 from sage.rings.integer_ring import ZZ
+from sage.rings.rational import Rational
 
-cdef compute_action(acting_element, action_source, module):
+cpdef compute_action(acting_element, action_source, module, comp_num):
     """Computes action of a single lie algebra element on a list of elements of the module. 
     Outputs a new array where indices and coefficients are replaced as per the action. 
     The output is unsorted, and may contain duplicate entries. """
@@ -18,7 +19,7 @@ cdef compute_action(acting_element, action_source, module):
     action_image = np.zeros_like(action_source)
 
     # Get component types. Each type has a different action of the Lie algebra
-    type_list = module.type_lists[0]
+    type_list = module.type_lists[comp_num]
     cdef image_row = 0 # counter for which row to edit in output
     cdef max_rows = len(action_image)
 
@@ -143,18 +144,26 @@ cpdef action_on_basis(pbw_elt,wmbase,module,factory,comp_num):
         action_image[:,-1]*=coefficient # mutliply results by coefficient of monomial
         for term in monomial.to_word_list()[::-1]: # Right action, so we take terms of the monomial in inverse order
             index = factory.root_to_index[term] # get the index of the term
-            action_image = compute_action(index, action_image, module) # compute the action
+            action_image = compute_action(index, action_image, module, comp_num) # compute the action
         action_list.append(action_image)
     action_image = np.concatenate(action_list) # concatenate and merge is equivalent to summing the results.
     if len(action_image)==0: # merging gives errors for empty matrices
         return action_image
     else:
         sort_cols(module,action_image,comp_num) # Sort and merge
-        return sort_merge(action_image)
+        action_image = sort_merge(action_image)
 
+        return action_image
 
+def check_weights(module,action_image):
+    weights = set()
+    for row in action_image[:,:-2]:
+        mu = sum(module.weight_dic[s] for s in row)
+        weights.add(tuple(mu))
+    if len(weights)>1:
+        raise ValueError("Found too many weights :(")
 
-def compute_diff(cohom,mu,i):
+def compute_diff(cohom, mu, i):
     """"
     Computes the BGG differential associated to a BGGCohomology object, weight mu and degree i.
     The matrix produced is of the correct rank, but omits some rows consisting entirely of zeros.
@@ -175,75 +184,124 @@ def compute_diff(cohom,mu,i):
     column = BGG.column[i]
     delta_i_arrows = [(w, [arrow for arrow in BGG.arrows if arrow[0] == w]) for w in column]
 
+
+    target_column = BGG.column[i+1]
+    target_col_dic = {w:vertex_weights[w] for w in target_column}
+
+    offset = 0
+    for w,mu in target_col_dic.items():
+        target_col_dic[w] = offset
+        if cohom.has_coker and (mu in cohom.coker):
+            offset+=cohom.coker[mu].nrows()
+        else:
+            if mu in module.dimensions:
+                offset+=module.dimensions[mu]
+
     # Compute dimension of source space by adding dimensions of weight components in the column
     source_dim = 0
     for w in column:
         initial_vertex = vertex_weights[w]
         if initial_vertex in cohom.weights:
-            source_dim += cohom.weight_module.dimensions[initial_vertex]
+            if cohom.has_coker and (initial_vertex in cohom.coker):
+                source_dim += cohom.coker[initial_vertex].nrows()
+            else:
+                source_dim += cohom.weight_module.dimensions[initial_vertex]
 
 
     offset = 0
-    total_diff_list = []
-    for comp_num in range(len(module.components)):  # iterate over direct sum components
-        total_diff=[]
-        for w, arrows in delta_i_arrows:
-            initial_vertex = vertex_weights[w]  # weight of vertex
-            if initial_vertex in cohom.weights:  # Ensure weight component isn't empty
-                action_images = []
-                max_ind = 0  # Keep track of biggest index
-                for a in arrows: # Compute image for each arrow
-                    sign = BGG.signs[a] # Multiply everything by the sign of the map in BGG complex
+    total_diff=[]
+    for w, arrows in delta_i_arrows:
+        initial_vertex = vertex_weights[w]  # weight of vertex
+        if initial_vertex in cohom.weights:  # Ensure weight component isn't empty
+            action_images = []
+            max_ind = 0  # Keep track of biggest index
+            for a in arrows: # Compute image for each arrow
+                final_vertex = vertex_weights[a[1]]
 
-                    # Find the right direct sum component. If direct sum component doesn't have this weight, do nothing.
-                    for wc in module.weight_components[initial_vertex]:
-                        if wc[0]==comp_num:
-                            weight_comp = wc[-1]
-                            # compute the action of the PBW element
-                            basis_action = action_on_basis(maps[a]*sign,weight_comp,module,factory,comp_num)
-                            if len(basis_action)>0:
-                                max_ind = max(max_ind,basis_action[-1,-2])
-                                action_images.append(basis_action)
-                            break
+                sign = BGG.signs[a] # Multiply everything by the sign of the map in BGG complex
 
-                if len(action_images)>0:
-                    # Concatenate images for each arrow to get total image
-                    sub_diff = np.concatenate(action_images)
+                comp_offset_s = 0
+                comp_offset_t = 0
+                max_ind_comp = 0
 
-                    # Each basis element of weight component gets index
-                    # Because we have multiple weight components, we need to add a number to this index
-                    # So that index remains unique across multiple components
-                    sub_diff[:,-2]+=offset
-                    offset+=max_ind+1
-                    total_diff.append(sub_diff)
-        if len(total_diff)>0: # Sometimes action is trivial, would otherwise raise errors
-            total_diff = np.concatenate(total_diff)  # concatenate maps for each vertex in column
-            total_diff = total_diff[np.lexsort(np.transpose(total_diff[:,:-2]))]  # Sort by rows
-            total_diff_list.append(total_diff)
+                for comp_num,weight_comp in module.weight_components[initial_vertex]:
+                    # compute the action of the PBW element
+                    # map is multiplied by sign. Need to convert sign to Rational to avoid errors in newer sage version
+                    basis_action = action_on_basis(maps[a]*Rational(sign),weight_comp,module,factory,comp_num)
 
-    total_length = sum(len(diff) for diff in total_diff_list)  # Compute maximum shape of differential
 
-    if total_length ==0: # Trivial differential
+                    basis_action[:,-2] += comp_offset_s # update source
+
+                    try:
+                        comp_offset_s += module.dimensions_components[comp_num][initial_vertex]
+                    except KeyError:
+                        pass
+
+
+                    if cohom.has_coker:
+
+                        basis_action = coker_reduce(cohom.weight_module,cohom.coker, basis_action,
+                                                    initial_vertex, final_vertex,
+                                                    component=comp_num)
+
+                        if len(basis_action)>0:
+                            basis_action[:,0]+=target_col_dic[a[1]]
+
+                            action_images.append(basis_action)
+
+                    if len(basis_action)>0:
+                        if not cohom.has_coker:
+                            new_basis_action = np.zeros(shape=(basis_action.shape[0],3),dtype=basis_action.dtype)
+
+                            target_basis_dic = module.weight_comp_index_numbers[final_vertex]
+                            num_cols = basis_action.shape[1]-2
+
+                            for i,row in enumerate(basis_action):
+                                j = target_basis_dic[tuple(list(row[:num_cols])+[comp_num])]
+                                new_basis_action[i][0]=j
+                                new_basis_action[i][1:] = row[num_cols:]
+                            new_basis_action[:,0]+=target_col_dic[a[1]]
+
+                            action_images.append(new_basis_action)
+
+            if len(action_images)>0:
+                # Concatenate images for each arrow to get total image
+                sub_diff = np.concatenate(action_images)
+
+                # Each basis element of weight component gets index
+                # Because we have multiple weight components, we need to add a number to this index
+                # So that index remains unique across multiple components
+
+                sub_diff[:,-2]+=offset
+
+                offset+=module.dimensions[initial_vertex]
+                total_diff.append(sub_diff)
+
+
+
+    if len(total_diff)>0: # Sometimes action is trivial, would otherwise raise errors
+        total_diff = np.concatenate(total_diff)
+        total_diff = total_diff[np.lexsort(np.transpose(total_diff[:,:-2]))]  # Sort by rows
+
+    if len(total_diff) ==0: # Trivial differential
         return matrix(ZZ,0,0),source_dim
 
      # encode as sparse matrix. each entry is triple of two indices and the value at the two indices
-    diff_entries = np.zeros((total_length,3),np.int64)
+    diff_entries = np.zeros((len(total_diff),3),np.int64)
     j = -1
-    offset=0 # Offset counting the number of rows already populated
 
     # If two entries represent the same element in source column, put them in same row j.
     # This loop merges this an populates a sparse matrix with correct row numbers.
-    for total_diff in total_diff_list:
-        prev_row = np.zeros_like(total_diff[0,:-2])-1  # every row is different from this one
-        for i in range(len(total_diff)):
-            row_num = i+offset
-            row = total_diff[i,:-2]
-            if np.any(np.not_equal(row,prev_row)): # if row is different, it will have different index
-                j+=1
-                prev_row = row
-            diff_entries[row_num,0] = j # populate sparse matrix
-            diff_entries[row_num,1:] = total_diff[i,-2:]
-        offset+=len(total_diff)
+
+    prev_row = np.zeros_like(total_diff[0,:-2])-1  # every row is different from this one
+    for i in range(len(total_diff)):
+        row_num = i
+        row = total_diff[i,:-2]
+        if np.any(np.not_equal(row,prev_row)): # if row is different, it will have different index
+            j+=1
+            prev_row = row
+        diff_entries[row_num,0] = j # populate sparse matrix
+        diff_entries[row_num,1:] = total_diff[i,-2:]
     j+=1
 
     # turn sparse differential matrix into dense one.
@@ -252,3 +310,62 @@ def compute_diff(cohom,mu,i):
         d_dense[diff_entries[i,0],diff_entries[i,1]] = diff_entries[i,2]
 
     return d_dense, source_dim
+
+def coker_reduce(target_module, coker, action_image, mu0, mu1, component=0):
+    """Projects source and target of an action in the coker quotient coker(f), f:M->N.
+    Returns action in the basis of the cokernel.
+    `source_module` is the module M
+    `target_module` is the module N
+    `coker` is a dictionary encoding a basis of the coker in each weight component of N
+    `action_image` is what action_on_basis returns.
+    `component` is the index of the direct sum component
+    We assume we acted with a map `mu0`->`mu1` in action_on_basis.
+    """
+    num_cols = action_image.shape[1]-2
+
+    if mu1 not in target_module.weight_components:
+        return []
+
+    if mu0 in coker:
+        new_images = np.zeros((action_image.shape[0]*coker[mu0].ncols(),action_image.shape[1]),dtype=action_image.dtype)
+        current_row = 0
+        for i,row in enumerate(coker[mu0].rows()):
+            for action_row in action_image:
+                j = action_row[-2] # lookup source
+                if row[j]!=0:
+                    new_images[current_row] = action_row
+                    new_images[current_row][-2]=i
+                    new_images[current_row][-1]*=row[j]
+                    current_row+=1
+        action_image = new_images[:current_row]
+    target_basis_dic = target_module.weight_comp_index_numbers[mu1]
+
+
+    action_image_coker = np.zeros((action_image.shape[0],3),dtype=action_image.dtype)
+    for i,row in enumerate(action_image):
+        j = target_basis_dic[tuple(list(row[:num_cols])+[component])]
+        action_image_coker[i][0]=j
+        action_image_coker[i][1:] = row[num_cols:]
+
+
+
+
+    if mu1 in coker:
+        new_image_coker = np.zeros((action_image_coker.shape[0]*coker[mu1].ncols(),3),dtype=action_image.dtype)
+        current_row = 0
+        for i,col in enumerate(coker[mu1].rows()):
+            for action_row in action_image_coker:
+                j = action_row[0]
+                if col[j]!=0:
+                    new_image_coker[current_row]=action_row
+                    new_image_coker[current_row][0]=i
+                    new_image_coker[current_row][2]*=col[j]
+                    current_row+=1
+    else:
+        new_image_coker = action_image_coker
+        current_row = len(new_image_coker)
+
+    if current_row>0:
+        return sort_merge(new_image_coker[:current_row])
+    else:
+        return np.array([])
