@@ -890,7 +890,8 @@ class BGGCohomology:
             betti_num+=dim*mult
         return betti_num
 
-    def cohomology_LaTeX(self, i=None, complex_string='', only_non_zero=True, print_betti=False, print_modules= True):
+    def cohomology_LaTeX(self, i=None, complex_string='', only_non_zero=True, print_betti=False, print_modules= True,
+                         only_strings=False):
         """In a notebook we can use pretty display of cohomology output.
         Only displays cohomology, does not return anything.
         We have the following options:
@@ -898,7 +899,8 @@ class BGGCohomology:
         complex_string ='', an optional string to cohom as H^i(complex_string) = ...
         only_non_zero = True, a bool indicating whether to print non-zero cohomologies.
         print_betti = False, print the Betti numbers
-        print_modules = True, print the decomposition of cohomology into highest weight reps"""
+        print_modules = True, print the decomposition of cohomology into highest weight reps
+        only_strings = False, don't display anything and return a string instead for further processing"""
 
         # If there is a complex_string, insert it between brackets, otherwise no brackets.
         if len(complex_string) > 0:
@@ -911,10 +913,22 @@ class BGGCohomology:
             cohoms = [(j, self.cohomology(j)) for j in range(self.BGG.max_word_length+1)]
             max_len = max([len(cohom) for _, cohom in cohoms])
             if max_len==0:
-                display(Math(r'\mathrm H^\bullet' + display_string+'0'))
-                return None
+                if only_strings:
+                    return '0'
+                else:
+                    display(Math(r'\mathrm H^\bullet' + display_string+'0'))
+                    return None
         else:
-            cohoms = [(i, self.cohomology(i))]
+            cohom_i = self.cohomology(i)
+            if len(cohom_i)==0: #particular i, and zero cohomology:
+                if only_strings:
+                    return '0'
+                else:
+                    display(Math(r'\mathrm H^{' + str(i) + r'}' + display_string + '0'))
+                    return None
+            cohoms = [(i, cohom_i)]
+
+
 
         for i, cohom in cohoms:
             if (not only_non_zero) or (len(cohom)>0):
@@ -924,12 +938,20 @@ class BGGCohomology:
                     latex = self.cohom_to_latex(cohom)
 
                     # Display the cohomology in the notebook using LaTeX rendering
-                    display(Math(r'\mathrm H^{%d}' % i + display_string + latex))
+                    if only_strings:
+                        return latex
+                    else:
+                        display(Math(r'\mathrm H^{%d}' % i + display_string + latex ))
+                        return None
 
                 # Print just dimension of cohomology
                 if print_betti:
                     betti_num = self.betti_number(cohom)
-                    display(Math(r'\mathrm b^{%d}' % i + display_string + str(betti_num)))
+                    if only_strings:
+                        return str(betti_num)
+                    else:
+                        display(Math(r'\mathrm b^{%d}' % i + display_string + str(betti_num)))
+                        return None
 
 
     def tuple_to_latex(self, (mu, mult)):
