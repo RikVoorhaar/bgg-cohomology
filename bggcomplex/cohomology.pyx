@@ -214,31 +214,26 @@ def compute_diff(cohom, mu, i):
         initial_vertex = vertex_weights[w]  # weight of vertex
         if initial_vertex in cohom.weights:  # Ensure weight component isn't empty
             action_images = []
-            max_ind = 0  # Keep track of biggest index
             for a in arrows: # Compute image for each arrow
                 final_vertex = vertex_weights[a[1]]
 
                 sign = BGG.signs[a] # Multiply everything by the sign of the map in BGG complex
 
                 comp_offset_s = 0
-                comp_offset_t = 0
-                max_ind_comp = 0
 
                 for comp_num,weight_comp in module.weight_components[initial_vertex]:
                     # compute the action of the PBW element
                     # map is multiplied by sign. Need to convert sign to Rational to avoid errors in newer sage version
                     basis_action = action_on_basis(maps[a]*Rational(sign),weight_comp,module,factory,comp_num)
 
-
                     basis_action[:,-2] += comp_offset_s # update source
-
-                    try:
-                        comp_offset_s += module.dimensions_components[comp_num][initial_vertex]
-                    except KeyError:
-                        pass
-
+                    comp_offset_s += module.dimensions_components[comp_num][initial_vertex]
 
                     if cohom.has_coker:
+
+                        print(final_vertex,comp_num)
+                        print(basis_action)
+                        print('\n')
 
                         basis_action = coker_reduce(cohom.weight_module,cohom.coker, basis_action,
                                                     initial_vertex, final_vertex,
@@ -246,8 +241,9 @@ def compute_diff(cohom, mu, i):
 
                         if len(basis_action)>0:
                             basis_action[:,0]+=target_col_dic[a[1]]
-
+                            print(basis_action)
                             action_images.append(basis_action)
+
 
                     if len(basis_action)>0:
                         if not cohom.has_coker:
@@ -277,7 +273,8 @@ def compute_diff(cohom, mu, i):
                 offset+=module.dimensions[initial_vertex]
                 total_diff.append(sub_diff)
 
-
+    print('\n\ntotal diff')
+    print(total_diff)
 
     if len(total_diff)>0: # Sometimes action is trivial, would otherwise raise errors
         total_diff = np.concatenate(total_diff)
@@ -338,16 +335,13 @@ def coker_reduce(target_module, coker, action_image, mu0, mu1, component=0):
                     new_images[current_row][-1]*=row[j]
                     current_row+=1
         action_image = new_images[:current_row]
+
     target_basis_dic = target_module.weight_comp_index_numbers[mu1]
-
-
     action_image_coker = np.zeros((action_image.shape[0],3),dtype=action_image.dtype)
     for i,row in enumerate(action_image):
         j = target_basis_dic[tuple(list(row[:num_cols])+[component])]
         action_image_coker[i][0]=j
         action_image_coker[i][1:] = row[num_cols:]
-
-
 
 
     if mu1 in coker:

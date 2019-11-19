@@ -436,8 +436,9 @@ class FastModuleFactory:
         # For practical reasons we want the subspace `n` to have indices 0,...,dim(n)-1
         # Since those elements are the only with negative coefficients in the roots,
         # we can just sort by the first coefficient of the root to ensure this.
-        sorted_basis = sorted(self.lie_algebra_basis.keys(), key=lambda k: k.coefficients()[0])
-        self.root_to_index = {k: i for i, k in enumerate(sorted_basis)}
+        #sorted_basis = sorted(self.lie_algebra_basis.keys(), key=lambda k: k.coefficients()[0])
+        self.sorted_basis = list(lie_algebra.indices())[::-1]
+        self.root_to_index = {k: i for i, k in enumerate(self.sorted_basis)}
         self.g_basis = sorted(self.root_to_index.values())
         self.index_to_lie_algebra = {i: self.lie_algebra_basis[k] for k, i in self.root_to_index.items()}
 
@@ -461,10 +462,11 @@ class FastModuleFactory:
         for root in self.h_roots:
             self.dual_root_dict[self.root_to_index[root]] = self.root_to_index[root]
 
+
         # Make a dictionary encoding the associated weight for each basis element.
         # Weight is encoded as a np.array with length self.rank and dtype int.
         self.weight_dic = dict()
-        for i, r in enumerate(sorted_basis):
+        for i, r in enumerate(self.sorted_basis):
             if r.parent() == self.lattice:  # If root is an e_root or f_root weight is just the monomial_coefficients
                 self.weight_dic[i] = self.dic_to_vec(r.monomial_coefficients(), self.rank)
             else:  # If the basis element comes from the Cartan, the weight is zero
