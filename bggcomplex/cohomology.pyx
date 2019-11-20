@@ -230,18 +230,11 @@ def compute_diff(cohom, mu, i):
                     comp_offset_s += module.dimensions_components[comp_num][initial_vertex]
 
                     if cohom.has_coker:
-
-                        print(final_vertex,comp_num)
-                        print(basis_action)
-                        print('\n')
-
                         basis_action = coker_reduce(cohom.weight_module,cohom.coker, basis_action,
                                                     initial_vertex, final_vertex,
                                                     component=comp_num)
-
                         if len(basis_action)>0:
                             basis_action[:,0]+=target_col_dic[a[1]]
-                            print(basis_action)
                             action_images.append(basis_action)
 
 
@@ -273,12 +266,11 @@ def compute_diff(cohom, mu, i):
                 offset+=module.dimensions[initial_vertex]
                 total_diff.append(sub_diff)
 
-    print('\n\ntotal diff')
-    print(total_diff)
 
     if len(total_diff)>0: # Sometimes action is trivial, would otherwise raise errors
         total_diff = np.concatenate(total_diff)
-        total_diff = total_diff[np.lexsort(np.transpose(total_diff[:,:-2]))]  # Sort by rows
+        total_diff = sort_merge(total_diff) # for cokernels we can get duplicate entries. We need to merge them.
+        total_diff = total_diff[np.lexsort(np.transpose(total_diff[:,:-2]))]  # Sort by source indices
 
     if len(total_diff) ==0: # Trivial differential
         return matrix(ZZ,0,0),source_dim
@@ -323,42 +315,59 @@ def coker_reduce(target_module, coker, action_image, mu0, mu1, component=0):
     if mu1 not in target_module.weight_components:
         return []
 
-    if mu0 in coker:
-        new_images = np.zeros((action_image.shape[0]*coker[mu0].ncols(),action_image.shape[1]),dtype=action_image.dtype)
-        current_row = 0
-        for i,row in enumerate(coker[mu0].rows()):
-            for action_row in action_image:
-                j = action_row[-2] # lookup source
-                if row[j]!=0:
-                    new_images[current_row] = action_row
-                    new_images[current_row][-2]=i
-                    new_images[current_row][-1]*=row[j]
-                    current_row+=1
-        action_image = new_images[:current_row]
 
     target_basis_dic = target_module.weight_comp_index_numbers[mu1]
-    action_image_coker = np.zeros((action_image.shape[0],3),dtype=action_image.dtype)
+    action_image_target = np.zeros((action_image.shape[0],3),dtype=action_image.dtype)
     for i,row in enumerate(action_image):
         j = target_basis_dic[tuple(list(row[:num_cols])+[component])]
-        action_image_coker[i][0]=j
-        action_image_coker[i][1:] = row[num_cols:]
+        action_image_target[i][0]=j
+        action_image_target[i][1:] = row[num_cols:]
 
+
+    if mu0 in coker:
+        new_images = np.zeros((action_image.shape[0]*coker[mu0].ncols(),3),dtype=action_image.dtype)
+        current_row = 0
+        # for i,row in enumerate(coker[mu0].rows()):
+        #     for action_row in action_image:
+        #         j = action_row[-2] # lookup source
+        #         if row[j]!=0:
+        #             new_images[current_row] = action_row
+        #             new_images[current_row][-2]=i
+        #             new_images[current_row][-1]*=row[j]
+        #             current_row+=1
+        for action_row in action_image_target:
+            target, source,coeff = action_row
+            for i,c in enumerate(coker[mu0][:,source]):
+                if c!=0:
+                    new_images[current_row] = [target, i, coeff*c]
+                    current_row+=1
+        new_action_image = new_images[:current_row]
+    else:
+        new_action_image = action_image_target
 
     if mu1 in coker:
-        new_image_coker = np.zeros((action_image_coker.shape[0]*coker[mu1].ncols(),3),dtype=action_image.dtype)
+        new_image_coker = np.zeros((new_action_image.shape[0]*coker[mu1].ncols(),3),dtype=action_image.dtype)
         current_row = 0
-        for i,col in enumerate(coker[mu1].rows()):
-            for action_row in action_image_coker:
-                j = action_row[0]
-                if col[j]!=0:
+        # for i,col in enumerate(coker[mu1].rows()):
+        #     for action_row in action_image_coker:
+        #         j = action_row[0]
+        #         if col[j]!=0:
+        #             new_image_coker[current_row]=action_row
+        #             new_image_coker[current_row][0]=i
+        #             new_image_coker[current_row][2]*=col[j]
+        #             current_row+=1
+
+        for action_row in new_action_image:
+            j = action_row[0]
+            for i,c in enumerate(coker[mu1][:,j]):
+                if c!=0:
                     new_image_coker[current_row]=action_row
                     new_image_coker[current_row][0]=i
-                    new_image_coker[current_row][2]*=col[j]
+                    new_image_coker[current_row][2]*=c
                     current_row+=1
     else:
-        new_image_coker = action_image_coker
+        new_image_coker = new_action_image
         current_row = len(new_image_coker)
-
     if current_row>0:
         return sort_merge(new_image_coker[:current_row])
     else:

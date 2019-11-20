@@ -375,6 +375,97 @@ class FastLieAlgebraCompositeModule:
 
         return image[nonzero_coefficients], coefficients[nonzero_coefficients]
 
+    def component_symbols_latex(self, component):
+        symbols = []
+        for _, num, t in component:
+            if t == 'sym':
+                type_string = r'\odot '
+            else:  # t == 'wedge'
+                type_string = r'\wedge '
+            symbols += [type_string] * (num - 1)
+            if num > 0:
+                symbols += [r'\otimes ']
+        symbols[-1] = ''
+        return symbols
+
+    def component_latex_basis(self, comp_num, basis):
+        comp_symbols = self.component_symbols_latex(self.components[comp_num])
+        basis_latex_dic = dict()
+        for i, b in enumerate(basis):
+            basis_strings = [self.factory.root_latex_dic[j] for j in b]
+            basis_latex = ''.join(list(itertools.chain.from_iterable(zip(basis_strings, comp_symbols))))
+            basis_latex_dic[i] = basis_latex
+        return basis_latex_dic
+
+    @property
+    def latex_basis_dic(self):
+        try:  # Use cached version if available. Ugly hack.
+            return self._latex_basis_dic
+        except AttributeError:
+            basis_dic = dict()
+            for mu, wcomps in self.weight_components.items():
+                mu_dict = dict()
+                for comp_num, basis in wcomps:
+                    mu_dict[comp_num] = self.component_latex_basis(comp_num, basis)
+                basis_dic[mu] = mu_dict
+            self._latex_basis_dic = basis_dic
+            return basis_dic
+
+    def weight_latex_basis(self, mu):
+        return list(itertools.chain.from_iterable(
+            d.values() for d in self.latex_basis_dic[mu].values()
+        ))
+
+    def display_action(self, BGG, arrow, dominant_weight):
+        weight_set = WeightSet(BGG)
+        vertex_weights = weight_set.get_vertex_weights(dominant_weight)
+        mu = vertex_weights[arrow[0]]
+        new_mu = vertex_weights[arrow[1]]
+
+        mu_weight = weight_set.tuple_to_weight(dominant_weight)
+        alpha_mu = BGG.weight_to_alpha_sum(mu_weight)
+
+        bgg_map = BGG.compute_maps(alpha_mu)[arrow]
+
+        source_counter = 0
+        for comp_num, weight_comp in self.weight_components[mu]:
+            basis_action = cohomology.action_on_basis(bgg_map, weight_comp, self, self.factory, comp_num)
+
+            target_dic = self.weight_comp_index_numbers[new_mu]
+            source_target_pairs = dict()
+            for row in basis_action:
+                target = target_dic[tuple(list(row[:-2]) + [comp_num])]
+                source = row[-2]
+                coeff = row[-1]
+                if source not in source_target_pairs:
+                    source_target_pairs[source] = []
+                source_target_pairs[source].append((target, coeff))
+
+            source_latex = self.weight_latex_basis(mu)
+            target_latex = self.weight_latex_basis(new_mu)
+
+            for source, targets in source_target_pairs.items():
+                source_string = source_latex[source]
+                target_strings = []
+
+                first = True
+                for target, coeff in targets:
+                    if coeff == 1:
+                        coeff_string = ''
+                    elif coeff == -1:
+                        coeff_string = '-'
+                    else:
+                        coeff_string = str(coeff)
+
+                    if (not first) and (coeff > 0):
+                        coeff_string = '+' + coeff_string
+                    first = False
+                    target_strings.append(coeff_string + (r'(%d)' % target) + target_latex[target])
+
+                display(Math(r'%d\colon \,' % (source+source_counter) + source_string +
+                             r'\mapsto ' + ''.join(target_strings)))
+            source_counter += len(weight_comp)
+
 
 class FastModuleComponent:
     """Class encoding a building-block for lie algebra modules. Input is a list of basis indices (assumed to be ints),
@@ -421,7 +512,6 @@ class FastModuleComponent:
         total = [(m, {k: v for k, v in d.items() if v != 0}) for m, d in total]
         return total
 
-
 class FastModuleFactory:
     """A factory class making FastModuleComponent. It can create modules for (co)adjoint actions on parabolic
     subalgebras of the input Lie algebra."""
@@ -446,6 +536,8 @@ class FastModuleFactory:
         self.f_roots = list(self.lattice.negative_roots())
         self.e_roots = list(self.lattice.positive_roots())
         self.h_roots = self.lattice.alphacheck().values()
+
+        self.root_latex_dic = {i: self.root_to_latex(root) for i, root in enumerate(self.sorted_basis)}
 
         # Make a list of indices for the (non parabolic) 'g','u','n','b'
         self.basis = dict()
@@ -601,6 +693,22 @@ class FastModuleFactory:
         else:
             raise ValueError('\'%s\' is not a valid type of action' % action_type)
         return FastModuleComponent(module, action, self)
+
+    def root_to_latex(self, root):
+        root_type = ''
+
+        if root in self.h_roots:
+            root_type = 'h'
+        elif root in self.f_roots:
+            root_type = 'f'
+        elif root in self.e_roots:
+            root_type = 'e'
+
+        mon_coeffs = sorted(root.monomial_coefficients().items(), key=lambda x: x[0])
+        root_index = ''.join(str(i) * abs(n) for i, n in mon_coeffs)
+        root_string = root_type + r'_{%s}' % root_index
+
+        return root_string
 
 
 class WeightSet:
@@ -992,3 +1100,59 @@ class BGGCohomology:
         else:
             return r'0'
 
+    def display_coker(self, mu, transpose=False):
+        if self.has_coker:
+            if mu in self.coker:
+                if not transpose:
+                    coker_mat = self.coker[mu]
+                    latex_basis = self.weight_module.weight_latex_basis(mu)
+                    for row_num, row in enumerate(coker_mat.rows()):
+                        row_strings = [r'%d\colon\,' % row_num]
+
+                        first = True
+                        for i, c in enumerate(row):
+                            if c != 0:
+                                latex_i = (r'(%d)' % i) + latex_basis[i]
+                                if c == 1:
+                                    row_string = latex_i
+                                elif c == -1:
+                                    row_string = '-' +latex_i
+                                else:
+                                    row_string = str(c) +latex_i
+                                if first:
+                                    row_strings.append(row_string)
+                                    first = False
+                                else:
+                                    if c > 0:
+                                        row_strings.append('+' + row_string)
+                                    else:
+                                        row_strings.append(row_string)
+                        display(Math(''.join(row_strings)))
+
+                else:  # it's transposed
+                    coker_mat = self.coker[mu]
+                    latex_basis = self.weight_module.weight_latex_basis(mu)
+                    for col_num, col in enumerate(coker_mat.columns()):
+                        col_strings = [(r'(%d)' % col_num) + latex_basis[col_num] + r'\mapsto \,']
+
+                        first = True
+                        for i,c in enumerate(col):
+                            if c!= 0:
+                                latex_i = (r'(%d)' % i)
+                                if c == 1:
+                                    col_string = latex_i
+                                elif c == -1:
+                                    col_string = '-' + latex_i
+                                else:
+                                    col_string = str(c) + latex_i
+                                if first:
+                                    col_strings.append(col_string)
+                                    first = False
+                                else:
+                                    if c > 0:
+                                        col_strings.append('+' + col_string)
+                                    else:
+                                        col_strings.append(col_string)
+                        display(Math(''.join(col_strings)))
+        else:
+            print('No cokernel (weight = %s)' % str(mu))
