@@ -184,15 +184,17 @@ def compute_diff(cohom, mu, i):
     column = BGG.column[i]
     delta_i_arrows = [(w, [arrow for arrow in BGG.arrows if arrow[0] == w]) for w in column]
 
-
+    # Look up vertex weights for the target column
     target_column = BGG.column[i+1]
     target_col_dic = {w:vertex_weights[w] for w in target_column}
 
+    # To give the weights in the target column a unique index, we compute
+    # an offset for each weight component in the target column
     offset = 0
     for w,mu in target_col_dic.items():
         target_col_dic[w] = offset
         if cohom.has_coker and (mu in cohom.coker):
-            offset+=cohom.coker[mu].nrows()
+            offset+=cohom.coker[mu].nrows() # Dimension of quotient is number of rows
         else:
             if mu in module.dimensions:
                 offset+=module.dimensions[mu]
@@ -203,7 +205,7 @@ def compute_diff(cohom, mu, i):
         initial_vertex = vertex_weights[w]
         if initial_vertex in cohom.weights:
             if cohom.has_coker and (initial_vertex in cohom.coker):
-                source_dim += cohom.coker[initial_vertex].nrows()
+                source_dim += cohom.coker[initial_vertex].nrows() # dimension of quotient is number of rows
             else:
                 source_dim += cohom.weight_module.dimensions[initial_vertex]
 
@@ -229,22 +231,28 @@ def compute_diff(cohom, mu, i):
                     basis_action[:,-2] += comp_offset_s # update source
                     comp_offset_s += module.dimensions_components[comp_num][initial_vertex]
 
+                    # If there is a cokernel, we have reduce the image of the action
+                    # to the basis of the quotient module
                     if cohom.has_coker:
                         basis_action = coker_reduce(cohom.weight_module,cohom.coker, basis_action,
                                                     initial_vertex, final_vertex,
                                                     component=comp_num)
                         if len(basis_action)>0:
-                            basis_action[:,0]+=target_col_dic[a[1]]
+                            basis_action[:,0]+=target_col_dic[a[1]] # offset for weight module
                             action_images.append(basis_action)
 
-
+                    # The cokernel reduction automatically inserts appropriate offsets for indices
+                    # In the non-cokernel case we still have to do this manually
                     if len(basis_action)>0:
                         if not cohom.has_coker:
                             new_basis_action = np.zeros(shape=(basis_action.shape[0],3),dtype=basis_action.dtype)
 
+
+
+                            # Convert the sets of indices [i1,...,ik] into a single index for the whole weight component
+                            # We do this by looking the index i up in a dictionary.
                             target_basis_dic = module.weight_comp_index_numbers[final_vertex]
                             num_cols = basis_action.shape[1]-2
-
                             for i,row in enumerate(basis_action):
                                 j = target_basis_dic[tuple(list(row[:num_cols])+[comp_num])]
                                 new_basis_action[i][0]=j
@@ -310,12 +318,17 @@ def coker_reduce(target_module, coker, action_image, mu0, mu1, component=0):
     `component` is the index of the direct sum component
     We assume we acted with a map `mu0`->`mu1` in action_on_basis.
     """
+    # the input is always of shape [i1,i2,..,ik,j,c] where i denotes the indices
+    # of the target, j the source index, and c the coefficient.
+    # then `num_cols` denotes this number k.
     num_cols = action_image.shape[1]-2
 
+    # If mu1 is not in the module, then it has to be zero
     if mu1 not in target_module.weight_components:
         return []
 
-
+    # Convert the sets of indices [i1,...,ik] into a single index i for the whole weight component
+    # We do this by looking the index i up in a dictionary.
     target_basis_dic = target_module.weight_comp_index_numbers[mu1]
     action_image_target = np.zeros((action_image.shape[0],3),dtype=action_image.dtype)
     for i,row in enumerate(action_image):
@@ -323,18 +336,12 @@ def coker_reduce(target_module, coker, action_image, mu0, mu1, component=0):
         action_image_target[i][0]=j
         action_image_target[i][1:] = row[num_cols:]
 
-
+    # If mu0 is in the cokernel dictionary, express the action in the basis of the quotient
+    # If not, then the basis of the quotient is equal to the basis of the module, so there's nothing to do
     if mu0 in coker:
         new_images = np.zeros((action_image.shape[0]*coker[mu0].ncols(),3),dtype=action_image.dtype)
         current_row = 0
-        # for i,row in enumerate(coker[mu0].rows()):
-        #     for action_row in action_image:
-        #         j = action_row[-2] # lookup source
-        #         if row[j]!=0:
-        #             new_images[current_row] = action_row
-        #             new_images[current_row][-2]=i
-        #             new_images[current_row][-1]*=row[j]
-        #             current_row+=1
+
         for action_row in action_image_target:
             target, source,coeff = action_row
             for i,c in enumerate(coker[mu0][:,source]):
@@ -345,17 +352,12 @@ def coker_reduce(target_module, coker, action_image, mu0, mu1, component=0):
     else:
         new_action_image = action_image_target
 
+    # If mu1 is in the cokernel dictionary, then reduce the image to the quotient
+    # We do this by multiplying by the matrix encoding the basis of the cokernel
+    # If it's not in the dictionary, no reduction is necessary.
     if mu1 in coker:
         new_image_coker = np.zeros((new_action_image.shape[0]*coker[mu1].ncols(),3),dtype=action_image.dtype)
         current_row = 0
-        # for i,col in enumerate(coker[mu1].rows()):
-        #     for action_row in action_image_coker:
-        #         j = action_row[0]
-        #         if col[j]!=0:
-        #             new_image_coker[current_row]=action_row
-        #             new_image_coker[current_row][0]=i
-        #             new_image_coker[current_row][2]*=col[j]
-        #             current_row+=1
 
         for action_row in new_action_image:
             j = action_row[0]
@@ -368,6 +370,9 @@ def coker_reduce(target_module, coker, action_image, mu0, mu1, component=0):
     else:
         new_image_coker = new_action_image
         current_row = len(new_image_coker)
+
+    # At the end of the day, sort the result and sum coefficients of identical (source, target) tuples.
+    # If the final matrix is empty, instead we just return an empty array to avoid errors.
     if current_row>0:
         return sort_merge(new_image_coker[:current_row])
     else:
