@@ -977,7 +977,10 @@ class BGGCohomology:
 
         # For isolated weights, multiplicity is just the module dimension
         for w, w_dom in dominant_trivial:
-            cohom_dim = self.weight_module.dimensions[w]
+            if (self.has_coker) and (w in self.coker):
+                cohom_dim = self.coker[w].nrows()
+            else:
+                cohom_dim = self.weight_module.dimensions[w]
             if cohom_dim > 0:
                 cohomology[w_dom] += cohom_dim
 
@@ -1003,7 +1006,7 @@ class BGGCohomology:
         return betti_num
 
     def cohomology_LaTeX(self, i=None, complex_string='', only_non_zero=True, print_betti=False, print_modules= True,
-                         only_strings=False):
+                         only_strings=False, compact=False):
         """In a notebook we can use pretty display of cohomology output.
         Only displays cohomology, does not return anything.
         We have the following options:
@@ -1047,7 +1050,7 @@ class BGGCohomology:
                 # Print the decomposition into highest weight modules.
                 if print_modules:
                     # Get LaTeX string of the highest weights + multiplicities
-                    latex = self.cohom_to_latex(cohom)
+                    latex = self.cohom_to_latex(cohom,compact=compact)
 
                     # Display the cohomology in the notebook using LaTeX rendering
                     if only_strings:
@@ -1066,39 +1069,56 @@ class BGGCohomology:
                         return None
 
 
-    def tuple_to_latex(self, (mu, mult)):
+    def tuple_to_latex(self, (mu, mult),compact=False):
         """LaTeX string representing a tuple of highest weight vector and it's multiplicity"""
-
-        # Each entry mu_i in the tuple mu represents a simple root. We display it as mu_i alpha_i
-        alphas = []
-        for i, m in enumerate(mu):
-            if m == 1:
-                alphas.append(r'\alpha_{%d}' % (i + 1))
-            elif m != 0:
-                alphas.append(r' %d\alpha_{%d}' % (m, i + 1))
-
-        # If all entries are zero, we just display the string '0' to represent zero weight,
-        # otherwise we join the mu_i alpha_i together with a + operator in between
-        if mult>1:
-            if len(alphas) == 0:
-                return r'\mathbb{C}^{%d}' % mult
+        if compact: #compact display
+            #alpha_string = ''.join([str(i+1)*m for i,m in enumerate(mu)])
+            alpha_string = ','.join([str(m) for m in mu])
+            if sum(mu)==0:
+                if mult>1:
+                    return r'\mathbb{C}^{%d}' % mult
+                else:
+                    return r'\mathbb{C}'
+            if mult>1:
+                return r'L_{%s}^{%d}' % (alpha_string, mult)
             else:
-                alphas_string = r'+'.join(alphas)
-                return r'L\left(%s\right)^{%d}' % (alphas_string,mult)
-        else:
-            if len(alphas) == 0:
-                return r'\mathbb{C}'
-            else:
-                alphas_string = r'+'.join(alphas)
-                return r'L\left(%s\right)' % alphas_string
+                return r'L_{%s}' % alpha_string
 
-    def cohom_to_latex(self, cohom):
+        else: # not compact display
+            # Each entry mu_i in the tuple mu represents a simple root. We display it as mu_i alpha_i
+            alphas = []
+            for i, m in enumerate(mu):
+                if m == 1:
+                    alphas.append(r'\alpha_{%d}' % (i + 1))
+                elif m != 0:
+                    alphas.append(r' %d\alpha_{%d}' % (m, i + 1))
+
+            # If all entries are zero, we just display the string '0' to represent zero weight,
+            # otherwise we join the mu_i alpha_i together with a + operator in between
+            if mult>1:
+                if len(alphas) == 0:
+                    return r'\mathbb{C}^{%d}' % mult
+                else:
+                    alphas_string = r'+'.join(alphas)
+                    return r'L\left(%s\right)^{%d}' % (alphas_string,mult)
+            else:
+                if len(alphas) == 0:
+                    return r'\mathbb{C}'
+                else:
+                    alphas_string = r'+'.join(alphas)
+                    return r'L\left(%s\right)' % alphas_string
+
+    def cohom_to_latex(self, cohom, compact=False):
         """String together the tuple_to_latex function multiple times to turn a list of mu, multiplicity
         into one big LaTeX string."""
 
         # If there is no cohomology just print the string '0'
         if len(cohom) > 0:
-            return r'\oplus '.join(map(self.tuple_to_latex, cohom))
+            tuples = [self.tuple_to_latex(c,compact=compact) for c in cohom]
+            if compact:
+                return r''.join(tuples)
+            else:
+                return r'\oplus '.join(tuples)
         else:
             return r'0'
 
