@@ -6,9 +6,10 @@ from fast_module import FastLieAlgebraCompositeModule, FastModuleFactory
 from IPython.display import display, Math, Latex
 import cohomology
 import numpy as np
-from tqdm.notebook import tqdm
+from tqdm.auto import tqdm
 from sage.rings.integer_ring import ZZ
 from sage.matrix.constructor import matrix
+
 
 def Mijk(BGG, i, j, k, subset=[]):
     factory = FastModuleFactory(BGG.LA)
@@ -21,7 +22,7 @@ def Mijk(BGG, i, j, k, subset=[]):
 
     components = []
     for r in range(j + k // 2 + 1):
-        if (j - r <= dim_n):
+        if (j - r <= dim_n) and (j - r >= 0):
             components.append([('u', j + k // 2 - r, 'sym'), ('g', r, 'wedge'), ('n', j - r, 'wedge')])
 
     module = FastLieAlgebraCompositeModule(factory, components, component_dic)
@@ -37,35 +38,38 @@ def sort_sign(A):
     else:
         return (A,np.ones(len(A),dtype=int),np.ones(len(A),dtype=bool))
 
-
-def compute_phi(BGG, subset=[]):
+def compute_phi(BGG,subset= []):
     factory = FastModuleFactory(BGG.LA)
 
-    component_dic = {'u': factory.build_component('u', 'coad', subset=subset)}
-    components_phi = [[('u', 1, 'wedge')]]
+    component_dic = {'n':factory.build_component('n','ad',subset=subset)}
+    components_phi = [[('n',1,'wedge')]]
 
-    module_phi = FastLieAlgebraCompositeModule(factory, components_phi, component_dic)
+    module_phi = FastLieAlgebraCompositeModule(factory,components_phi,component_dic)
 
     b_basis = factory.parabolic_p_basis(subset)
-    u_basis = factory.parabolic_u_basis(subset)
-    coad_dic = factory.coadjoint_action_tensor(b_basis, u_basis)
+    n_basis = factory.parabolic_n_basis(subset)
+    ad_dic = factory.adjoint_action_tensor(b_basis,n_basis)
 
-    phi_image = {b: [] for b in b_basis}
-    for (b, u), n_dic in coad_dic.items():
-        n, coeff = n_dic.items()[0]
-        phi_image[b].append(np.array([factory.dual_root_dict[u], n, coeff]))
+    phi_image = {b:[] for b in b_basis}
+    for (b,n),u_dic in ad_dic.items():
+        u,coeff = u_dic.items()[0]
+        phi_image[b].append(np.array([u,factory.dual_root_dict[n],coeff]))
 
     for b in phi_image.keys():
         img = phi_image[b]
-        if len(img) > 0:
-            phi_image[b] = np.vstack(img)
+        if len(img)>0:
+            phi_image[b]=np.vstack(img)
         else:
-            phi_image[b] = []
+            phi_image[b]=[]
     return phi_image
 
 
-def Tijk_basis(BGG, i, j, k, subset=[]):
+def Tijk_basis(BGG, i, j, k, subset=[], pbar=None):
     factory = FastModuleFactory(BGG.LA)
+
+    if pbar is not None:
+        pbar.reset()
+        pbar.set_description('Creating modules')
     wc_mod = Mijk(BGG, i, j, k, subset=subset)
     wc_rel = Mijk(BGG, i, j - 1, k, subset=subset)
 
@@ -74,6 +78,9 @@ def Tijk_basis(BGG, i, j, k, subset=[]):
 
     phi_image = compute_phi(BGG, subset=subset)
     # phi_image = {i:[] for i,_ in phi_image.items()}
+
+    if pbar is not None:
+        pbar.set_description('Computing modules')
 
     for mu, components in wc_rel.weight_components.items():
 
@@ -140,39 +147,52 @@ def Tijk_basis(BGG, i, j, k, subset=[]):
     coker_dic = {mu: cohomology.sort_merge(np.concatenate(rels)) for mu, rels in coker_dic.items()}
 
     T = dict()
-    with tqdm(coker_dic.items()) as pbar:
-        for mu, rels in pbar:
-            source_dim = mu_source_counters[mu]
-            target_dim = wc_mod.dimensions[mu]
-            sparse_dic = dict()
-            for source, target, coeff in rels:
-                sparse_dic[(source, target)] = coeff
-            pbar.set_description(str((source_dim, target_dim)))
-            M = matrix(ZZ, sparse_dic, nrows=source_dim, ncols=target_dim, sparse=True)
-            T[mu] = M.right_kernel().basis_matrix()
+    total_rels = len(coker_dic)
+    if pbar is not None:
+        pbar.reset(total=total_rels)
+        pbar.set_description('Computing kernels')
+
+    for mu, rels in coker_dic.items():
+        source_dim = mu_source_counters[mu]
+        target_dim = wc_mod.dimensions[mu]
+        sparse_dic = dict()
+        for source, target, coeff in rels:
+            sparse_dic[(source, target)] = coeff
+
+        if pbar is not None:
+            pbar.update()
+
+        M = matrix(ZZ, sparse_dic, nrows=source_dim, ncols=target_dim, sparse=True)
+        T[mu] = M.right_kernel().basis_matrix()
     return T
 
-def all_abijk(BGG,s=0,subset=[],half_only=True):
+def all_abijk(BGG,s=0,subset=[],half_only=False):
     dim_n = len(FastModuleFactory(BGG.LA).parabolic_n_basis(subset))
     output = []
     s_mod = s%2
     a_max = dim_n+(1+s_mod)%2
     for a_iterator in range(a_max):
         a = 2*a_iterator+s_mod
-        for b in range(max(0,s-2*a),a+1):
+        #for b in range(max(0,s-2*a),a+1):
+        for b in range(a+1):
             if (a+b) % 2 == 0:
                 output.append((a,b,(a-b)//2,(a+b)//2,s-a))
     if half_only:
         new_out = []
         max_a = max(s[0] for s in output)
         for a,b,i,j,k in output:
-            if a+b<=max_a:
+            if a+b<=max_a+1:
                 new_out.append((a,b,i,j,k))
         return sorted(new_out,key=lambda s: (s[0]+s[1],s[0],s[1]))
     else:
         return output
 
-def display_ab_dic(ab_dic):
+def display_ab_dic(ab_dic,extend_half = False):
+    if extend_half:
+        max_a = max(a for a,b in ab_dic.keys())
+        max_a = max_a + (max_a%2)
+        for (a,b),v in ab_dic.items():
+            ab_dic[(max_a-b,max_a-a)] = v
     a_set = set()
     b_set = set()
     for a,b in ab_dic.keys():
