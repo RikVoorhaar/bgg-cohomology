@@ -1,8 +1,7 @@
 # -*- coding: utf8 -*-
 
 """
-Deprecated. fast_module.py provides similar functionality (except for support of quotients),
-but with much higher performance.
+Deprecated. fast_module.py provides similar functionality but more reliably with better performance
 """
 
 from collections import defaultdict

@@ -6,15 +6,12 @@ subsequently compute the cohomology of the module. See the example notebooks on 
 for explanation of usage.
 """
 
-# import numpy_indexed as npi
 from IPython.display import display, Math, Latex
-from sympy.utilities.iterables import subsets
-from sage.rings.integer_ring import ZZ
 import itertools
+from sage.rings.integer_ring import ZZ
 from sage.matrix.constructor import matrix
 from collections import defaultdict
 import numpy as np
-import warnings
 
 import cohomology
 
@@ -37,10 +34,6 @@ class FastLieAlgebraCompositeModule:
         # length of all the indices occurring in any module
         self.len_basis = len(set(itertools.chain.from_iterable(self.modules.values())))
         self.max_index = max(itertools.chain.from_iterable(self.modules.values()))
-
-        if self.len_basis*5 < self.max_index:
-            warnings.warn("""Maximum index %d is much higher than length of module basis %d. 
-                This may cause slowdown""" % (self.max_index,self.len_basis))
 
         # To compute the hash fast, cache a power of 33 for each basis element mod 2^32
         self.pow_array = 33 ** np.arange(self.max_index+1, dtype=INT_PRECISION)
@@ -274,106 +267,205 @@ class FastLieAlgebraCompositeModule:
                     s_values[j] += 1
         return action_tensor
 
-    def set_pbw_action_matrix(self, pbw_elt):
-        """<<DEPRECATED>>
-        Given a PBW element, cache a matrix encoding the PBW action for each type of component in component_dic"""
-        self.action_matrix = dict()
-        for key, component in self.component_dic.items():
-            self.action_matrix[key] = component.pbw_action_matrix(pbw_elt)
+    # def set_pbw_action_matrix(self, pbw_elt):
+    #     """<<DEPRECATED>>
+    #     Given a PBW element, cache a matrix encoding the PBW action for each type of component in component_dic"""
+    #     self.action_matrix = dict()
+    #     for key, component in self.component_dic.items():
+    #         self.action_matrix[key] = component.pbw_action_matrix(pbw_elt)
 
-    def compute_pbw_action(self, weight_comp):
-        """<<DEPRECATED>>
-        Compute the action of a PBW element on the basis of a weight component.
-        The action is computed column-wise as a list of hashes and coefficients.
-        In the end the coefficients of the rows with the same hashes are summed.
-        Returns a tuple of tensor indices of source, hashes of targets, coefficients.
-        Only rows with non-zero coefficients are returned."""
-        index, basis = weight_comp
-        type_list = self.type_lists[index]
-        output_basis = []
-        output_hashes = []
-        output_coefficients = []
-        hashes = self.get_hash(weight_comp)
+    # def compute_pbw_action(self, weight_comp):
+    #     """<<DEPRECATED>>
+    #     Compute the action of a PBW element on the basis of a weight component.
+    #     The action is computed column-wise as a list of hashes and coefficients.
+    #     In the end the coefficients of the rows with the same hashes are summed.
+    #     Returns a tuple of tensor indices of source, hashes of targets, coefficients.
+    #     Only rows with non-zero coefficients are returned."""
+    #     index, basis = weight_comp
+    #     type_list = self.type_lists[index]
+    #     output_basis = []
+    #     output_hashes = []
+    #     output_coefficients = []
+    #     hashes = self.get_hash(weight_comp)
+    #
+    #     for column in range(len(type_list)):
+    #         action = self.action_matrix[type_list[column]]  # Retrieve cached action matrix for this column
+    #
+    #         # Make a list of all the unique indices occurring in column.
+    #         # This can be smaller than the list of indices occurring in the module type.
+    #         unique_values = np.unique(basis[:, column])
+    #
+    #         # Make a list of tuples (indices, action) such that the index occurs in column and action is non-trivial
+    #         non_zero_actions = [(i, d) for i, d in action if (len(d) > 0 and i in unique_values)]
+    #
+    #         # Unpack the list `non_zero_actions` so that it consists of triples (old_index,new_index,coefficient)
+    #         action_queue = list(
+    #             itertools.chain.from_iterable([[tuple([i] + list(t)) for t in d.items()] for i, d in non_zero_actions]))
+    #
+    #         # Create a dictionary of slices identifying the rows containing a specific index in the current column
+    #         split_indices = {i: np.flatnonzero(basis[:, column] == i) for i, _ in non_zero_actions}
+    #
+    #         # Retrieve the hash multiplier for this column
+    #         column_hash_modifier = self.component_primes[index][column]
+    #
+    #         for old_index, new_index, coefficient in action_queue:
+    #             # Changing the hash by this number gives the hash of the output
+    #             hash_modifier = column_hash_modifier*(self.pow_array[new_index] - self.pow_array[old_index])
+    #             new_hashes = hashes[split_indices[old_index]] + hash_modifier
+    #
+    #             # Compute the signs for each of the rows. There are no signs for symmetric powers.
+    #             tensor_type, sub_column, start_slice, end_slice = self.slice_lists[index][column]
+    #             coefficient_array = None
+    #             if tensor_type == 'sym':  # Symmetric power
+    #                 coefficient_array = np.full(len(new_hashes), coefficient,dtype=INT_PRECISION)
+    #             if tensor_type == 'wedge':  # Wedge power
+    #
+    #                 # Retrieve the other columns of the current tensor component
+    #                 slic = range(start_slice, end_slice)
+    #                 slic.remove(column)
+    #                 other_columns = basis[split_indices[old_index]][:, slic]
+    #
+    #                 # For each row, compute the number of indices in the row that are strictly smaller than new_index
+    #                 # Turn the result into a sign +1/-1 giving sign of the permutation sorting the row
+    #                 sort_parity = (-1) ** (sub_column + np.sum(other_columns < new_index, axis=1) % 2)
+    #
+    #                 # For each row, check if it already contains new_index, in which case permutation will have parity 0
+    #                 is_double = 1 - np.sum(other_columns == new_index, axis=1)
+    #                 permutation_signs = sort_parity * is_double
+    #
+    #                 # Multiply the coefficient with the signs to get the output coefficient array
+    #                 coefficient_array = coefficient * permutation_signs
+    #
+    #             # append the resulting source tensor indices, output hashes, coefficients to an output list
+    #
+    #             #output_basis.append(split_indices[old_index].reshape(-1))
+    #             output_basis.append(hashes[split_indices[old_index]])
+    #
+    #             output_hashes.append(new_hashes)
+    #             output_coefficients.append(coefficient_array)
+    #
+    #     # If there are no non-trivial actions, just ouptut an emtpy matrix. Otherwise subsequent code throws errors.
+    #     if len(output_basis) == 0:
+    #         return np.array([], dtype=INT_PRECISION), np.array([], dtype=INT_PRECISION)
+    #
+    #     # Concatenate results for each sub_part
+    #     output_basis = np.concatenate(output_basis)
+    #     output_hashes = np.concatenate(output_hashes)
+    #     output_coefficients = np.concatenate(output_coefficients)
+    #
+    #     # Sum and merge coefficients of rows with same source tensor indices and target hash
+    #     basis_hash_pairs = np.vstack([output_basis, output_hashes]).T
+    #     gb = npi.group_by(basis_hash_pairs)
+    #     image, coefficients = gb.sum(output_coefficients)
+    #
+    #     # Take only non-zero coefficients, output result
+    #     nonzero_coefficients = coefficients.nonzero()
+    #
+    #     # check that the algorithm did not produce any garbage hashes
+    #     for hash in output_hashes[nonzero_coefficients]:
+    #         if hash not in self.hash_dic:
+    #             raise ValueError('hash %s is unknown.' % hash)
+    #
+    #     return image[nonzero_coefficients], coefficients[nonzero_coefficients]
 
-        for column in range(len(type_list)):
-            action = self.action_matrix[type_list[column]]  # Retrieve cached action matrix for this column
+    def component_symbols_latex(self, component):
+        """Compute a list of latex symbols to put in between indices to display them in latex"""
+        symbols = []
+        for _, num, t in component:
+            if t == 'sym':
+                type_string = r'\odot '
+            else:  # t == 'wedge'
+                type_string = r'\wedge '
+            symbols += [type_string] * (num - 1)
+            if num > 0:
+                symbols += [r'\otimes ']
+        symbols[-1] = ''
+        return symbols
 
-            # Make a list of all the unique indices occurring in column.
-            # This can be smaller than the list of indices occurring in the module type.
-            unique_values = np.unique(basis[:, column])
+    def component_latex_basis(self, comp_num, basis):
+        """Given a basis of a weight component, convert all the indices to latex"""
+        comp_symbols = self.component_symbols_latex(self.components[comp_num])
+        basis_latex_dic = dict()
+        for i, b in enumerate(basis):
+            basis_strings = [self.factory.root_latex_dic[j] for j in b]
+            basis_latex = ''.join(list(itertools.chain.from_iterable(zip(basis_strings, comp_symbols))))
+            basis_latex_dic[i] = basis_latex
+        return basis_latex_dic
 
-            # Make a list of tuples (indices, action) such that the index occurs in column and action is non-trivial
-            non_zero_actions = [(i, d) for i, d in action if (len(d) > 0 and i in unique_values)]
+    @property
+    def latex_basis_dic(self):
+        """Compute a dictionary sending each weight to a dictionary of latex strings encoding the basis elements
+        of the associated weight component (one dictionary for each direct sum component)"""
+        try:  # Use cached version if available. Ugly hack.
+            return self._latex_basis_dic
+        except AttributeError:
+            basis_dic = dict()
+            for mu, wcomps in self.weight_components.items():
+                mu_dict = dict()
+                for comp_num, basis in wcomps:
+                    mu_dict[comp_num] = self.component_latex_basis(comp_num, basis)
+                basis_dic[mu] = mu_dict
+            self._latex_basis_dic = basis_dic
+            return basis_dic
 
-            # Unpack the list `non_zero_actions` so that it consists of triples (old_index,new_index,coefficient)
-            action_queue = list(
-                itertools.chain.from_iterable([[tuple([i] + list(t)) for t in d.items()] for i, d in non_zero_actions]))
+    def weight_latex_basis(self, mu):
+        """Turn a list of dictionaries into a list of all their values"""
+        return list(itertools.chain.from_iterable(
+            d.values() for d in self.latex_basis_dic[mu].values()
+        ))
 
-            # Create a dictionary of slices identifying the rows containing a specific index in the current column
-            split_indices = {i: np.flatnonzero(basis[:, column] == i) for i, _ in non_zero_actions}
+    def display_action(self, BGG, arrow, dominant_weight):
+        """Display the action on a basis. Mainly for debugging purposes.
+        Here BGG is a BGGComplex. arrow is a pair of strings encoding vertices in the Bruhat graph.
+        Dominant weight is a tuple of same lenght as the rank of the lie algebra encoding a dominant weight"""
+        weight_set = WeightSet(BGG)
+        vertex_weights = weight_set.get_vertex_weights(dominant_weight)
+        mu = vertex_weights[arrow[0]]
+        new_mu = vertex_weights[arrow[1]]
 
-            # Retrieve the hash multiplier for this column
-            column_hash_modifier = self.component_primes[index][column]
+        mu_weight = weight_set.tuple_to_weight(dominant_weight)
+        alpha_mu = BGG.weight_to_alpha_sum(mu_weight)
 
-            for old_index, new_index, coefficient in action_queue:
-                # Changing the hash by this number gives the hash of the output
-                hash_modifier = column_hash_modifier*(self.pow_array[new_index] - self.pow_array[old_index])
-                new_hashes = hashes[split_indices[old_index]] + hash_modifier
+        bgg_map = BGG.compute_maps(alpha_mu)[arrow]
 
-                # Compute the signs for each of the rows. There are no signs for symmetric powers.
-                tensor_type, sub_column, start_slice, end_slice = self.slice_lists[index][column]
-                coefficient_array = None
-                if tensor_type == 'sym':  # Symmetric power
-                    coefficient_array = np.full(len(new_hashes), coefficient,dtype=INT_PRECISION)
-                if tensor_type == 'wedge':  # Wedge power
+        source_counter = 0
+        for comp_num, weight_comp in self.weight_components[mu]:
+            basis_action = cohomology.action_on_basis(bgg_map, weight_comp, self, self.factory, comp_num)
 
-                    # Retrieve the other columns of the current tensor component
-                    slic = range(start_slice, end_slice)
-                    slic.remove(column)
-                    other_columns = basis[split_indices[old_index]][:, slic]
+            target_dic = self.weight_comp_index_numbers[new_mu]
+            source_target_pairs = dict()
+            for row in basis_action:
+                target = target_dic[tuple(list(row[:-2]) + [comp_num])]
+                source = row[-2]
+                coeff = row[-1]
+                if source not in source_target_pairs:
+                    source_target_pairs[source] = []
+                source_target_pairs[source].append((target, coeff))
 
-                    # For each row, compute the number of indices in the row that are strictly smaller than new_index
-                    # Turn the result into a sign +1/-1 giving sign of the permutation sorting the row
-                    sort_parity = (-1) ** (sub_column + np.sum(other_columns < new_index, axis=1) % 2)
+            source_latex = self.weight_latex_basis(mu)
+            target_latex = self.weight_latex_basis(new_mu)
 
-                    # For each row, check if it already contains new_index, in which case permutation will have parity 0
-                    is_double = 1 - np.sum(other_columns == new_index, axis=1)
-                    permutation_signs = sort_parity * is_double
+            for source, targets in source_target_pairs.items():
+                source_string = source_latex[source]
+                target_strings = []
 
-                    # Multiply the coefficient with the signs to get the output coefficient array
-                    coefficient_array = coefficient * permutation_signs
+                first = True
+                for target, coeff in targets:
+                    if coeff == 1:
+                        coeff_string = ''
+                    elif coeff == -1:
+                        coeff_string = '-'
+                    else:
+                        coeff_string = str(coeff)
 
-                # append the resulting source tensor indices, output hashes, coefficients to an output list
+                    if (not first) and (coeff > 0):
+                        coeff_string = '+' + coeff_string
+                    first = False
+                    target_strings.append(coeff_string + (r'(%d)' % target) + target_latex[target])
 
-                #output_basis.append(split_indices[old_index].reshape(-1))
-                output_basis.append(hashes[split_indices[old_index]])
-
-                output_hashes.append(new_hashes)
-                output_coefficients.append(coefficient_array)
-
-        # If there are no non-trivial actions, just ouptut an emtpy matrix. Otherwise subsequent code throws errors.
-        if len(output_basis) == 0:
-            return np.array([], dtype=INT_PRECISION), np.array([], dtype=INT_PRECISION)
-
-        # Concatenate results for each sub_part
-        output_basis = np.concatenate(output_basis)
-        output_hashes = np.concatenate(output_hashes)
-        output_coefficients = np.concatenate(output_coefficients)
-
-        # Sum and merge coefficients of rows with same source tensor indices and target hash
-        basis_hash_pairs = np.vstack([output_basis, output_hashes]).T
-        gb = npi.group_by(basis_hash_pairs)
-        image, coefficients = gb.sum(output_coefficients)
-
-        # Take only non-zero coefficients, output result
-        nonzero_coefficients = coefficients.nonzero()
-
-        # check that the algorithm did not produce any garbage hashes
-        for hash in output_hashes[nonzero_coefficients]:
-            if hash not in self.hash_dic:
-                raise ValueError('hash %s is unknown.' % hash)
-
-        return image[nonzero_coefficients], coefficients[nonzero_coefficients]
+                display(Math(r'%d\colon \,' % (source+source_counter) + source_string +
+                             r'\mapsto ' + ''.join(target_strings)))
+            source_counter += len(weight_comp)
 
 
 class FastModuleComponent:
@@ -421,7 +513,6 @@ class FastModuleComponent:
         total = [(m, {k: v for k, v in d.items() if v != 0}) for m, d in total]
         return total
 
-
 class FastModuleFactory:
     """A factory class making FastModuleComponent. It can create modules for (co)adjoint actions on parabolic
     subalgebras of the input Lie algebra."""
@@ -436,8 +527,9 @@ class FastModuleFactory:
         # For practical reasons we want the subspace `n` to have indices 0,...,dim(n)-1
         # Since those elements are the only with negative coefficients in the roots,
         # we can just sort by the first coefficient of the root to ensure this.
-        sorted_basis = sorted(self.lie_algebra_basis.keys(), key=lambda k: k.coefficients()[0])
-        self.root_to_index = {k: i for i, k in enumerate(sorted_basis)}
+        #sorted_basis = sorted(self.lie_algebra_basis.keys(), key=lambda k: k.coefficients()[0])
+        self.sorted_basis = list(lie_algebra.indices())[::-1]
+        self.root_to_index = {k: i for i, k in enumerate(self.sorted_basis)}
         self.g_basis = sorted(self.root_to_index.values())
         self.index_to_lie_algebra = {i: self.lie_algebra_basis[k] for k, i in self.root_to_index.items()}
 
@@ -445,6 +537,8 @@ class FastModuleFactory:
         self.f_roots = list(self.lattice.negative_roots())
         self.e_roots = list(self.lattice.positive_roots())
         self.h_roots = self.lattice.alphacheck().values()
+
+        self.root_latex_dic = {i: self.root_to_latex(root) for i, root in enumerate(self.sorted_basis)}
 
         # Make a list of indices for the (non parabolic) 'g','u','n','b'
         self.basis = dict()
@@ -461,10 +555,11 @@ class FastModuleFactory:
         for root in self.h_roots:
             self.dual_root_dict[self.root_to_index[root]] = self.root_to_index[root]
 
+
         # Make a dictionary encoding the associated weight for each basis element.
         # Weight is encoded as a np.array with length self.rank and dtype int.
         self.weight_dic = dict()
-        for i, r in enumerate(sorted_basis):
+        for i, r in enumerate(self.sorted_basis):
             if r.parent() == self.lattice:  # If root is an e_root or f_root weight is just the monomial_coefficients
                 self.weight_dic[i] = self.dic_to_vec(r.monomial_coefficients(), self.rank)
             else:  # If the basis element comes from the Cartan, the weight is zero
@@ -599,6 +694,23 @@ class FastModuleFactory:
         else:
             raise ValueError('\'%s\' is not a valid type of action' % action_type)
         return FastModuleComponent(module, action, self)
+
+    def root_to_latex(self, root):
+        """Convert a root (an element of the sagemath root lattice)  a latex expression"""
+        root_type = ''
+
+        if root in self.h_roots:
+            root_type = 'h'
+        elif root in self.f_roots:
+            root_type = 'f'
+        elif root in self.e_roots:
+            root_type = 'e'
+
+        mon_coeffs = sorted(root.monomial_coefficients().items(), key=lambda x: x[0])
+        root_index = ''.join(str(i) * abs(n) for i, n in mon_coeffs)
+        root_string = root_type + r'_{%s}' % root_index
+
+        return root_string
 
 
 class WeightSet:
@@ -865,7 +977,10 @@ class BGGCohomology:
 
         # For isolated weights, multiplicity is just the module dimension
         for w, w_dom in dominant_trivial:
-            cohom_dim = self.weight_module.dimensions[w]
+            if (self.has_coker) and (w in self.coker):
+                cohom_dim = self.coker[w].nrows()
+            else:
+                cohom_dim = self.weight_module.dimensions[w]
             if cohom_dim > 0:
                 cohomology[w_dom] += cohom_dim
 
@@ -890,7 +1005,8 @@ class BGGCohomology:
             betti_num+=dim*mult
         return betti_num
 
-    def cohomology_LaTeX(self, i=None, complex_string='', only_non_zero=True, print_betti=False, print_modules= True):
+    def cohomology_LaTeX(self, i=None, complex_string='', only_non_zero=True, print_betti=False, print_modules= True,
+                         only_strings=False, compact=False):
         """In a notebook we can use pretty display of cohomology output.
         Only displays cohomology, does not return anything.
         We have the following options:
@@ -898,7 +1014,8 @@ class BGGCohomology:
         complex_string ='', an optional string to cohom as H^i(complex_string) = ...
         only_non_zero = True, a bool indicating whether to print non-zero cohomologies.
         print_betti = False, print the Betti numbers
-        print_modules = True, print the decomposition of cohomology into highest weight reps"""
+        print_modules = True, print the decomposition of cohomology into highest weight reps
+        only_strings = False, don't display anything and return a string instead for further processing"""
 
         # If there is a complex_string, insert it between brackets, otherwise no brackets.
         if len(complex_string) > 0:
@@ -911,60 +1028,154 @@ class BGGCohomology:
             cohoms = [(j, self.cohomology(j)) for j in range(self.BGG.max_word_length+1)]
             max_len = max([len(cohom) for _, cohom in cohoms])
             if max_len==0:
-                display(Math(r'\mathrm H^\bullet' + display_string+'0'))
-                return None
+                if only_strings:
+                    return '0'
+                else:
+                    display(Math(r'\mathrm H^\bullet' + display_string+'0'))
+                    return None
         else:
-            cohoms = [(i, self.cohomology(i))]
+            cohom_i = self.cohomology(i)
+            if len(cohom_i)==0: #particular i, and zero cohomology:
+                if only_strings:
+                    return '0'
+                else:
+                    display(Math(r'\mathrm H^{' + str(i) + r'}' + display_string + '0'))
+                    return None
+            cohoms = [(i, cohom_i)]
+
+
 
         for i, cohom in cohoms:
             if (not only_non_zero) or (len(cohom)>0):
                 # Print the decomposition into highest weight modules.
                 if print_modules:
                     # Get LaTeX string of the highest weights + multiplicities
-                    latex = self.cohom_to_latex(cohom)
+                    latex = self.cohom_to_latex(cohom,compact=compact)
 
                     # Display the cohomology in the notebook using LaTeX rendering
-                    display(Math(r'\mathrm H^{%d}' % i + display_string + latex))
+                    if only_strings:
+                        return latex
+                    else:
+                        display(Math(r'\mathrm H^{%d}' % i + display_string + latex ))
+                        return None
 
                 # Print just dimension of cohomology
                 if print_betti:
                     betti_num = self.betti_number(cohom)
-                    display(Math(r'\mathrm b^{%d}' % i + display_string + str(betti_num)))
+                    if only_strings:
+                        return str(betti_num)
+                    else:
+                        display(Math(r'\mathrm b^{%d}' % i + display_string + str(betti_num)))
+                        return None
 
 
-    def tuple_to_latex(self, (mu, mult)):
+    def tuple_to_latex(self, (mu, mult),compact=False):
         """LaTeX string representing a tuple of highest weight vector and it's multiplicity"""
-
-        # Each entry mu_i in the tuple mu represents a simple root. We display it as mu_i alpha_i
-        alphas = []
-        for i, m in enumerate(mu):
-            if m == 1:
-                alphas.append(r'\alpha_{%d}' % (i + 1))
-            elif m != 0:
-                alphas.append(r' %d\alpha_{%d}' % (m, i + 1))
-
-        # If all entries are zero, we just display the string '0' to represent zero weight,
-        # otherwise we join the mu_i alpha_i together with a + operator in between
-        if mult>1:
-            if len(alphas) == 0:
-                return r'\mathbb{C}^{%d}' % mult
+        if compact: #compact display
+            #alpha_string = ''.join([str(i+1)*m for i,m in enumerate(mu)])
+            alpha_string = ','.join([str(m) for m in mu])
+            if sum(mu)==0:
+                if mult>1:
+                    return r'\mathbb{C}^{%d}' % mult
+                else:
+                    return r'\mathbb{C}'
+            if mult>1:
+                return r'L_{%s}^{%d}' % (alpha_string, mult)
             else:
-                alphas_string = r'+'.join(alphas)
-                return r'L\left(%s\right)^{%d}' % (alphas_string,mult)
-        else:
-            if len(alphas) == 0:
-                return r'\mathbb{C}'
-            else:
-                alphas_string = r'+'.join(alphas)
-                return r'L\left(%s\right)' % alphas_string
+                return r'L_{%s}' % alpha_string
 
-    def cohom_to_latex(self, cohom):
+        else: # not compact display
+            # Each entry mu_i in the tuple mu represents a simple root. We display it as mu_i alpha_i
+            alphas = []
+            for i, m in enumerate(mu):
+                if m == 1:
+                    alphas.append(r'\alpha_{%d}' % (i + 1))
+                elif m != 0:
+                    alphas.append(r' %d\alpha_{%d}' % (m, i + 1))
+
+            # If all entries are zero, we just display the string '0' to represent zero weight,
+            # otherwise we join the mu_i alpha_i together with a + operator in between
+            if mult>1:
+                if len(alphas) == 0:
+                    return r'\mathbb{C}^{%d}' % mult
+                else:
+                    alphas_string = r'+'.join(alphas)
+                    return r'L\left(%s\right)^{%d}' % (alphas_string,mult)
+            else:
+                if len(alphas) == 0:
+                    return r'\mathbb{C}'
+                else:
+                    alphas_string = r'+'.join(alphas)
+                    return r'L\left(%s\right)' % alphas_string
+
+    def cohom_to_latex(self, cohom, compact=False):
         """String together the tuple_to_latex function multiple times to turn a list of mu, multiplicity
         into one big LaTeX string."""
 
         # If there is no cohomology just print the string '0'
         if len(cohom) > 0:
-            return r'\oplus '.join(map(self.tuple_to_latex, cohom))
+            tuples = [self.tuple_to_latex(c,compact=compact) for c in cohom]
+            if compact:
+                return r''.join(tuples)
+            else:
+                return r'\oplus '.join(tuples)
         else:
             return r'0'
 
+    def display_coker(self, mu, transpose=False):
+        """Display the cokernel of a quotient module. This is mainly implemented for debugging purposes."""
+        if self.has_coker:
+            if mu in self.coker:
+                if not transpose:
+                    coker_mat = self.coker[mu]
+                    latex_basis = self.weight_module.weight_latex_basis(mu)
+                    for row_num, row in enumerate(coker_mat.rows()):
+                        row_strings = [r'%d\colon\,' % row_num]
+
+                        first = True
+                        for i, c in enumerate(row):
+                            if c != 0:
+                                latex_i = (r'(%d)' % i) + latex_basis[i]
+                                if c == 1:
+                                    row_string = latex_i
+                                elif c == -1:
+                                    row_string = '-' +latex_i
+                                else:
+                                    row_string = str(c) +latex_i
+                                if first:
+                                    row_strings.append(row_string)
+                                    first = False
+                                else:
+                                    if c > 0:
+                                        row_strings.append('+' + row_string)
+                                    else:
+                                        row_strings.append(row_string)
+                        display(Math(''.join(row_strings)))
+
+                else:  # it's transposed
+                    coker_mat = self.coker[mu]
+                    latex_basis = self.weight_module.weight_latex_basis(mu)
+                    for col_num, col in enumerate(coker_mat.columns()):
+                        col_strings = [(r'(%d)' % col_num) + latex_basis[col_num] + r'\mapsto \,']
+
+                        first = True
+                        for i,c in enumerate(col):
+                            if c!= 0:
+                                latex_i = (r'(%d)' % i)
+                                if c == 1:
+                                    col_string = latex_i
+                                elif c == -1:
+                                    col_string = '-' + latex_i
+                                else:
+                                    col_string = str(c) + latex_i
+                                if first:
+                                    col_strings.append(col_string)
+                                    first = False
+                                else:
+                                    if c > 0:
+                                        col_strings.append('+' + col_string)
+                                    else:
+                                        col_strings.append(col_string)
+                        display(Math(''.join(col_strings)))
+        else:
+            print('No cokernel (weight = %s)' % str(mu))
