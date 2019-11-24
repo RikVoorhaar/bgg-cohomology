@@ -15,6 +15,8 @@ import numpy as np
 
 import cohomology
 
+from tqdm.auto import tqdm
+
 INT_PRECISION = np.int32
 
 class FastLieAlgebraCompositeModule:
@@ -34,12 +36,6 @@ class FastLieAlgebraCompositeModule:
         # length of all the indices occurring in any module
         self.len_basis = len(set(itertools.chain.from_iterable(self.modules.values())))
         self.max_index = max(itertools.chain.from_iterable(self.modules.values()))
-
-        # To compute the hash fast, cache a power of 33 for each basis element mod 2^32
-        self.pow_array = 33 ** np.arange(self.max_index+1, dtype=INT_PRECISION)
-
-        # For each direct sum component, compute a list of prime powers of 7919 incrementing at each tensor component
-        self.component_primes = [self.compute_component_primes(index) for index in range(len(self.components))]
 
         # Compute a basis for the module, and group by weight to get a basis for each weight component
         self.weight_components = self.initialize_weight_components()
@@ -90,13 +86,6 @@ class FastLieAlgebraCompositeModule:
                 start_slice = end_slice
             self.slice_lists.append(slice_list)
 
-
-        self.hash_dic = dict()
-        for comps in self.weight_components.values():
-            for comp in comps:
-                for h, v in zip(self.get_hash(comp), comp[1]):
-                    self.hash_dic[h] = v
-
         self.action_tensor_dic = dict()
         for key, mod in self.component_dic.items():
             self.action_tensor_dic[key] = self.get_action_tensor(mod)
@@ -133,16 +122,6 @@ class FastLieAlgebraCompositeModule:
 
         return output
 
-    # def compute_weight_components(self, direct_sum_component):
-    #     """Compute the weight for each basis element, group the basis by weight.
-    #     returns a dictionary mapping tuples of weights to basis of weight component."""
-    #     weight_mat = np.array([s[1] for s in sorted(self.weight_dic.items(), key=lambda t: t[0])], dtype=INT_PRECISION)
-    #     total_weight = np.sum(weight_mat[direct_sum_component], axis=1)
-    #
-    #     groupby = npi.group_by(total_weight)
-    #     return {tuple(w): l for w, l in
-    #             zip(groupby.unique, groupby.split_array_as_list(direct_sum_component))}
-
     def compute_weight_components(self, direct_sum_component):
         """Compute the weight for each basis element, group the basis by weight.
            returns a dictionary mapping tuples of weights to basis of weight component.
@@ -171,7 +150,6 @@ class FastLieAlgebraCompositeModule:
 
         return split_dic
 
-
     def initialize_weight_components(self):
         """Compute a basis for each direct sum component, and compute basis for each weight component"""
         weight_components = dict()
@@ -183,32 +161,6 @@ class FastLieAlgebraCompositeModule:
                     weight_components[weight] = list()
                 weight_components[weight].append((i, basis))
         return weight_components
-
-    def compute_component_primes(self, index):
-        """Given index of a direct sum component, create a list of ints of same length as a basis element.
-        For each tensor component the int is the same, and is a mod 2^32 power of 7919"""
-        comp_type = [s[1] for s in self.components[index]]
-        comp_primes = []
-        for i, n in enumerate(comp_type):
-            comp_primes += [i] * n
-        return 7919 ** np.array(comp_primes, dtype=INT_PRECISION)  # * (541)**index
-
-    def get_hash(self, weight_component, check_conflict=True):
-        """ <<This functionality is deprecated.>>
-        Compute the hash function for each weight component. Optionally check for hash conflicts. """
-        index, vector_list = weight_component
-
-        comp_primes = self.component_primes[index]
-
-        hashes = comp_primes * self.pow_array[vector_list]
-        hashes = np.sum(hashes, axis=1, dtype=INT_PRECISION)
-
-        if check_conflict:
-            hash_conflicts = len(hashes) - len(set(hashes))
-            if hash_conflicts > 0:
-                raise ValueError('Found %d hash conflict(s)!' % hash_conflicts)
-
-        return hashes
 
     def get_action_tensor(self, component):
         """Computes a tensor encoding the action for a given tensor component.
@@ -266,107 +218,6 @@ class FastLieAlgebraCompositeModule:
                     s = s_values[j]
                     s_values[j] += 1
         return action_tensor
-
-    # def set_pbw_action_matrix(self, pbw_elt):
-    #     """<<DEPRECATED>>
-    #     Given a PBW element, cache a matrix encoding the PBW action for each type of component in component_dic"""
-    #     self.action_matrix = dict()
-    #     for key, component in self.component_dic.items():
-    #         self.action_matrix[key] = component.pbw_action_matrix(pbw_elt)
-
-    # def compute_pbw_action(self, weight_comp):
-    #     """<<DEPRECATED>>
-    #     Compute the action of a PBW element on the basis of a weight component.
-    #     The action is computed column-wise as a list of hashes and coefficients.
-    #     In the end the coefficients of the rows with the same hashes are summed.
-    #     Returns a tuple of tensor indices of source, hashes of targets, coefficients.
-    #     Only rows with non-zero coefficients are returned."""
-    #     index, basis = weight_comp
-    #     type_list = self.type_lists[index]
-    #     output_basis = []
-    #     output_hashes = []
-    #     output_coefficients = []
-    #     hashes = self.get_hash(weight_comp)
-    #
-    #     for column in range(len(type_list)):
-    #         action = self.action_matrix[type_list[column]]  # Retrieve cached action matrix for this column
-    #
-    #         # Make a list of all the unique indices occurring in column.
-    #         # This can be smaller than the list of indices occurring in the module type.
-    #         unique_values = np.unique(basis[:, column])
-    #
-    #         # Make a list of tuples (indices, action) such that the index occurs in column and action is non-trivial
-    #         non_zero_actions = [(i, d) for i, d in action if (len(d) > 0 and i in unique_values)]
-    #
-    #         # Unpack the list `non_zero_actions` so that it consists of triples (old_index,new_index,coefficient)
-    #         action_queue = list(
-    #             itertools.chain.from_iterable([[tuple([i] + list(t)) for t in d.items()] for i, d in non_zero_actions]))
-    #
-    #         # Create a dictionary of slices identifying the rows containing a specific index in the current column
-    #         split_indices = {i: np.flatnonzero(basis[:, column] == i) for i, _ in non_zero_actions}
-    #
-    #         # Retrieve the hash multiplier for this column
-    #         column_hash_modifier = self.component_primes[index][column]
-    #
-    #         for old_index, new_index, coefficient in action_queue:
-    #             # Changing the hash by this number gives the hash of the output
-    #             hash_modifier = column_hash_modifier*(self.pow_array[new_index] - self.pow_array[old_index])
-    #             new_hashes = hashes[split_indices[old_index]] + hash_modifier
-    #
-    #             # Compute the signs for each of the rows. There are no signs for symmetric powers.
-    #             tensor_type, sub_column, start_slice, end_slice = self.slice_lists[index][column]
-    #             coefficient_array = None
-    #             if tensor_type == 'sym':  # Symmetric power
-    #                 coefficient_array = np.full(len(new_hashes), coefficient,dtype=INT_PRECISION)
-    #             if tensor_type == 'wedge':  # Wedge power
-    #
-    #                 # Retrieve the other columns of the current tensor component
-    #                 slic = range(start_slice, end_slice)
-    #                 slic.remove(column)
-    #                 other_columns = basis[split_indices[old_index]][:, slic]
-    #
-    #                 # For each row, compute the number of indices in the row that are strictly smaller than new_index
-    #                 # Turn the result into a sign +1/-1 giving sign of the permutation sorting the row
-    #                 sort_parity = (-1) ** (sub_column + np.sum(other_columns < new_index, axis=1) % 2)
-    #
-    #                 # For each row, check if it already contains new_index, in which case permutation will have parity 0
-    #                 is_double = 1 - np.sum(other_columns == new_index, axis=1)
-    #                 permutation_signs = sort_parity * is_double
-    #
-    #                 # Multiply the coefficient with the signs to get the output coefficient array
-    #                 coefficient_array = coefficient * permutation_signs
-    #
-    #             # append the resulting source tensor indices, output hashes, coefficients to an output list
-    #
-    #             #output_basis.append(split_indices[old_index].reshape(-1))
-    #             output_basis.append(hashes[split_indices[old_index]])
-    #
-    #             output_hashes.append(new_hashes)
-    #             output_coefficients.append(coefficient_array)
-    #
-    #     # If there are no non-trivial actions, just ouptut an emtpy matrix. Otherwise subsequent code throws errors.
-    #     if len(output_basis) == 0:
-    #         return np.array([], dtype=INT_PRECISION), np.array([], dtype=INT_PRECISION)
-    #
-    #     # Concatenate results for each sub_part
-    #     output_basis = np.concatenate(output_basis)
-    #     output_hashes = np.concatenate(output_hashes)
-    #     output_coefficients = np.concatenate(output_coefficients)
-    #
-    #     # Sum and merge coefficients of rows with same source tensor indices and target hash
-    #     basis_hash_pairs = np.vstack([output_basis, output_hashes]).T
-    #     gb = npi.group_by(basis_hash_pairs)
-    #     image, coefficients = gb.sum(output_coefficients)
-    #
-    #     # Take only non-zero coefficients, output result
-    #     nonzero_coefficients = coefficients.nonzero()
-    #
-    #     # check that the algorithm did not produce any garbage hashes
-    #     for hash in output_hashes[nonzero_coefficients]:
-    #         if hash not in self.hash_dic:
-    #             raise ValueError('hash %s is unknown.' % hash)
-    #
-    #     return image[nonzero_coefficients], coefficients[nonzero_coefficients]
 
     def component_symbols_latex(self, component):
         """Compute a list of latex symbols to put in between indices to display them in latex"""
@@ -825,7 +676,7 @@ class BGGCohomology:
     between the module and the BGG complex.
     Input is a BGGComplex instance, and a FastLieAlgebraCompositeModule instance."""
 
-    def __init__(self, BGG, weight_module, coker=None):
+    def __init__(self, BGG, weight_module, coker=None, pbars=None):
         self.BGG = BGG
         self.BGG.compute_signs()  # Make sure BGG signs are computed.
         self.weight_module = weight_module
@@ -835,6 +686,12 @@ class BGGCohomology:
         else:
             self.has_coker = False
 
+        if pbars is None:
+            self.pbar1 = None
+            self.pbar2 = None
+        if pbars is not None:
+            self.pbar1, self.pbar2 = pbars
+
         self.weights = weight_module.weight_components.keys()
         self.weight_set = WeightSet(BGG)
 
@@ -842,109 +699,23 @@ class BGGCohomology:
 
         self.regular_weights = self.weight_set.compute_weights(self.weights)  # Find dot-regular weights
 
-    def compute_differential(self, mu, i):
-        """Given a dominant weight mu, compute the BGG differential at degree i. The resulting matrix
-        does not contain any zero rows, but has the same image as the true differential, and has therefore the
-        same rank as the true differential.
-        This method outputs a tuple consisting of the matrix of the differential and the dimension of the source
-        space (of the true differential)."""
-
-        if not self.weight_set.is_dominant(mu):  # Assert the weight is dominant to prevent further errors.
-            raise ValueError('Input weight %s is not dominant' % str(mu))
-
-        vertex_weights = self.weight_set.get_vertex_weights(mu)  # Compute dot orbit of mu
-
-        # Weights need to be in the right format for BGG.compute maps. This will hopefully be fixed in the future.
-        maps = self.BGG.compute_maps(self.BGG.weight_to_alpha_sum(self.BGG._tuple_to_weight(mu)),check=True)
-
-        column = self.BGG.column[i]  # Elements of Weyl group in ith column
-
-        # For each w in the ith column, find all arrows w->w' for some w' (of longer length)
-        delta_i_arrows = [(w, [arrow for arrow in self.BGG.arrows if arrow[0] == w]) for w in column]
-
-        # Count the total dimension of all the weight components associated to the ith column.
-        source_dim = 0
-        for w in column:
-            initial_vertex = vertex_weights[w]
-            if initial_vertex in self.weights:
-                source_dim += self.weight_module.dimensions[initial_vertex]
-
-        # For each arrow a: w->w', we compute the action of the PBW element associated to w->w'.
-        # We then multiply the result by the sign associated to w->w' in the BGG complex.
-        # Finally we concatenate all these in a list.
-        #output = []
-        diff_keys = []
-        diff_coeffs = []
-        for w, arrows in delta_i_arrows:
-            initial_vertex = vertex_weights[w]  # Get weight w.mu
-            if initial_vertex in self.weights:  # Weight component may be empty
-                for a in arrows:
-                    sign = self.BGG.signs[a]
-                    self.weight_module.set_pbw_action_matrix(maps[a])
-                    for weight_comp in self.weight_module.weight_components[initial_vertex]:
-                        key_pairs, coefficients = self.weight_module.compute_pbw_action(weight_comp)
-                        if len(key_pairs) > 0:
-                            diff_keys.append(key_pairs)
-                            diff_coeffs.append(sign*coefficients)
-                            #output.append((key_pairs, sign * coefficients))
-        if len(diff_keys)>0:
-            diff_keys = np.concatenate(diff_keys)
-            diff_coeffs = np.concatenate(diff_coeffs)
-
-
-            # Make a list of rows in the matrix. Each row is encoded as two numpy vectors.
-            # The first vector encodes the hashes of the indices of the image
-            # The second vector encodes the coefficients.
-            row_list = []
-            # for key_pairs, coefficients in output:
-            gb = npi.group_by(diff_keys[:, 0])
-            row_list = zip(gb.split_array_as_list(diff_keys[:, 1]), gb.split_array_as_list(diff_coeffs))
-            # row_list += rows
-
-        else:
-            row_list=[]
-
-
-        # Make a set of all the occurring hashes, enumerate them, and make a dictionary sending hashes to new indices
-        all_hashes = []
-        for columns, _ in row_list:
-            all_hashes += list(columns)
-        hash_dic = {h: i for i, h in enumerate(set(all_hashes))}
-
-        # For each row in row_list, replace hashes by new indices, and then sort new indices and reorder coefficients.
-        def convert_and_sort(input):
-            input_columns, input_data = input
-            converted_columns = np.array([hash_dic[c] for c in input_columns], dtype=INT_PRECISION)
-            indices = np.argsort(converted_columns)
-            return converted_columns[indices], input_data[indices]
-        row_list = map(convert_and_sort, row_list)
-
-
-
-        # Create a dictionary of all non-zero entries of the matrix of the differential
-        # Keys are pairs (row, column), values are the coefficients.
-        sparse_dic = dict()
-        for row, (columns, data) in enumerate(row_list):
-            for column, entry in zip(columns, data):
-                sparse_dic[(row, column)] = entry
-
-
-        # Use the dictionary above to build a sparse matrix
-        differential_matrix = matrix(ZZ, len(row_list), len(hash_dic), sparse_dic, sparse=True)
-
-        # Return the sparse matrix as well as the dimension of the source space (because zero rows are omitted).
-        return differential_matrix, source_dim
-
     def cohomology_component(self, mu, i):
         """Compute cohomology BGG_i(mu)"""
+        if self.pbar1 is not None:
+            self.pbar1.set_description(str(mu)+', maps')
+        mu_converted = self.BGG.weight_to_alpha_sum(self.BGG._tuple_to_weight(mu))
+        self.BGG.compute_maps(mu_converted, pbar=self.pbar2)
 
-        #d_i, chain_dim = self.compute_differential(mu, i)
-        #d_i_minus_1, _ = self.compute_differential(mu, i - 1)
-
+        if self.pbar1 is not None:
+            self.pbar1.set_description(str(mu)+', diff')
         d_i, chain_dim = cohomology.compute_diff(self,mu,i)
         d_i_minus_1, _ = cohomology.compute_diff(self,mu,i-1)
 
+        if self.pbar1 is not None:
+            self.pbar1.set_description(str(mu)+', rank1')
         rank_1 = d_i.rank()
+        if self.pbar1 is not None:
+            self.pbar1.set_description(str(mu)+', rank2')
         rank_2 = d_i_minus_1.rank()
         return chain_dim - rank_1 - rank_2
 
@@ -956,6 +727,9 @@ class BGGCohomology:
         cohomology is the entire weight module.
         The cohomology is returned as a list of highest weight vectors appearing in the
         cohomology, together with their multiplicities."""
+
+        if self.pbar1 is not None:
+            self.pbar1.set_description('Initializing')
 
         # Find all dot-regular weights of lenght i, together with their associated dominants.
         length_i_weights = [triplet for triplet in self.regular_weights if triplet[2] == i]
@@ -972,8 +746,7 @@ class BGGCohomology:
             else:
                 dominant_trivial.append((w, w_dom))
 
-        cohomology = defaultdict(int)
-
+        cohomology_dic = defaultdict(int)
 
         # For isolated weights, multiplicity is just the module dimension
         for w, w_dom in dominant_trivial:
@@ -982,17 +755,21 @@ class BGGCohomology:
             else:
                 cohom_dim = self.weight_module.dimensions[w]
             if cohom_dim > 0:
-                cohomology[w_dom] += cohom_dim
+                cohomology_dic[w_dom] += cohom_dim
 
+        if self.pbar1 is not None:
+            self.pbar1.reset(total=len(dominant_non_trivial))
         # For non-isolated weights, multiplicity is computed through the BGG differential
         for w in dominant_non_trivial:
             cohom_dim = self.cohomology_component(w, i)
+            if self.pbar1 is not None:
+                self.pbar1.update()
             if cohom_dim > 0:
-                cohomology[w] += cohom_dim
+                cohomology_dic[w] += cohom_dim
 
         # Return cohomology as sorted list of highest weight vectors and multiplicities.
         # The sorting order is the same as how we normally sort weights
-        return sorted(cohomology.items(), key=lambda t: (sum(t[0]), t[0][::-1]))
+        return sorted(cohomology_dic.items(), key=lambda t: (sum(t[0]), t[0][::-1]))
 
     def betti_number(self, cohomology):
         """Given a list of highest weight vectors + multiplicities, compute
@@ -1032,7 +809,6 @@ class BGGCohomology:
                     return '0'
                 else:
                     display(Math(r'\mathrm H^\bullet' + display_string+'0'))
-                    return None
         else:
             cohom_i = self.cohomology(i)
             if len(cohom_i)==0: #particular i, and zero cohomology:
@@ -1040,10 +816,7 @@ class BGGCohomology:
                     return '0'
                 else:
                     display(Math(r'\mathrm H^{' + str(i) + r'}' + display_string + '0'))
-                    return None
             cohoms = [(i, cohom_i)]
-
-
 
         for i, cohom in cohoms:
             if (not only_non_zero) or (len(cohom)>0):
@@ -1057,7 +830,6 @@ class BGGCohomology:
                         return latex
                     else:
                         display(Math(r'\mathrm H^{%d}' % i + display_string + latex ))
-                        return None
 
                 # Print just dimension of cohomology
                 if print_betti:
@@ -1066,13 +838,10 @@ class BGGCohomology:
                         return str(betti_num)
                     else:
                         display(Math(r'\mathrm b^{%d}' % i + display_string + str(betti_num)))
-                        return None
-
 
     def tuple_to_latex(self, (mu, mult),compact=False):
         """LaTeX string representing a tuple of highest weight vector and it's multiplicity"""
-        if compact: #compact display
-            #alpha_string = ''.join([str(i+1)*m for i,m in enumerate(mu)])
+        if compact: # compact display
             alpha_string = ','.join([str(m) for m in mu])
             if sum(mu)==0:
                 if mult>1:

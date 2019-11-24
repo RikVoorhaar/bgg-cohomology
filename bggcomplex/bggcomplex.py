@@ -7,12 +7,21 @@ To use the BGG complex to compute cohomology we can use fast_module.
 
 from itertools import groupby,chain
 
-from sage.all import *
+#from sage.all import *
+from sage.rings.rational_field import QQ
+from sage.matrix.constructor import matrix
+from sage.rings.integer_ring import ZZ
+from sage.algebras.lie_algebras.lie_algebra import LieAlgebra
+from sage.combinat.root_system.weyl_group import WeylGroup
+from sage.graphs.digraph import DiGraph
+from sage.modules.free_module_element import vector
 
 from numpy import array
 
 from compute_signs import compute_signs
 from compute_maps import BGGMapSolver
+
+from pbw import PoincareBirkhoffWittBasis
 
 from fast_module import WeightSet
 
@@ -26,8 +35,9 @@ class BGGComplex:
     def __init__(self, root_system):
         self.W = WeylGroup(root_system)
         self.domain = self.W.domain()
-        self.LA =  LieAlgebra(QQ, cartan_type=root_system)
-        self.PBW = self.LA.pbw_basis()
+        self.LA = LieAlgebra(QQ, cartan_type=root_system)
+        self.PBW = PoincareBirkhoffWittBasis(self.LA,None,'PBW')
+        #self.PBW = self.LA.pbw_basis()
         self.PBW_alg_gens = self.PBW.algebra_generators()
         self.lattice = self.domain.root_system.root_lattice()
         self.S = self.W.simple_reflections()
@@ -40,12 +50,12 @@ class BGGComplex:
         self.rank = len(self.simple_roots)
         self.neg_roots = sorted([-array(self._weight_to_tuple(r)) for r in self.domain.negative_roots()],
                                 key=lambda l: (sum(l), tuple(l)))
+        self.alpha_to_index = {self.weight_to_alpha_sum(-self._tuple_to_weight(r)):i for i,r in enumerate(self.neg_roots)}
         self.zero_root = self.domain.zero()
 
         self._maps = dict()
 
         self.rho = self.domain.rho()
-        #self.rho_alpha = self.weight_to_alpha_sum(self.rho)
 
         self._action_dic = dict()
         for s, w in self.reduced_word_dic.items():
@@ -145,14 +155,14 @@ class BGGComplex:
         self.signs = compute_signs(self)
         return self.signs
 
-    def compute_maps(self,root,check=False):
+    def compute_maps(self, root, check=False, pbar=None):
         """For the given weight, compute the maps of the BGG complex"""
 
         # If the maps are not in the cache, compute them and cache the result
         if root not in self._maps:
             self.find_cycles()
 
-            MapSolver = BGGMapSolver(self,  root)
+            MapSolver = BGGMapSolver(self,  root, pbar=pbar)
             self._maps[root] = MapSolver.solve()
             if check:
                 maps_OK = MapSolver.check_maps()
@@ -168,7 +178,7 @@ class BGGComplex:
         A=[list(a.to_vector()) for a in self.simple_roots]
         A=matrix(A).transpose()
 
-        return tuple(transpose(A.solve_right(b)).list())
+        return tuple(A.solve_right(b).transpose().list())
 
     def weight_to_alpha_sum(self,weight):
         """Express a weight in the lattice as a linear combination of alpha[i]'s. These objects form the keys

@@ -178,7 +178,7 @@ def compute_diff(cohom, mu, i):
     vertex_weights = cohom.weight_set.get_vertex_weights(mu)
 
     # maps of the BGG complex
-    maps = BGG.compute_maps(BGG.weight_to_alpha_sum(BGG._tuple_to_weight(mu)),check=True)
+    maps = BGG._maps[BGG.weight_to_alpha_sum(BGG._tuple_to_weight(mu))]
 
     # for each vertex, get the arrows in the Bruhat graph going out of it.
     column = BGG.column[i]

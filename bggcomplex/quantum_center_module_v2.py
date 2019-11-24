@@ -32,7 +32,7 @@ def Mijk(BGG, i, j, k, subset=[]):
 
     return module
 
-def sort_sign(A)
+def sort_sign(A):
     """Sort a numpy array which is sorted except for the first entry.
      Compute the signs of the permutations sorting them.
      Returns the sorted array, the signs for each row, 
