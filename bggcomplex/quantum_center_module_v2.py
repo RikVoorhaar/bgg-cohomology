@@ -6,7 +6,6 @@ from fast_module import FastLieAlgebraCompositeModule, FastModuleFactory
 from IPython.display import display, Math, Latex
 import cohomology
 import numpy as np
-from tqdm.auto import tqdm
 from sage.rings.integer_ring import ZZ
 from sage.matrix.constructor import matrix
 

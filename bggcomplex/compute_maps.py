@@ -8,24 +8,28 @@ Works for any dominant weight.
 
 from numpy import array,int16,zeros,around,greater_equal,array_equal
 
-from multiprocessing import cpu_count
-from sage.parallel.decorate import parallel
+
 from sage.matrix.constructor import matrix
 #from sage.rings.integer_ring import ZZ
 from sage.rings.rational_field import QQ
 from sage.rings.rational import Rational
 from sage.modules.free_module_element import vector
 
+
 class BGGMapSolver:
     """A class encoding the methods to compute all the maps in the BGG complex"""
-    def __init__(self, BGG, weight, pbar=None):
+    def __init__(self, BGG, weight, pbar=None, cached_results=None):
         self.BGG= BGG
 
         self.pbar = pbar
 
         self.action_dic = {w:BGG.alpha_sum_to_array(BGG.fast_dot_action(w,weight)) for w in BGG.reduced_words}
+        self.max_len = max(len(v) for v in self.action_dic.keys())
 
-        self.maps = dict()
+        if cached_results is not None:
+            self.maps = cached_results
+        else:
+            self.maps = dict()
         self.num_trivial_maps = self._compute_initial_maps()
         self.n_non_trivial_maps = len(self.BGG.arrows)-self.num_trivial_maps
         self.problem_dic = dict()
@@ -48,49 +52,52 @@ class BGGMapSolver:
         for each such cycle, create a dictionary containing all the information needed to solve
         for the remaining fourth map. We only store the problem of lowest total degree for any undetermined edge."""
         for c in self.BGG.cycles:
-            edg = (c[0:2], c[1:3], c[4:2:-1], c[3:1:-1]) #unpack cycle into its four edges
+            edg = (c[0:2], c[1:3], c[4:2:-1], c[3:1:-1])  # unpack cycle into its four edges
             mask = [e in self.maps for e in edg]
-            if sum(mask) == 3: #if we know three of the maps...
+            if sum(mask) == 3:  # if we know three of the maps...
                 problem = dict()
                 problem['tot_deg'] = sum(self.action_dic[c[0]] - self.action_dic[c[2]])
+                index_unknown_edg = mask.index(False)
+                problem['edge']=edg[index_unknown_edg]
 
-                if mask.index(False) == 0:
-                    problem['edge']=edg[0]
-                    problem['deg']=self.action_dic[edg[0][0]] - self.action_dic[edg[0][1]]
-                    problem['deg_RHS'] = -self.action_dic[edg[3][1]] + self.action_dic[edg[2][0]]
-                    problem['side']='left'
-                    problem['known_LHS']=self.maps[edg[1]]
-                    problem['RHS'] = self.maps[edg[3]] * self.maps[edg[2]]
-                if mask.index(False) == 1:
-                    problem['edge']=edg[1]
-                    problem['deg']=self.action_dic[edg[1][0]] - self.action_dic[edg[1][1]]
-                    problem['deg_RHS'] = -self.action_dic[edg[3][1]] + self.action_dic[edg[2][0]]
-                    problem['side']='right'
-                    problem['known_LHS']=self.maps[edg[0]]
-                    problem['RHS'] = self.maps[edg[3]] * self.maps[edg[2]]
-                if mask.index(False) == 2:
-                    problem['edge']=edg[2]
-                    problem['deg']=self.action_dic[edg[2][0]] - self.action_dic[edg[2][1]]
-                    problem['deg_RHS'] = -self.action_dic[edg[1][1]] + self.action_dic[edg[0][0]]
-                    problem['side']='left'
-                    problem['known_LHS']=self.maps[edg[3]]
-                    problem['RHS']=self.maps[edg[1]] * self.maps[edg[0]]
-                if mask.index(False) == 3:
-                    problem['edge']=edg[3]
-                    problem['deg']=self.action_dic[edg[3][0]] - self.action_dic[edg[3][1]]
-                    problem['deg_RHS'] = -self.action_dic[edg[1][1]] +self.action_dic[edg[0][0]]
-                    problem['side']='right'
-                    problem['known_LHS']=self.maps[edg[2]]
-                    problem['RHS'] = self.maps[edg[1]] * self.maps[edg[0]]
-
-                #only store the problem if either we didn't have a problem for this edge,
-                #or the problem we had for this edge was of higher degree
+                # only store the problem if either we didn't have a problem for this edge,
+                # or the problem we had for this edge was of higher degree
                 current_edge=problem['edge']
                 if current_edge in self.problem_dic:
-                    existing_problem = self.problem_dic[current_edge]
-                    if existing_problem['tot_deg']>problem['tot_deg']:
-                        self.problem_dic[current_edge]=problem
+                    best_degree = self.problem_dic[current_edge]['tot_deg']
+                    if problem['tot_deg'] < best_degree:
+                        problem_viable = True
+                    else:
+                        problem_viable = False
                 else:
+                    problem_viable = True
+
+                if problem_viable:
+                    if index_unknown_edg == 0:
+                        problem['deg']=self.action_dic[edg[0][0]] - self.action_dic[edg[0][1]]
+                        problem['deg_RHS'] = -self.action_dic[edg[3][1]] + self.action_dic[edg[2][0]]
+                        problem['side']='left'
+                        problem['known_LHS']=self.maps[edg[1]]
+                        problem['RHS'] = self.maps[edg[3]] * self.maps[edg[2]]
+                    if index_unknown_edg == 1:
+                        problem['deg']=self.action_dic[edg[1][0]] - self.action_dic[edg[1][1]]
+                        problem['deg_RHS'] = -self.action_dic[edg[3][1]] + self.action_dic[edg[2][0]]
+                        problem['side']='right'
+                        problem['known_LHS']=self.maps[edg[0]]
+                        problem['RHS'] = self.maps[edg[3]] * self.maps[edg[2]]
+                    if index_unknown_edg == 2:
+                        problem['deg']=self.action_dic[edg[2][0]] - self.action_dic[edg[2][1]]
+                        problem['deg_RHS'] = -self.action_dic[edg[1][1]] + self.action_dic[edg[0][0]]
+                        problem['side']='left'
+                        problem['known_LHS']=self.maps[edg[3]]
+                        problem['RHS']=self.maps[edg[1]] * self.maps[edg[0]]
+                    if index_unknown_edg == 3:
+                        problem['deg']=self.action_dic[edg[3][0]] - self.action_dic[edg[3][1]]
+                        problem['deg_RHS'] = -self.action_dic[edg[1][1]] +self.action_dic[edg[0][0]]
+                        problem['side']='right'
+                        problem['known_LHS']=self.maps[edg[2]]
+                        problem['RHS'] = self.maps[edg[1]] * self.maps[edg[0]]
+
                     self.problem_dic[current_edge] = problem
 
     def problems(self):
@@ -105,20 +112,46 @@ class BGGMapSolver:
             _, problem = self.problem_dic.popitem()
             yield problem
 
-    def solve(self):
+    def solve(self, column = None):
         """Iterate over all the problems to find all the maps, and return the result"""
 
         if self.pbar is not None:
             self.pbar.reset(total = self.n_non_trivial_maps)
 
         self._get_available_problems()
-        #for problem in self.problems():
+
+        def column_distance(v):
+            v1, v2 = v
+            return min(abs(column - len(v1)), abs(column - len(v2)))
+
         while len(self.problem_dic) > 0:
-            for problem in self.problem_dic.values():
+            if column is not None:
+                maps_missing = False
+                for a in self.BGG.arrows:
+                    if (len(a[0]) == column) or (len(a[1]) == column):
+                        if a not in self.maps:
+                            maps_missing = True
+                if not maps_missing:
+                    break
+
+            if column is not None:
+
+                problem_sorted = sorted(self.problem_dic.items(),
+                                        key=lambda s: (column_distance(s[0]), s[1]['tot_deg'])
+                                        )
+                max_tolerance = min(column_distance(v) for v,_ in problem_sorted)
+            else:
+                problem_sorted = sorted(self.problem_dic.items(), key=lambda s: s[1]['tot_deg'])
+
+            for edge, problem in problem_sorted:
+                if column is not None:
+                    if column_distance(edge)>max_tolerance:
+                        break
                 self.solve_problem(problem)
-                #self.BGG.PBW.product_on_basis.clear_cache()
+
                 if self.pbar is not None:
                     self.pbar.update()
+
             self.problem_dic = dict()
             self._get_available_problems()
         return self.maps

@@ -7,6 +7,9 @@ To use the BGG complex to compute cohomology we can use fast_module.
 
 from itertools import groupby,chain
 
+import os
+import pickle
+
 #from sage.all import *
 from sage.rings.rational_field import QQ
 from sage.matrix.constructor import matrix
@@ -32,11 +35,12 @@ from IPython.display import display, Math, Latex
 
 class BGGComplex:
     """A class encoding all the things we need of the BGG complex"""
-    def __init__(self, root_system):
+    def __init__(self, root_system, pickle_directory = None):
+        self.root_system = root_system
         self.W = WeylGroup(root_system)
         self.domain = self.W.domain()
         self.LA = LieAlgebra(QQ, cartan_type=root_system)
-        self.PBW = PoincareBirkhoffWittBasis(self.LA,None,'PBW')
+        self.PBW = PoincareBirkhoffWittBasis(self.LA, None, 'PBW', cache_degree=4)
         #self.PBW = self.LA.pbw_basis()
         self.PBW_alg_gens = self.PBW.algebra_generators()
         self.lattice = self.domain.root_system.root_lattice()
@@ -46,6 +50,8 @@ class BGGComplex:
         self._compute_weyl_dictionary()
         self._construct_BGG_graph()
 
+        self.find_cycles()
+
         self.simple_roots = self.domain.simple_roots().values()
         self.rank = len(self.simple_roots)
         self.neg_roots = sorted([-array(self._weight_to_tuple(r)) for r in self.domain.negative_roots()],
@@ -53,7 +59,16 @@ class BGGComplex:
         self.alpha_to_index = {self.weight_to_alpha_sum(-self._tuple_to_weight(r)):i for i,r in enumerate(self.neg_roots)}
         self.zero_root = self.domain.zero()
 
-        self._maps = dict()
+        self.pickle_directory = pickle_directory
+        if pickle_directory is None:
+            self.pickle_maps = False
+        else:
+             self.pickle_maps = True
+
+        if self.pickle_maps:
+            self._maps = self.read_maps()
+        else:
+            self._maps = dict()
 
         self.rho = self.domain.rho()
 
@@ -130,16 +145,8 @@ class BGGComplex:
             # b<b' in lexicographic order (to avoid duplicates) and length goes +1,+1,-1
             self.cycles=chain.from_iterable([[a+(v,) for v in incoming[a[-1]] if v > a[1]] for a in self.cycles])
 
-            # Sort such that b<b' in lexicographic order
-            #self.cycles = [(a[0],a[3],a[2],a[1]) for a in self.cycles if a[1] > a[3]]
-
-            # Remove duplicates
-            #self.cycles= list(set(self.cycles))
-
             # enumerate all cycles of length 4, a->b->c->b'->a such that b'!=b and length goes +1,+1,-1,-1
             self.cycles=[a+(a[0],) for a in self.cycles if a[0] in incoming[a[-1]]]
-
-
 
         return self.cycles
 
@@ -155,21 +162,42 @@ class BGGComplex:
         self.signs = compute_signs(self)
         return self.signs
 
-    def compute_maps(self, root, check=False, pbar=None):
+    def compute_maps(self, root, column=None, check=False, pbar=None):
         """For the given weight, compute the maps of the BGG complex"""
 
         # If the maps are not in the cache, compute them and cache the result
-        if root not in self._maps:
-            self.find_cycles()
+        if root in self._maps:
+            cached_result = self._maps[root]
+        else:
+            cached_result = None
+        MapSolver = BGGMapSolver(self,  root, pbar=pbar, cached_results=cached_result)
+        self._maps[root] = MapSolver.solve(column=column)
+        if check:
+            maps_OK = MapSolver.check_maps()
+            if not maps_OK:
+                raise ValueError('For root %s the map solver produced something wrong' % root)
 
-            MapSolver = BGGMapSolver(self,  root, pbar=pbar)
-            self._maps[root] = MapSolver.solve()
-            if check:
-                maps_OK = MapSolver.check_maps()
-                if not maps_OK:
-                    raise ValueError('For root %s the map solver produced something wrong' % root)
+        if self.pickle_maps:
+            self.store_maps()
 
         return self._maps[root]
+
+    def read_maps(self):
+        target_path = os.path.join(self.pickle_directory, self.root_system + r'_maps.pkl')
+        try:
+            with open(target_path, 'rb') as file:
+                maps = pickle.load(file)
+                return maps
+        except IOError:
+            return dict()
+
+    def store_maps(self):
+        target_path = os.path.join(self.pickle_directory, self.root_system + r'_maps.pkl')
+        try:
+            with open(target_path, 'wb') as file:
+                pickle.dump(self._maps, file, pickle.HIGHEST_PROTOCOL)
+        except IOError:
+            pass
 
     def _weight_to_tuple(self,weight):
         """Decompose a weight into a tuple encoding the weight as a linear combination of the simple roots"""

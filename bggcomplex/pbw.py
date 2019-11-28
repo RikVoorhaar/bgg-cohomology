@@ -4,6 +4,9 @@ The Poincare-Birkhoff-Witt Basis For A Universal Enveloping Algebra
 AUTHORS:
 
 - Travis Scrimshaw (2013-11-03): Initial version
+
+This is a slightly modified version of that included in sagemath. We implemented a custom cache for the
+`product_on_basis` method.
 """
 
 #*****************************************************************************
@@ -96,7 +99,7 @@ class PoincareBirkhoffWittBasis(CombinatorialFreeModule):
         PBW[-2]*PBW[2]*PBW[3] + PBW[-2]*PBW[5]
     """
     @staticmethod
-    def __classcall_private__(cls, g, basis_key=None, prefix='PBW', **kwds):
+    def __classcall_private__(cls, g, basis_key=None, prefix='PBW', cache_degree=None, **kwds):
         """
         Normalize input to ensure a unique representation.
 
@@ -110,9 +113,9 @@ class PoincareBirkhoffWittBasis(CombinatorialFreeModule):
             True
         """
         return super(PoincareBirkhoffWittBasis, cls).__classcall__(cls,
-                            g, basis_key, prefix, **kwds)
+                            g, basis_key, prefix, cache_degree, **kwds)
 
-    def __init__(self, g, basis_key, prefix, **kwds):
+    def __init__(self, g, basis_key, prefix, cache_degree, **kwds):
         """
         Initialize ``self``.
 
@@ -128,6 +131,9 @@ class PoincareBirkhoffWittBasis(CombinatorialFreeModule):
             self._basis_key = basis_key
         else:
             self._basis_key_inverse = None
+
+        self._cache_degree = cache_degree
+        self.product_cache = dict()
 
         R = g.base_ring()
         self._g = g
@@ -410,6 +416,9 @@ class PoincareBirkhoffWittBasis(CombinatorialFreeModule):
         if rhs == self.one_basis():
             return self.monomial(lhs)
 
+        if (lhs,rhs) in self.product_cache:
+            return self.product_cache[(lhs,rhs)]
+
         I = self._indices
         trail = lhs.trailing_support()
         lead = rhs.leading_support()
@@ -424,7 +433,13 @@ class PoincareBirkhoffWittBasis(CombinatorialFreeModule):
         mc = terms.monomial_coefficients(copy=False)
         terms = self.sum_of_terms((I.gen(t), c) for t,c in mc.items())
         terms += self.monomial(lead * trail)
-        return self.monomial(lhs // trail) * terms * self.monomial(rhs // lead)
+
+        product = self.monomial(lhs // trail) * terms * self.monomial(rhs // lead)
+
+        if (len(lhs) <= self._cache_degree) and (len(rhs) <= self._cache_degree):
+            self.product_cache[(lhs,rhs)] = product
+
+        return product
 
     def degree_on_basis(self, m):
         """

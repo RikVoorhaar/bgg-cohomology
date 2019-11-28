@@ -15,8 +15,6 @@ import numpy as np
 
 import cohomology
 
-from tqdm.auto import tqdm
-
 INT_PRECISION = np.int32
 
 class FastLieAlgebraCompositeModule:
@@ -704,7 +702,7 @@ class BGGCohomology:
         if self.pbar1 is not None:
             self.pbar1.set_description(str(mu)+', maps')
         mu_converted = self.BGG.weight_to_alpha_sum(self.BGG._tuple_to_weight(mu))
-        self.BGG.compute_maps(mu_converted, pbar=self.pbar2)
+        self.BGG.compute_maps(mu_converted, pbar=self.pbar2)#, column=i)
 
         if self.pbar1 is not None:
             self.pbar1.set_description(str(mu)+', diff')
