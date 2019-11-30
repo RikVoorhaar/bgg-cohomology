@@ -47,13 +47,15 @@ class BGGMapSolver:
                 num_trivial_maps+=1
         return num_trivial_maps
 
-    def _get_available_problems(self):
+    def _get_available_problems(self, final_column=None):
         """Find all the admissible cycles in the BGG graph where we know three out of the four maps,
         for each such cycle, create a dictionary containing all the information needed to solve
         for the remaining fourth map. We only store the problem of lowest total degree for any undetermined edge."""
         for c in self.BGG.cycles:
             edg = (c[0:2], c[1:3], c[4:2:-1], c[3:1:-1])  # unpack cycle into its four edges
             mask = [e in self.maps for e in edg]
+
+
             if sum(mask) == 3:  # if we know three of the maps...
                 problem = dict()
                 problem['tot_deg'] = sum(self.action_dic[c[0]] - self.action_dic[c[2]])
@@ -71,6 +73,10 @@ class BGGMapSolver:
                         problem_viable = False
                 else:
                     problem_viable = True
+
+                if final_column is not None:  # Only solve problems where the edge ends in the target column
+                    if len(current_edge[-1]) != final_column:
+                        problem_viable = False
 
                 if problem_viable:
                     if index_unknown_edg == 0:
@@ -100,60 +106,37 @@ class BGGMapSolver:
 
                     self.problem_dic[current_edge] = problem
 
-    def problems(self):
-        """Generator yielding problems. Once we run out of problems, we go through all the cycles to look for more problems.
-        If we run out then, it means we found all the maps"""
-        while True:
-            if (len(self.problem_dic)) == 0:
-                self._get_available_problems()
-                if len(self.problem_dic) ==0:
-                    break
-
-            _, problem = self.problem_dic.popitem()
-            yield problem
-
     def solve(self, column = None):
         """Iterate over all the problems to find all the maps, and return the result"""
 
-        if self.pbar is not None:
-            self.pbar.reset(total = self.n_non_trivial_maps)
-
-        self._get_available_problems()
-
-        def column_distance(v):
-            v1, v2 = v
-            return min(abs(column - len(v1)), abs(column - len(v2)))
-
-        while len(self.problem_dic) > 0:
+        # Iterate in the opposite direction if we only need a column on the far side of the middle.
+        if (column is not None) and (column > self.max_len / 2):
+            columns = range(column, self.max_len+1)[::-1]
+        else:
             if column is not None:
-                maps_missing = False
-                for a in self.BGG.arrows:
-                    if (len(a[0]) == column) or (len(a[1]) == column):
-                        if a not in self.maps:
-                            maps_missing = True
-                if not maps_missing:
-                    break
-
-            if column is not None:
-
-                problem_sorted = sorted(self.problem_dic.items(),
-                                        key=lambda s: (column_distance(s[0]), s[1]['tot_deg'])
-                                        )
-                max_tolerance = min(column_distance(v) for v,_ in problem_sorted)
+                columns = range(column+2)
             else:
-                problem_sorted = sorted(self.problem_dic.items(), key=lambda s: s[1]['tot_deg'])
+                columns = range(self.max_len+1)
 
-            for edge, problem in problem_sorted:
-                if column is not None:
-                    if column_distance(edge)>max_tolerance:
-                        break
+        # Configure the progress bar with the right number of maps.
+        if self.pbar is not None:
+            if column is None:
+                self.pbar.reset(total=self.n_non_trivial_maps)
+            else:
+                tot = 0
+                for c in columns:
+                    for s, t in self.BGG.arrows:
+                        if (len(t) == c) and ((s, t) not in self.maps):
+                            tot += 1
+                self.pbar.reset(total=tot)
+
+        for c in columns:
+            self._get_available_problems(final_column=c)
+            for problem in self.problem_dic.values():
                 self.solve_problem(problem)
-
                 if self.pbar is not None:
                     self.pbar.update()
 
-            self.problem_dic = dict()
-            self._get_available_problems()
         return self.maps
 
     def multidegree_to_root_sum(self,deg):
@@ -213,8 +196,6 @@ class BGGMapSolver:
                         enumerate(self.multidegree_to_root_sum(problem['deg_RHS']))
                         }
 
-        #monomial_to_index = self.get_monomial_to_index(LHS)
-
         A = self.vectorize_polynomials_list(LHS,target_basis)
         b = self.vectorize_polynomial(problem['RHS'],target_basis)
 
@@ -223,6 +204,9 @@ class BGGMapSolver:
         output = sum(Rational(c) * basis[i] for i, c in enumerate(sol))
 
         self.maps[problem['edge']] = output
+
+    def dual_edge(self, edge):
+        return self.BGG.dual_words[edge[1]], self.BGG.dual_words[edge[0]]
 
     @staticmethod
     def get_monomial_to_index(LHS):

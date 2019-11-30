@@ -416,8 +416,10 @@ class PoincareBirkhoffWittBasis(CombinatorialFreeModule):
         if rhs == self.one_basis():
             return self.monomial(lhs)
 
-        if (lhs,rhs) in self.product_cache:
-            return self.product_cache[(lhs,rhs)]
+        # Look up in cache if degree is low enough
+        if (len(lhs) <= self._cache_degree) and (len(rhs) <= self._cache_degree):
+            if (lhs,rhs) in self.product_cache:
+                return self.product_cache[(lhs,rhs)]
 
         I = self._indices
         trail = lhs.trailing_support()
@@ -436,6 +438,7 @@ class PoincareBirkhoffWittBasis(CombinatorialFreeModule):
 
         product = self.monomial(lhs // trail) * terms * self.monomial(rhs // lead)
 
+        # add to cache if degree is low enough
         if (len(lhs) <= self._cache_degree) and (len(rhs) <= self._cache_degree):
             self.product_cache[(lhs,rhs)] = product
 
