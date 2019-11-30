@@ -40,7 +40,7 @@ class BGGComplex:
         self.W = WeylGroup(root_system)
         self.domain = self.W.domain()
         self.LA = LieAlgebra(QQ, cartan_type=root_system)
-        self.PBW = PoincareBirkhoffWittBasis(self.LA, None, 'PBW', cache_degree=4)
+        self.PBW = PoincareBirkhoffWittBasis(self.LA, None, 'PBW', cache_degree=5)
         #self.PBW = self.LA.pbw_basis()
         self.PBW_alg_gens = self.PBW.algebra_generators()
         self.lattice = self.domain.root_system.root_lattice()
@@ -54,8 +54,16 @@ class BGGComplex:
 
         self.simple_roots = self.domain.simple_roots().values()
         self.rank = len(self.simple_roots)
-        self.neg_roots = sorted([-array(self._weight_to_tuple(r)) for r in self.domain.negative_roots()],
-                                key=lambda l: (sum(l), tuple(l)))
+
+        # for PBW computations we need to put the right order on the negative roots.
+        # This order coincides with that of the sagemath source code.
+        lie_alg_order = {k: i for i, k in enumerate(self.LA.basis().keys())}
+        ordered_roots = sorted([self.weight_to_alpha_sum(r) for r in self.domain.negative_roots()],
+                               key=lambda rr: lie_alg_order[rr])
+        self.neg_roots = [-self.alpha_sum_to_array(r) for r in ordered_roots]
+        # self.neg_roots = sorted([-array(self._weight_to_tuple(r)) for r in self.domain.negative_roots()],
+        #                         key=lambda l: (sum(l), tuple(l)))
+
         self.alpha_to_index = {self.weight_to_alpha_sum(-self._tuple_to_weight(r)):i for i,r in enumerate(self.neg_roots)}
         self.zero_root = self.domain.zero()
 
@@ -86,6 +94,11 @@ class BGGComplex:
         self.reduced_word_dic={''.join([str(s) for s in g.reduced_word()]):g for g in self.W}
         self.reduced_word_dic_reversed=dict([[v,k] for k,v in self.reduced_word_dic.items()])
         self.reduced_words = sorted(self.reduced_word_dic.keys(),key=len) #sort the reduced words by their length
+        long_element = self.W.long_element()
+        self.dual_words = {
+            s: self.reduced_word_dic_reversed[long_element*w]
+            for s, w in self.reduced_word_dic.items()
+        } # the dual word is the word times the longest element
 
         self.column = defaultdict(list)
         max_len = 0
@@ -114,7 +127,7 @@ class BGGComplex:
         BGGPartition=[list(v) for k,v in groupby(BGGVertices,len)]
 
         BGGGraphPlot = self.graph.to_undirected().graphplot(partition=BGGPartition,vertex_labels=None,vertex_size=30)
-        return BGGGraphPlot
+        display(BGGGraphPlot.plot())
 
     def find_cycles(self):
         """Find all the admitted cycles in the BGG graph. An admitted cycle consists of two paths a->b->c and a->b'->c,
