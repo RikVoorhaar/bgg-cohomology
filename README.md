@@ -16,14 +16,6 @@ There is a basic tutorial of how to use this module in the `examples` directory.
 Furthermore the `computations` directory contains notebooks with the code we used
 for the results in our preprint. 
 
-## To do
-
-Several important features are currently in development.
-- Optimize the computation of BGG maps
-- Add support for a wider class of Lie algebra modules.
-
-We welcome all suggestions and feature requests for academic purposes. 
-
 ## Credit
 All the code has been written by **Rik Voorhaar**. 
  Additional credit goes to **Nicolas Hemelsoet** for many aspects of the algorithm implemented here.
