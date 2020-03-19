@@ -154,7 +154,7 @@ class FastLieAlgebraCompositeModule:
         for i, comp in enumerate(self.components):
             direct_sum_component = self.construct_component(comp)
             direct_sum_weight_components = self.compute_weight_components(direct_sum_component)
-            for weight, basis in direct_sum_weight_components.iteritems():
+            for weight, basis in direct_sum_weight_components.items():
                 if weight not in weight_components:
                     weight_components[weight] = list()
                 weight_components[weight].append((i, basis))
@@ -198,16 +198,17 @@ class FastLieAlgebraCompositeModule:
         # action matrix is of form (i,j):v, where v is a list of pairs (k,C_ijk)
         for (i, j), v in action_mat.items():
             l = len(v)
+            v_iterator = iter(v.items())
             if l == 1: # s=-1, and we can just store the triple in location i,j
-                k, C_ijk = v.items()[0]
+                k, C_ijk = next(v_iterator)
                 action_tensor[i, j] = (-1, k, C_ijk)
             else:  # Multiple non-zero C_ijk for this i,j
                 s = s_values[j] # Look up number of extra rows already added to this column
                 s_values[j] += 1
-                k, C_ijk = v.items()[0]
+                k, C_ijk = next(v_iterator)
                 action_tensor[i, j] = (s, k, C_ijk) # First one is still at position (i,j)
                 count = 0
-                for k, C_ijk in v.items()[1:]: # Other ones will be in the extra rows
+                for k, C_ijk in v_iterator: # Other ones will be in the extra rows
                     count += 1
                     if count >= l - 1: # For the last in the chain s=-1
                         action_tensor[s, j] = (-1, k, C_ijk)
@@ -706,8 +707,12 @@ class BGGCohomology:
 
         if self.pbar1 is not None:
             self.pbar1.set_description(str(mu)+', diff')
-        d_i, chain_dim = cohomology.compute_diff(self,mu,i)
-        d_i_minus_1, _ = cohomology.compute_diff(self,mu,i-1)
+        try:
+            d_i, chain_dim = cohomology.compute_diff(self,mu,i)
+            d_i_minus_1, _ = cohomology.compute_diff(self,mu,i-1)
+        except IndexError as err:
+            print(mu,i)
+            raise err
 
         if self.pbar1 is not None:
             self.pbar1.set_description(str(mu)+', rank1')
@@ -837,8 +842,9 @@ class BGGCohomology:
                     else:
                         display(Math(r'\mathrm b^{%d}' % i + display_string + str(betti_num)))
 
-    def tuple_to_latex(self, (mu, mult),compact=False):
+    def tuple_to_latex(self, tup, compact=False):
         """LaTeX string representing a tuple of highest weight vector and it's multiplicity"""
+        (mu, mult) = tup
         if compact: # compact display
             alpha_string = ','.join([str(m) for m in mu])
             if sum(mu)==0:

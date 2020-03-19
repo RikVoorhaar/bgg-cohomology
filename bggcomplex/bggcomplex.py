@@ -10,7 +10,6 @@ from itertools import groupby,chain
 import os
 import pickle
 
-#from sage.all import *
 from sage.rings.rational_field import QQ
 from sage.matrix.constructor import matrix
 from sage.rings.integer_ring import ZZ
@@ -142,13 +141,13 @@ class BGGComplex:
             # are vertices such that there is an arrow v->u_i
             first = lambda x: x[0]
             second = lambda x: x[1]
-            outgoing={k:map(second,v) for k,v in groupby(sorted(self.arrows,key=first),first)}
+            outgoing={k:list(map(second,v)) for k,v in groupby(sorted(self.arrows,key=first),first)}
             # outgoing[max(self.reduced_words,key=lambda x: len(x))]=[]
             outgoing[self.reduced_word_dic_reversed[self.W.long_element()]]=[]
 
             # make a dictionary of pairs (v,[u_1,...,u_k]) where v is a vertex and u_i are vertices such that
             # there is an arrow u_i->v
-            incoming={k:map(first,v) for k,v in groupby(sorted(self.arrows,key=second),second)}
+            incoming={k:list(map(first,v)) for k,v in groupby(sorted(self.arrows,key=second),second)}
             incoming['']=[]
 
             # enumerate all paths of length 2, a->b->c, where length goes +1,+1

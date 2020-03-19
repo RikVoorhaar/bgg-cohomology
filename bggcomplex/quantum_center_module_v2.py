@@ -8,7 +8,12 @@ import cohomology
 import numpy as np
 from sage.rings.integer_ring import ZZ
 from sage.matrix.constructor import matrix
-
+from sage.parallel.decorate import parallel, normalize_input
+from sage.parallel.multiprocessing_sage import parallel_iter
+import csv
+import time
+from os.path import join
+from os import mkdir
 
 def Mijk(BGG, i, j, k, subset=[]):
     """Define the module Mijk. Here i is the cohomology degreee, j and k are parameters."""
@@ -45,8 +50,8 @@ def sort_sign(A):
         return (A,np.ones(len(A),dtype=int),np.ones(len(A),dtype=bool))
 
 def compute_phi(BGG,subset= []):
-    """Computes the map b->g\oplus n\otimes u. It is returned as a dictionary
-    b-> n\otimes u, where the latter is stored as an array with rows (n_index, u_index, coefficient)"""
+    """Computes the map b->g oplus n otimes u. It is returned as a dictionary
+    b-> n otimes u, where the latter is stored as an array with rows (n_index, u_index, coefficient)"""
 
     factory = FastModuleFactory(BGG.LA)
 
@@ -59,7 +64,7 @@ def compute_phi(BGG,subset= []):
     # look up adjoint action for each b
     phi_image = {b:[] for b in b_basis}
     for (b,n),u_dic in ad_dic.items():
-        u,coeff = u_dic.items()[0]
+        u,coeff = next(iter(u_dic.items()))
         phi_image[b].append(np.array([u,factory.dual_root_dict[n],coeff]))
 
     # process the adjoint action image into the right format
@@ -72,7 +77,7 @@ def compute_phi(BGG,subset= []):
     return phi_image
 
 
-def Tijk_basis(BGG, i, j, k, subset=[], pbar=None):
+def Tijk_basis(BGG, i, j, k, subset=[], pbar=None, kernel_benchmark = False, ker_method='fast'):
     """Gives a basis of the quotient Ejk = Mjk/Tjk for each weight component"""
     factory = FastModuleFactory(BGG.LA)
 
@@ -190,24 +195,80 @@ def Tijk_basis(BGG, i, j, k, subset=[], pbar=None):
         pbar.reset(total=total_rels)
         pbar.set_description('Computing kernels')
 
-    # now we need to compute the cokernel (= right kernel) of the relations to get a basis
-    for mu, rels in coker_dic.items():
-        # compute the dimension of source and target
+    for mu,rels in coker_dic.items():
         source_dim = mu_source_counters[mu]
         target_dim = wc_mod.dimensions[mu]
+        ker = _compute_kernel(source_dim,target_dim,rels,pbar)
+        T[mu] = ker
 
-        # build the matrix of relations
-        sparse_dic = dict()
-        for source, target, coeff in rels:
-            sparse_dic[(source, target)] = coeff
-        M = matrix(ZZ, sparse_dic, nrows=source_dim, ncols=target_dim, sparse=True)
+    # # now we need to compute the cokernel (= right kernel) of the relations to get a basis
+    # for mu, rels in coker_dic.items():
+    #     t = time.time()
+    #
+    #     # compute the dimension of source and target
+    #     source_dim = mu_source_counters[mu]
+    #     target_dim = wc_mod.dimensions[mu]
+    #
+    #     # build the matrix of relations
+    #     sparse_dic = dict()
+    #     for source, target, coeff in rels:
+    #         sparse_dic[(source, target)] = coeff
+    #     M = matrix(ZZ, sparse_dic, nrows=source_dim, ncols=target_dim, sparse=True)
+    #
+    #     if pbar is not None:
+    #         pbar.update()
+    #         pbar.set_description('Computing kernels (%d,%d)' % (M.ncols(), M.nrows()))
+    #
+    #     # compute the right kernel, store it in a dictionary
+    #     if ker_method=='fast':
+    #         ker = M.__pari__().matker(flag=1).mattranspose().sage()
+    #     else:
+    #         ker = M.right_kernel().basis_matrix()
+    #     T[mu] = ker
+    #     t = int(time.time() - t)
+    #     if kernel_benchmark and t>0:
+    #         bench_folder = 'mat_benchmark'
+    #         mat_folder = 'mat'
+    #         ker_folder = 'ker'
+    #
+    #         try:
+    #             mkdir(bench_folder)
+    #             mkdir(join(bench_folder,mat_folder))
+    #             mkdir(join(bench_folder,ker_folder))
+    #         except OSError:
+    #             pass
+    #
+    #         mat_path= join(bench_folder, mat_folder, '%s_%d.csv' % (str(mu), t))
+    #         ker_path = join(bench_folder, ker_folder, '%s_%d.csv' % (str(mu), t))
+    #
+    #         with open(mat_path, 'w') as f:
+    #             w = csv.writer(f)
+    #             w.writerows(M.rows())
+    #         with open(ker_path, 'w') as f:
+    #             w = csv.writer(f)
+    #             w.writerows(T[mu].rows())
 
-        if pbar is not None:
-            pbar.update()
-
-        # compute the right kernel, store it in a dictionary
-        T[mu] = M.right_kernel().basis_matrix()
     return T
+
+def _compute_kernel(source_dim,target_dim,rels,pbar=None):
+
+    # build the matrix of relations
+    sparse_dic = dict()
+    for source, target, coeff in rels:
+        sparse_dic[(source, target)] = coeff
+    M = matrix(ZZ, sparse_dic, nrows=source_dim, ncols=target_dim, sparse=True)
+    M = M.dense_matrix()
+
+    if pbar is not None:
+         pbar.update()
+         pbar.update()
+         pbar.set_description('Computing kernels (%d,%d)' % (M.ncols(), M.nrows()))
+
+    # compute the right kernel, store it in a dictionary
+    ker = M.__pari__().matker(flag=1).mattranspose().sage()
+    return ker
+
+
 
 def all_abijk(BGG,s=0,subset=[],half_only=False):
     """Returns a list of all the (a,b) in the bigraded table. If half_only=True then only
@@ -233,11 +294,11 @@ def all_abijk(BGG,s=0,subset=[],half_only=False):
         for a,b,i,j,k in output:
             if a+b<=max_a+1:
                 new_out.append((a,b,i,j,k))
-        return sorted(new_out,key=lambda s: (s[0]+s[1],s[0],s[1]))
+        return sorted(new_out,key=lambda s: (s[0]+s[1],s[1],s[0]))
     else:
         return output
 
-def display_ab_dic(ab_dic,extend_half = False):
+def display_ab_dic(ab_dic,extend_half = False,text_only=False):
     """Generates LaTeX code to display the bigraded table. Takes a dictionary (a,b) -> LaTeX string.
     If extend_half = True, we extend the table by using the symmetry"""
 
@@ -245,7 +306,7 @@ def display_ab_dic(ab_dic,extend_half = False):
     if extend_half:
         max_a = max(a for a,b in ab_dic.keys())
         max_a = max_a + (max_a%2)
-        for (a,b),v in ab_dic.items():
+        for (a,b),v in list(ab_dic.items()):
             ab_dic[(max_a-b,max_a-a)] = v
 
     # Find all the values of a,b
@@ -278,4 +339,8 @@ def display_ab_dic(ab_dic,extend_half = False):
     all_strings = r'\\'.join(rows)
 
     # display the generated latex code.
-    display(Math(r'\begin{array}'+column_string+all_strings+r'\end{array}'))
+    display_string = r'\begin{array}'+column_string+all_strings+r'\end{array}'
+    if text_only:
+        return display_string
+    else:
+        display(Math(display_string))

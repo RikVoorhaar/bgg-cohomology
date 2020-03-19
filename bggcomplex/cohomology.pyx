@@ -234,9 +234,14 @@ def compute_diff(cohom, mu, i):
                     # If there is a cokernel, we have reduce the image of the action
                     # to the basis of the quotient module
                     if cohom.has_coker:
-                        basis_action = coker_reduce(cohom.weight_module,cohom.coker, basis_action,
-                                                    initial_vertex, final_vertex,
-                                                    component=comp_num)
+                        try:
+                            basis_action = coker_reduce(cohom.weight_module,cohom.coker, basis_action,
+                                                        initial_vertex, final_vertex,
+                                                        component=comp_num)
+                        except IndexError as err:
+                            print(final_vertex)
+                            raise err
+
                         if len(basis_action)>0:
                             basis_action[:,0]+=target_col_dic[a[1]] # offset for weight module
                             action_images.append(basis_action)
@@ -339,6 +344,9 @@ def coker_reduce(target_module, coker, action_image, mu0, mu1, component=0):
     # If mu0 is in the cokernel dictionary, express the action in the basis of the quotient
     # If not, then the basis of the quotient is equal to the basis of the module, so there's nothing to do
     if mu0 in coker:
+        # If target vector space is zero, return empty matrix
+        if coker[mu0].nrows()==0:
+            return np.array([])
         new_images = np.zeros((action_image.shape[0]*coker[mu0].ncols(),3),dtype=action_image.dtype)
         current_row = 0
 
@@ -356,6 +364,9 @@ def coker_reduce(target_module, coker, action_image, mu0, mu1, component=0):
     # We do this by multiplying by the matrix encoding the basis of the cokernel
     # If it's not in the dictionary, no reduction is necessary.
     if mu1 in coker:
+        # If target vector space is zero, return empty matrix
+        if coker[mu1].nrows()==0:
+            return np.array([])
         new_image_coker = np.zeros((new_action_image.shape[0]*coker[mu1].ncols(),3),dtype=action_image.dtype)
         current_row = 0
 
