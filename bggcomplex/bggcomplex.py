@@ -10,6 +10,8 @@ from itertools import groupby,chain
 import os
 import pickle
 
+import sage.all
+
 from sage.rings.rational_field import QQ
 from sage.matrix.constructor import matrix
 from sage.rings.integer_ring import ZZ
