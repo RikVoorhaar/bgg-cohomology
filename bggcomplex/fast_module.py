@@ -786,7 +786,7 @@ class BGGCohomology:
         return betti_num
 
     def cohomology_LaTeX(self, i=None, complex_string='', only_non_zero=True, print_betti=False, print_modules= True,
-                         only_strings=False, compact=False):
+                         only_strings=False, compact=False, skip_zero=False):
         """In a notebook we can use pretty display of cohomology output.
         Only displays cohomology, does not return anything.
         We have the following options:
@@ -795,7 +795,8 @@ class BGGCohomology:
         only_non_zero = True, a bool indicating whether to print non-zero cohomologies.
         print_betti = False, print the Betti numbers
         print_modules = True, print the decomposition of cohomology into highest weight reps
-        only_strings = False, don't display anything and return a string instead for further processing"""
+        only_strings = False, don't display anything and return a string instead for further processing
+        skip_zero = False, skip the zeroth cohomology"""
 
         # If there is a complex_string, insert it between brackets, otherwise no brackets.
         if len(complex_string) > 0:
@@ -805,16 +806,21 @@ class BGGCohomology:
 
         # compute cohomology. If cohomology is trivial and only_non_zero is true, return nothing.
         if i is None:
-            cohoms = [(j, self.cohomology(j)) for j in range(self.BGG.max_word_length+1)]
+            if skip_zero:
+                all_degrees = range(1,self.BGG.max_word_length+1)
+            else:
+                all_degrees = range(self.BGG.max_word_length+1)
+            cohoms = [(j, self.cohomology(j)) for j in all_degrees]
+
             max_len = max([len(cohom) for _, cohom in cohoms])
-            if max_len==0:
+            if (max_len==0) and not skip_zero:
                 if only_strings:
                     return '0'
                 else:
                     display(Math(r'\mathrm H^\bullet' + display_string+'0'))
         else:
             cohom_i = self.cohomology(i)
-            if len(cohom_i)==0: #particular i, and zero cohomology:
+            if len(cohom_i)==0 and not only_non_zero: #particular i, and zero cohomology:
                 if only_strings:
                     return '0'
                 else:
