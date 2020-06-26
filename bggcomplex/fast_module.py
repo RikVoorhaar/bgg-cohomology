@@ -154,7 +154,7 @@ class FastLieAlgebraCompositeModule:
         for i, comp in enumerate(self.components):
             direct_sum_component = self.construct_component(comp)
             direct_sum_weight_components = self.compute_weight_components(direct_sum_component)
-            for weight, basis in direct_sum_weight_components.iteritems():
+            for weight, basis in direct_sum_weight_components.items():
                 if weight not in weight_components:
                     weight_components[weight] = list()
                 weight_components[weight].append((i, basis))
@@ -198,16 +198,17 @@ class FastLieAlgebraCompositeModule:
         # action matrix is of form (i,j):v, where v is a list of pairs (k,C_ijk)
         for (i, j), v in action_mat.items():
             l = len(v)
+            v_iterator = iter(v.items())
             if l == 1: # s=-1, and we can just store the triple in location i,j
-                k, C_ijk = v.items()[0]
+                k, C_ijk = next(v_iterator)
                 action_tensor[i, j] = (-1, k, C_ijk)
             else:  # Multiple non-zero C_ijk for this i,j
                 s = s_values[j] # Look up number of extra rows already added to this column
                 s_values[j] += 1
-                k, C_ijk = v.items()[0]
+                k, C_ijk = next(v_iterator)
                 action_tensor[i, j] = (s, k, C_ijk) # First one is still at position (i,j)
                 count = 0
-                for k, C_ijk in v.items()[1:]: # Other ones will be in the extra rows
+                for k, C_ijk in v_iterator: # Other ones will be in the extra rows
                     count += 1
                     if count >= l - 1: # For the last in the chain s=-1
                         action_tensor[s, j] = (-1, k, C_ijk)
@@ -706,8 +707,12 @@ class BGGCohomology:
 
         if self.pbar1 is not None:
             self.pbar1.set_description(str(mu)+', diff')
-        d_i, chain_dim = cohomology.compute_diff(self,mu,i)
-        d_i_minus_1, _ = cohomology.compute_diff(self,mu,i-1)
+        try:
+            d_i, chain_dim = cohomology.compute_diff(self,mu,i)
+            d_i_minus_1, _ = cohomology.compute_diff(self,mu,i-1)
+        except IndexError as err:
+            print(mu,i)
+            raise err
 
         if self.pbar1 is not None:
             self.pbar1.set_description(str(mu)+', rank1')
@@ -781,7 +786,7 @@ class BGGCohomology:
         return betti_num
 
     def cohomology_LaTeX(self, i=None, complex_string='', only_non_zero=True, print_betti=False, print_modules= True,
-                         only_strings=False, compact=False):
+                         only_strings=False, compact=False, skip_zero=False):
         """In a notebook we can use pretty display of cohomology output.
         Only displays cohomology, does not return anything.
         We have the following options:
@@ -790,7 +795,8 @@ class BGGCohomology:
         only_non_zero = True, a bool indicating whether to print non-zero cohomologies.
         print_betti = False, print the Betti numbers
         print_modules = True, print the decomposition of cohomology into highest weight reps
-        only_strings = False, don't display anything and return a string instead for further processing"""
+        only_strings = False, don't display anything and return a string instead for further processing
+        skip_zero = False, skip the zeroth cohomology"""
 
         # If there is a complex_string, insert it between brackets, otherwise no brackets.
         if len(complex_string) > 0:
@@ -800,16 +806,21 @@ class BGGCohomology:
 
         # compute cohomology. If cohomology is trivial and only_non_zero is true, return nothing.
         if i is None:
-            cohoms = [(j, self.cohomology(j)) for j in range(self.BGG.max_word_length+1)]
+            if skip_zero:
+                all_degrees = range(1,self.BGG.max_word_length+1)
+            else:
+                all_degrees = range(self.BGG.max_word_length+1)
+            cohoms = [(j, self.cohomology(j)) for j in all_degrees]
+
             max_len = max([len(cohom) for _, cohom in cohoms])
-            if max_len==0:
+            if (max_len==0) and not skip_zero:
                 if only_strings:
                     return '0'
                 else:
                     display(Math(r'\mathrm H^\bullet' + display_string+'0'))
         else:
             cohom_i = self.cohomology(i)
-            if len(cohom_i)==0: #particular i, and zero cohomology:
+            if len(cohom_i)==0 and not only_non_zero: #particular i, and zero cohomology:
                 if only_strings:
                     return '0'
                 else:
@@ -837,8 +848,9 @@ class BGGCohomology:
                     else:
                         display(Math(r'\mathrm b^{%d}' % i + display_string + str(betti_num)))
 
-    def tuple_to_latex(self, (mu, mult),compact=False):
+    def tuple_to_latex(self, tup, compact=False):
         """LaTeX string representing a tuple of highest weight vector and it's multiplicity"""
+        (mu, mult) = tup
         if compact: # compact display
             alpha_string = ','.join([str(m) for m in mu])
             if sum(mu)==0:
