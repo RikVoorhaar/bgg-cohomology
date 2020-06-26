@@ -5,12 +5,18 @@ of a Verma module.
 
 ## Installation
 
-Install sagemath. The code was developed in version 8.6, and has been tested to work with sage 8.9.
+Install sagemath. The code is currently developed for sage 9.0, but should still work on 8.9.
 
-Clone or download the repository, and run the following command in the `bggcomplex` folder to 
+Download the latest version from the `releases`tab. Run the following command in the `bggcomplex` folder to 
 compile the code before first usage. 
     
     sage setup.py build_ext -i
+
+Some parts require `tdqm` to display progress bars. This can be installed by running
+
+    sage -pip install tqdm
+    
+## Usage
 
 There is a basic tutorial of how to use this module in the `examples` directory. 
 Furthermore the `computations` directory contains notebooks with the code we used
