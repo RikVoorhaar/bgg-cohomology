@@ -722,14 +722,16 @@ class BGGCohomology:
         rank_2 = d_i_minus_1.rank()
         return chain_dim - rank_1 - rank_2
 
-    def cohomology(self, i):
+    def cohomology(self, i, mu=None):
         """Compute full block of cohomology by computing BGG_i(mu) for all dot-regular mu appearing in
         the weight module of length i.
         For a given weight mu, if there are no other weights mu' of length i +/- 1 with the
         same associated dominant, then the weight component mu is isolated and the associated
         cohomology is the entire weight module.
         The cohomology is returned as a list of highest weight vectors appearing in the
-        cohomology, together with their multiplicities."""
+        cohomology, together with their multiplicities.
+        
+        If `weight` is a tuple, then only compute the BGG_i(mu) for this mu"""
 
         if self.pbar1 is not None:
             self.pbar1.set_description('Initializing')
@@ -742,6 +744,8 @@ class BGGCohomology:
         dominant_non_trivial = set()
         dominant_trivial = []
         for w, w_dom, _ in length_i_weights:
+            if (mu is not None) and (w_dom != mu):
+                continue
             for _, w_prime_dom, l in self.regular_weights:
                 if w_prime_dom == w_dom and (l == i + 1 or l == i - 1):
                     dominant_non_trivial.add(w_dom)
@@ -785,12 +789,13 @@ class BGGCohomology:
             betti_num+=dim*mult
         return betti_num
 
-    def cohomology_LaTeX(self, i=None, complex_string='', only_non_zero=True, print_betti=False, print_modules= True,
+    def cohomology_LaTeX(self, i=None, mu=None, complex_string='', only_non_zero=True, print_betti=False, print_modules= True,
                          only_strings=False, compact=False, skip_zero=False):
         """In a notebook we can use pretty display of cohomology output.
         Only displays cohomology, does not return anything.
         We have the following options:
         i = None, degree to compute cohomology. If none, compute in all degrees
+        mu = None, weight for which to compute cohomoly, if None compute for all
         complex_string ='', an optional string to cohom as H^i(complex_string) = ...
         only_non_zero = True, a bool indicating whether to print non-zero cohomologies.
         print_betti = False, print the Betti numbers
@@ -810,7 +815,7 @@ class BGGCohomology:
                 all_degrees = range(1,self.BGG.max_word_length+1)
             else:
                 all_degrees = range(self.BGG.max_word_length+1)
-            cohoms = [(j, self.cohomology(j)) for j in all_degrees]
+            cohoms = [(j, self.cohomology(j, mu=mu)) for j in all_degrees]
 
             max_len = max([len(cohom) for _, cohom in cohoms])
             if (max_len==0) and not skip_zero:
@@ -819,7 +824,7 @@ class BGGCohomology:
                 else:
                     display(Math(r'\mathrm H^\bullet' + display_string+'0'))
         else:
-            cohom_i = self.cohomology(i)
+            cohom_i = self.cohomology(i, mu=mu)
             if len(cohom_i)==0 and not only_non_zero: #particular i, and zero cohomology:
                 if only_strings:
                     return '0'

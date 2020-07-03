@@ -16,3 +16,4 @@ bggcomplex/python2.7.exe.stackdump
 *.c
 *.o
 *.json
+*.pkl
