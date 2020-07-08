@@ -11,6 +11,8 @@ examples/.ipynb_checkpoints
 */.ipynb_checkpoints
 bggcomplex/python2.7.exe.stackdump
 bggcomplex/python2.7.exe.stackdump
+computations/tables
+computations/pickles
 *.stackdump
 *.dll
 *.c
