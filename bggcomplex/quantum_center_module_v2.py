@@ -19,6 +19,8 @@ from sage.parallel.decorate import normalize_input, parallel
 from sage.parallel.multiprocessing_sage import parallel_iter
 from sage.rings.integer_ring import ZZ
 
+import pickle
+
 
 def Mijk(BGG, i, j, k, subset=[]):
     """Define the module Mijk. Here i is the cohomology degreee, j and k are parameters."""
@@ -260,7 +262,15 @@ def _compute_kernel(source_dim, target_dim, rels, pbar=None):
         pbar.set_description("Computing kernels (%d,%d)" % (M.ncols(), M.nrows()))
 
     # compute the right kernel, store it in a dictionary
-    ker = M.__pari__().matker(flag=1).mattranspose().sage()
+    try:
+        ker = M.__pari__().matker(flag=1).mattranspose().sage()
+    except:
+        picklefile = 'matrix.pkl'
+        with open(picklefile,'wb') as f:
+            pickle.dump(M,f)
+        print(f"""Error in computing matrix kernel of size {M.ncols()} X {M.nrows()}.
+        Try increasing the size of the PARI stack. The matrix has been stored in {picklefile}.""")
+        raise
     return ker
 
 
