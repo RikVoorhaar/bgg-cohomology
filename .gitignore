@@ -18,4 +18,4 @@ computations/tables
 *.c
 *.o
 *.json
-*.pkl
+# *.pkl
