@@ -90,9 +90,7 @@ def compute_phi(BGG, subset=[]):
     return phi_image
 
 
-def Tijk_basis(
-    BGG, i, j, k, subset=[], pbar=None, kernel_benchmark=False, ker_method="fast"
-):
+def Tijk_basis(BGG, i, j, k, subset=[], pbar=None, rels_only=False):
     """Gives a basis of the quotient Ejk = Mjk/Tjk for each weight component"""
     factory = FastModuleFactory(BGG.LA)
 
@@ -232,19 +230,50 @@ def Tijk_basis(
         for mu, rels in coker_dic.items()
     }
 
-    T = dict()
-    total_rels = len(coker_dic)
-    if pbar is not None:
-        pbar.reset(total=total_rels)
-        pbar.set_description("Computing kernels")
+    # Special mode just to estimate the size of the computation
+    if rels_only:
+        return coker_dic, mu_source_counters, wc_mod.dimensions
 
-    for mu, rels in coker_dic.items():
-        source_dim = mu_source_counters[mu]
-        target_dim = wc_mod.dimensions[mu]
-        ker = _compute_kernel(source_dim, target_dim, rels, pbar)
-        T[mu] = ker
+    return CokerCache(coker_dic, mu_source_counters, wc_mod.dimensions)
 
-    return T
+    # T = dict()
+    # total_rels = len(coker_dic)
+    # if pbar is not None:
+    #     pbar.reset(total=total_rels)
+    #     pbar.set_description("Computing kernels")
+
+    # for mu, rels in coker_dic.items():
+    #     source_dim = mu_source_counters[mu]
+    #     target_dim = wc_mod.dimensions[mu]
+    #     ker = _compute_kernel(source_dim, target_dim, rels, pbar)
+    #     T[mu] = ker
+
+    # return T
+
+
+class CokerCache:
+    """Wrapper to compute cokernels on demand. Stores only the relations
+    defining the kernels, but only computes the kernel of the matrix when needed."""
+    def __init__(self, rel_dic, source_dims, target_dims, pbar=None):
+        self.rel_dic = rel_dic
+        self.source_dims = source_dims
+        self.target_dims = target_dims
+        self.computed_cokernels = dict()
+        self.pbar = pbar
+
+    def __getitem__(self, mu):
+        if mu in self.computed_cokernels:
+            return self.computed_cokernels[mu]
+        else:
+            rels = self.rel_dic[mu]
+            source_dim = self.source_dims[mu]
+            target_dim = self.target_dims[mu]
+            ker = _compute_kernel(source_dim, target_dim, rels, self.pbar)
+            self.computed_cokernels[mu] = ker
+            return ker
+
+    def __contains__(self, mu):
+        return (mu in self.rel_dic)
 
 
 def _compute_kernel(source_dim, target_dim, rels, pbar=None):
@@ -265,11 +294,13 @@ def _compute_kernel(source_dim, target_dim, rels, pbar=None):
     try:
         ker = M.__pari__().matker(flag=1).mattranspose().sage()
     except:
-        picklefile = 'matrix.pkl'
-        with open(picklefile,'wb') as f:
-            pickle.dump(M,f)
-        print(f"""Error in computing matrix kernel of size {M.ncols()} X {M.nrows()}.
-        Try increasing the size of the PARI stack. The matrix has been stored in {picklefile}.""")
+        picklefile = "matrix.pkl"
+        with open(picklefile, "wb") as f:
+            pickle.dump(M, f)
+        print(
+            f"""Error in computing matrix kernel of size {M.ncols()} X {M.nrows()}.
+        Try increasing the size of the PARI stack. The matrix has been stored in {picklefile}."""
+        )
         raise
     return ker
 
@@ -357,7 +388,7 @@ def display_bigraded_table(table, text_only=False):
     return display_string
 
 
-def display_cohomology_stats(cohom_dic, BGG):
+def display_cohomology_stats(cohom_dic, BGG, text_only=False):
     "Display multiplicities and dimensions of all the entries in bigraded table"
     multiplicities = defaultdict(int)
 
@@ -365,6 +396,8 @@ def display_cohomology_stats(cohom_dic, BGG):
     weight_set = bgg_cohomology.weight_set
 
     for cohom in cohom_dic.values():
+        if cohom is None:
+            continue
         for mu, mult in cohom:
             multiplicities[mu] += mult
 
@@ -393,7 +426,8 @@ def display_cohomology_stats(cohom_dic, BGG):
         )
 
     array_string = "\\begin{array}{rll}\n\t" + "\\\\\n\t".join(rows) + "\n\\end{array}"
-    display(Math(array_string))
+    if not text_only:
+        display(Math(array_string))
     return array_string
 
 
@@ -413,9 +447,11 @@ def prepare_texfile(tables, title=None):
     post = "\n".join(post)
 
     if title is not None:
-        preamble+=r'{\huge '+title+r'}\\ \\'+'\n\n'
+        preamble += r"{\huge " + title + r"}\\ \\" + "\n\n"
 
-    table_formulas = "\n".join(["\n$\\displaystyle\n" + tab + "\n$ \\\\ \\\\\n" for tab in tables])
+    table_formulas = "\n".join(
+        ["\n$\\displaystyle\n" + tab + "\n$ \\\\ \\\\\n" for tab in tables]
+    )
 
     document = preamble + table_formulas + post
 

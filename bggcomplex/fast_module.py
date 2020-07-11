@@ -921,6 +921,8 @@ class BGGCohomology:
         the associated betti numbers by taking a weighted sum of the dimensions of
         the associated highest weight representations.
         """
+        if cohomology is None:
+            return -1
         betti_num = 0
         for mu, mult in cohomology:
             dim = self.weight_set.highest_weight_rep_dim(mu)
@@ -1050,14 +1052,16 @@ class BGGCohomology:
         """String together the tuple_to_latex function multiple times to turn a list of mu, multiplicity
         into one big LaTeX string."""
 
-        # If there is no cohomology just print the string '0'
-        if len(cohom) > 0:
+        # Entry hasn't been computed yet
+        if cohom is None:
+            return "???"
+        elif len(cohom) > 0:
             tuples = [self.tuple_to_latex(c, compact=compact) for c in cohom]
             if compact:
                 return r"".join(tuples)
             else:
                 return r"\oplus ".join(tuples)
-        else:
+        else: # If there is no cohomology just print the string '0'
             return r"0"
 
     def display_coker(self, mu, transpose=False):
