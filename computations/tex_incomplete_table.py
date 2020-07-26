@@ -9,11 +9,9 @@ import itertools
 import argparse
 import sys
 
-sys.path.append("../bggcomplex")
-
-from fast_module import BGGCohomology
-from bggcomplex import BGGComplex
-from quantum_center_module_v2 import *
+from bggcohomology.fast_module import BGGCohomology
+from bggcohomology.bggcomplex import BGGComplex
+from bggcohomology.quantum_center import *
 
 parser = argparse.ArgumentParser(description="Produce table from .pkl file")
 parser.add_argument("diagram")

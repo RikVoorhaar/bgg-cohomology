@@ -8,9 +8,12 @@ Welcome to bgg-cohomology's documentation!
 
 .. toctree::
    :maxdepth: 2
-
+   
    installation
    bggcomplex
+
+.. automodule:: bggcomplex
+   :members:
 
 Indices and tables
 ==================
