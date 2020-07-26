@@ -45,7 +45,9 @@ compact = True
 picklefile = os.path.join("pickles", f"{diagram}-s{s}-{subset}.pkl")
 cohom_dic = pickle.load(open(picklefile, "rb"))
 cohom = BGGCohomology(BGG)
-cohom_dic = extend_from_symmetry(cohom_dic)
+abijk = all_abijk(BGG, s=s, subset=subset, half_only=False)
+max_a = max(x[0] for x in abijk)
+cohom_dic = extend_from_symmetry(cohom_dic, max_a=max_a)
 for a, b, i, j, k in all_abijk(BGG, s=s, subset=subset, half_only=False):
     if (a, b) not in cohom_dic:
         cohom_dic[(a, b)] = None

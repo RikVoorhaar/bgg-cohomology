@@ -30,7 +30,9 @@ def main(args):
     print(f"Found {len(tex_files)} .tex files.")
 
     print("Compiling pdfs")
-    for file in tqdm(tex_files):
+    pbar = tqdm(tex_files)
+    for file in pbar:
+        pbar.set_description(file)
         old_path = os.path.join(input_folder, file)
         new_path = os.path.join(temp_dir, file)
         shutil.copyfile(old_path, new_path)

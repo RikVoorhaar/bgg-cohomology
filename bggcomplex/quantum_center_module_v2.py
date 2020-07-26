@@ -334,9 +334,10 @@ def all_abijk(BGG, s=0, subset=[], half_only=False):
         return output
 
 
-def extend_from_symmetry(table):
+def extend_from_symmetry(table, max_a=None):
     "Use symmetry to compute an entire bigraded table from just the top half"
-    max_a = max(a for a, b in table.keys())
+    if max_a is None:
+        max_a = max(a for a, b in table.keys())
     max_a = max_a + (max_a % 2)
     for (a, b), v in list(table.items()):
         table[(max_a - b, max_a - a)] = v
