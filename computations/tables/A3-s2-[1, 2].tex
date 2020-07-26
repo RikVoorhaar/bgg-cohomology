@@ -1,0 +1,43 @@
+\documentclass[crop,border=2mm]{standalone}
+
+\usepackage{amsfonts, amsmath, amssymb}
+
+\begin{document}
+\begin{tabular}{l}
+{\huge type A3, s=2, subset=[1, 2]}\\ \\
+
+
+$\displaystyle
+\begin{array}{r|l l l l}
+	{\scriptstyle i+j=0}&L_{1,1,1}&&&\\
+	{\scriptstyle i+j=2}&0&L_{1,1,1}^{2}L_{1,2,1}L_{2,2,1}L_{1,2,2}&&\\
+	{\scriptstyle i+j=4}&0&0&L_{1,1,1}^{2}L_{1,2,1}L_{2,2,1}L_{1,2,2}&\\
+	{\scriptstyle i+j=6}&0&0&0&L_{1,1,1}\\
+	\hline h^{i,j}&{\scriptstyle j-i=0}&{\scriptstyle j-i=2}&{\scriptstyle j-i=4}&{\scriptstyle j-i=6}
+\end{array}
+$ \\ \\
+
+
+$\displaystyle
+\begin{array}{r|l l l l}
+	{\scriptstyle i+j=0}&15&&&\\
+	{\scriptstyle i+j=2}&0&140&&\\
+	{\scriptstyle i+j=4}&0&0&140&\\
+	{\scriptstyle i+j=6}&0&0&0&15\\
+	\hline h^{i,j}&{\scriptstyle j-i=0}&{\scriptstyle j-i=2}&{\scriptstyle j-i=4}&{\scriptstyle j-i=6}
+\end{array}
+$ \\ \\
+
+
+$\displaystyle
+\begin{array}{rll}
+	\text{module}&\text{multiplicity}&\text{dimension} \\ \hline \text{all}&&310 \\
+	L\left(\alpha_{1}+\alpha_{2}+\alpha_{3}\right)&6&15\\
+	L\left(\alpha_{1}+ 2\alpha_{2}+\alpha_{3}\right)&2&20\\
+	L\left( 2\alpha_{1}+ 2\alpha_{2}+\alpha_{3}\right)&2&45\\
+	L\left(\alpha_{1}+ 2\alpha_{2}+ 2\alpha_{3}\right)&2&45
+\end{array}
+$ \\ \\
+
+\end{tabular}
+\end{document}

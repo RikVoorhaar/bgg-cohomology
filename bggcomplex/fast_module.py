@@ -808,7 +808,7 @@ class BGGCohomology:
     def __init__(self, BGG, weight_module=None, coker=None, pbars=None):
         self.BGG = BGG
         self.BGG.compute_signs()  # Make sure BGG signs are computed.
-        
+
         if coker is not None:
             self.has_coker = True
             self.coker = coker
@@ -826,7 +826,7 @@ class BGGCohomology:
         if weight_module is not None:
             self.weight_module = weight_module
             self.weights = weight_module.weight_components.keys()
-            
+
             self.num_components = len(self.weight_module.components)
 
             self.regular_weights = self.weight_set.compute_weights(
@@ -1061,7 +1061,7 @@ class BGGCohomology:
                 return r"".join(tuples)
             else:
                 return r"\oplus ".join(tuples)
-        else: # If there is no cohomology just print the string '0'
+        else:  # If there is no cohomology just print the string '0'
             return r"0"
 
     def display_coker(self, mu, transpose=False):

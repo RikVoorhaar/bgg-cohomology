@@ -1,0 +1,58 @@
+\documentclass[crop,border=2mm]{standalone}
+
+\usepackage{amsfonts, amsmath, amssymb}
+
+\begin{document}
+\begin{tabular}{l}
+{\huge type D4, s=0, subset=[]}\\ \\
+
+
+$\displaystyle
+\begin{array}{r|l l l l l l l l l l l l l}
+	{\scriptstyle i+j=0}&\mathbb{C}&&&&&&&&&&&&\\
+	{\scriptstyle i+j=2}&\mathbb{C}^{4}&\mathbb{C}&&&&&&&&&&&\\
+	{\scriptstyle i+j=4}&\mathbb{C}^{9}&\mathbb{C}^{4}&\mathbb{C}&&&&&&&&&&\\
+	{\scriptstyle i+j=6}&\mathbb{C}^{16}&\mathbb{C}^{11}&\mathbb{C}^{4}&\mathbb{C}&&&&&&&&&\\
+	{\scriptstyle i+j=8}&\mathbb{C}^{23}&\mathbb{C}^{24}&\mathbb{C}^{11}&\mathbb{C}^{4}&\mathbb{C}&&&&&&&&\\
+	{\scriptstyle i+j=10}&\mathbb{C}^{28}&\mathbb{C}^{42}&\mathbb{C}^{24}&\mathbb{C}^{11}&???&???&&&&&&&\\
+	{\scriptstyle i+j=12}&\mathbb{C}^{30}&\mathbb{C}^{60}&\mathbb{C}^{44}&\mathbb{C}^{24}&???&???&???&&&&&&\\
+	{\scriptstyle i+j=14}&\mathbb{C}^{28}&\mathbb{C}^{70}&\mathbb{C}^{68}&???&???&???&???&???&&&&&\\
+	{\scriptstyle i+j=16}&\mathbb{C}^{23}&\mathbb{C}^{68}&???&???&???&???&???&???&\mathbb{C}&&&&\\
+	{\scriptstyle i+j=18}&\mathbb{C}^{16}&???&???&???&???&???&\mathbb{C}^{24}&\mathbb{C}^{11}&\mathbb{C}^{4}&\mathbb{C}&&&\\
+	{\scriptstyle i+j=20}&???&???&???&???&???&\mathbb{C}^{68}&\mathbb{C}^{44}&\mathbb{C}^{24}&\mathbb{C}^{11}&\mathbb{C}^{4}&\mathbb{C}&&\\
+	{\scriptstyle i+j=22}&???&???&???&???&\mathbb{C}^{68}&\mathbb{C}^{70}&\mathbb{C}^{60}&\mathbb{C}^{42}&\mathbb{C}^{24}&\mathbb{C}^{11}&\mathbb{C}^{4}&\mathbb{C}&\\
+	{\scriptstyle i+j=24}&???&???&???&\mathbb{C}^{16}&\mathbb{C}^{23}&\mathbb{C}^{28}&\mathbb{C}^{30}&\mathbb{C}^{28}&\mathbb{C}^{23}&\mathbb{C}^{16}&\mathbb{C}^{9}&\mathbb{C}^{4}&\mathbb{C}\\
+	\hline h^{i,j}&{\scriptstyle j-i=0}&{\scriptstyle j-i=2}&{\scriptstyle j-i=4}&{\scriptstyle j-i=6}&{\scriptstyle j-i=8}&{\scriptstyle j-i=10}&{\scriptstyle j-i=12}&{\scriptstyle j-i=14}&{\scriptstyle j-i=16}&{\scriptstyle j-i=18}&{\scriptstyle j-i=20}&{\scriptstyle j-i=22}&{\scriptstyle j-i=24}
+\end{array}
+$ \\ \\
+
+
+$\displaystyle
+\begin{array}{r|l l l l l l l l l l l l l}
+	{\scriptstyle i+j=0}&1&&&&&&&&&&&&\\
+	{\scriptstyle i+j=2}&4&1&&&&&&&&&&&\\
+	{\scriptstyle i+j=4}&9&4&1&&&&&&&&&&\\
+	{\scriptstyle i+j=6}&16&11&4&1&&&&&&&&&\\
+	{\scriptstyle i+j=8}&23&24&11&4&1&&&&&&&&\\
+	{\scriptstyle i+j=10}&28&42&24&11&-1&-1&&&&&&&\\
+	{\scriptstyle i+j=12}&30&60&44&24&-1&-1&-1&&&&&&\\
+	{\scriptstyle i+j=14}&28&70&68&-1&-1&-1&-1&-1&&&&&\\
+	{\scriptstyle i+j=16}&23&68&-1&-1&-1&-1&-1&-1&1&&&&\\
+	{\scriptstyle i+j=18}&16&-1&-1&-1&-1&-1&24&11&4&1&&&\\
+	{\scriptstyle i+j=20}&-1&-1&-1&-1&-1&68&44&24&11&4&1&&\\
+	{\scriptstyle i+j=22}&-1&-1&-1&-1&68&70&60&42&24&11&4&1&\\
+	{\scriptstyle i+j=24}&-1&-1&-1&16&23&28&30&28&23&16&9&4&1\\
+	\hline h^{i,j}&{\scriptstyle j-i=0}&{\scriptstyle j-i=2}&{\scriptstyle j-i=4}&{\scriptstyle j-i=6}&{\scriptstyle j-i=8}&{\scriptstyle j-i=10}&{\scriptstyle j-i=12}&{\scriptstyle j-i=14}&{\scriptstyle j-i=16}&{\scriptstyle j-i=18}&{\scriptstyle j-i=20}&{\scriptstyle j-i=22}&{\scriptstyle j-i=24}
+\end{array}
+$ \\ \\
+
+
+$\displaystyle
+\begin{array}{rll}
+	\text{module}&\text{multiplicity}&\text{dimension} \\ \hline \text{all}&&1302 \\
+	\mathbb{C}&1302&1
+\end{array}
+$ \\ \\
+
+\end{tabular}
+\end{document}
