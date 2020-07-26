@@ -11,7 +11,7 @@ examples/.ipynb_checkpoints
 */.ipynb_checkpoints
 bggcomplex/python2.7.exe.stackdump
 bggcomplex/python2.7.exe.stackdump
-computations/tables
+computations/tables/pdfs
 # computations/pickles
 *.stackdump
 *.dll
@@ -19,3 +19,5 @@ computations/tables
 *.o
 *.json
 # *.pkl
+
+nohup.out
