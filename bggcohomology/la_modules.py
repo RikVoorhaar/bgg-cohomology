@@ -2,8 +2,7 @@
 Lie algebra modules with weight decomposition and their BGG cohomology
 
 Provides functionality to construct weight modules with a Lie algebra action. Given a BGG complex, it can
-subsequently compute the cohomology of the module. See the example notebooks on https://github.com/RikVoorhaar/BGG
-for explanation of usage.
+subsequently compute the cohomology of the module. See the tutorial notebook for example usage.
 """
 
 from IPython.display import display, Math, Latex
@@ -14,17 +13,79 @@ from sage.misc.cachefunc import cached_method
 from collections import defaultdict
 import numpy as np
 
-import cohomology
+from . import cohomology
 
 INT_PRECISION = np.int32
 
+__all__ = [
+    "LieAlgebraCompositeModule",
+    "BGGCohomology",
+    "ModuleComponent",
+    "ModuleFactory",
+    "WeightSet",
+]
 
-class FastLieAlgebraCompositeModule:
-    """Class encoding a Lie algebra weight module. Input:
-    - `weight_dic`: a dictionary of indices -> flat np.array of length equal to rank of lie algebra
-    - `components: A list of lists of three-tuples. The entries of the tuples are respectively
-    the key of component_dic, the power (an int) and a string either 'wedge' or 'sym'
-    - `component_dic`: a dictionary with values instances of FastModuleComponent"""
+
+class LieAlgebraCompositeModule:
+    """Class encoding a Lie algebra weight module.
+
+    Parameters
+    ----------
+    factory : ModuleFactory
+        Factory object encoding the building blocks for the lie algebra module
+    components : List[List[tuple(str, int, str)]]
+        list of lists of triples e.g. of form `[[('g', 2, 'sym'),('n', 3, 'wedge')]]` to denote the
+        module :math:`\\mathrm{Sym}^2\\mathfrak g\\otimes \\wedge^3\\mathfrak n`. 
+        Or `[[('g',1,'sym')],[('u',1,'sym')]]` to denote :math:`\\mathfrak g\\oplus\\mathfrak u`.
+    component_dic : dict[str, ModuleComponent]
+        dictionary mapping keys like 'g' or 'n' to their respective lie algebra component
+
+    Attributes
+    ----------
+    components : List[List[tuple(str, int, str)]]
+    component_dic : dict[str, ModuleComponent]
+    factory : ModuleFactory
+    weight_dic : Dict[int, np.array[np.int32]]
+        Dictionary mapping the basis indices to the weights of the Lie algebra elements, 
+        encoded as vector with length given by rank of Lie algebra.
+    modules : Dict[str, np.array[np.int32]]
+        Dictionary mapping module keys (e.g. 'g' or 'n') to a matrix
+        list of integer indices of its basis
+    len_basis : int
+        Number of different indices occuring in the bases of any module
+    max_index : int
+        Largest index that occurs in the basis of any module
+    weight_components : dict[tuple[int], tuple(int,np.ndarray[np.int32, np.int32])]
+        dictionary mapping a weight tuple to a pair (i, basis) where i is an integer indexing the 
+        direct sum component, and basis is basis of the weight component in same format as output 
+        of self.compute_weight_components.
+    dimensions : dict[str, int]
+        Dictionary containing the total dimension of each weight component
+    dimensions_components : list[dict[str, int]]
+        For each direct sum component seperately, a dictionary containing the 
+        total dimension of each weight component
+    weight_comp_index_numbers : dict[str, dict[tuple(int), int]]
+        For each weight give a dictionary that maps a tuple encoding the 
+        a basis element together with an index encoding in which 
+        direct sum component it lies, to an index encoding
+        this basis element as basis element of the weight component.
+    weight_comp_direct_sum_index_numbers : dict[str, dict[tuple(int), int]]
+        For each weight give a dictionary that maps a tuple encoding the 
+        a basis element together with an index encoding in which 
+        direct sum component it lies, to an index encoding
+        this basis element as basis element of the direct sum component of
+        the weight component.
+    type_lists : list[list[str]]
+        Gives the type of the lie_algebra for each tensor component. For example for
+        [[('g',2,'sym'),('u',1,'sym')],[('n',2,'wedge')]] this gives
+        [['g','g','u'],['n','n']].
+    slice_lists : list[list[tuple(str,int,int,int)]]
+        For each direct sum component, store a list which gives a slice for the entire
+        tensor component for each individual tensor slot.
+    action_tensor_dic : dict[str, np.array[np.int32, np.int32, np.int32]]
+        For each Lie algebra type, give the order 3 tensor encoding the structure
+        coefficients of the action.
+    """
 
     def __init__(self, factory, components, component_dic):
         self.components = components
@@ -34,6 +95,7 @@ class FastLieAlgebraCompositeModule:
         self.modules = {
             k: component_dic[k].basis for k in component_dic.keys()
         }  # basis of each component type
+        self._latex_basis_dic = None
 
         # length of all the indices occurring in any module
         self.len_basis = len(set(itertools.chain.from_iterable(self.modules.values())))
@@ -99,8 +161,28 @@ class FastLieAlgebraCompositeModule:
             self.action_tensor_dic[key] = self.get_action_tensor(mod)
 
     def construct_component(self, component):
-        """Given a list of tuples representing tensor components, return an np array of integers. Each row
-        represents one basis element of the tensor product"""
+        r"""Construct array of integers representing basis of direct sum component.
+
+        Parameters
+        ----------
+        component : List[tuple(str, int, str)]
+            The direct sum component.  This is one entry of `self.components`
+        
+        Returns
+        -------
+        np.ndarray[np.int32, np.int32]
+            multi-indices describing basis of component. If we for example have
+            [('g',4,'sym'),('n',5,'wedge')]
+            as input, then the output will consist of an array of shape {math1}
+            The first 4 columns are ordered 4-tuples (with replacement)
+            of basis indices of {math2}, and the
+            last 5 columns are ordered tuples  (without replacement) of basis indices of {math3}.
+        """.format(
+            math1=r":math:`9\times {\dim \mathfrak g+3}\choose 4\cdot {\dim \mathfrak n}\choose 5`",
+            math2=r":math:`\mahtfrak g`",
+            math3=r":math:`\mathfrak n`",
+        )
+
         tensor_components = []
         n_components = len(component)
         for module, n_inputs, tensor_type in component:
@@ -155,9 +237,18 @@ class FastLieAlgebraCompositeModule:
         return output
 
     def compute_weight_components(self, direct_sum_component):
-        """Compute the weight for each basis element, group the basis by weight.
-           returns a dictionary mapping tuples of weights to basis of weight component.
-           This version doesn't use npi as dependency"""
+        """Construct the weight components of the module.
+
+        Parameters
+        ----------
+        direct_sum_component : np.ndarray[np.int32, np.in32]
+            output of `self.construct_component`
+
+        Returns
+        -------
+        dict[tuple[int], np.ndarray[np.int32, np.int32]]
+            dictionary mapping a weight tuple to a subset of the input basis.
+        """
         # Matrix of weights associated to each lie algebra basis element
         weight_mat = np.array(
             [s[1] for s in sorted(self.weight_dic.items(), key=lambda t: t[0])],
@@ -188,7 +279,16 @@ class FastLieAlgebraCompositeModule:
         return split_dic
 
     def initialize_weight_components(self):
-        """Compute a basis for each direct sum component, and compute basis for each weight component"""
+        """Compute a basis for each direct sum component and weight component.
+        
+        Returns
+        -------
+        dict[tuple[int], tuple(int,np.ndarray[np.int32, np.int32])]
+            dictionary mapping a weight tuple to a pair `(i, basis)` where
+            `i` is an integer indexing the direct sum component,
+            and `basis` is basis of the weight component in same
+            format as output of `self.compute_weight_components`.
+        """
         weight_components = dict()
         for i, comp in enumerate(self.components):
             direct_sum_component = self.construct_component(comp)
@@ -203,17 +303,27 @@ class FastLieAlgebraCompositeModule:
 
     def get_action_tensor(self, component):
         """Computes a tensor encoding the action for a given tensor component.
-         The shape of the tensor is (dim(n)+m, max_ind, 3),
-        where m is some (typically small integer),
-        dim(n) is the dimension of  the lie algebra n<g,
-        max_ind is the largest index occurring in the tensor component.
-        The last axis stores a triple (s, k, C_ijk) for each pair i,j.
-        If i<dim(n), then C_ijk is the structure coefficient, similarly for k.
-        If C_ijk is zero for all k, then the tuple is (0,0,0).
-        For some i,j there are multiple non-zero C_ijk. If this happens, then
-        s gives the row of the next non-zero C_ijk (the column is still j).
-        If s = -1 then there are no further non-zero structure coefficients.
-        The integer m is then the smallest such that the tensor is big enough."""
+
+        Parameters
+        ----------
+        component : ModuleComponent
+            Typically a value of `self.component_dic`
+
+        Returns
+        -------
+        np.ndarray[int, int ,int]
+            The shape of the tensor is (dim(n)+m, max_ind, 3),
+            where m is some (typically small integer),
+            dim(n) is the dimension of  the lie algebra n<g,
+            max_ind is the largest index occurring in the tensor component.
+            The last axis stores a triple (s, k, C_ijk) for each pair i,j.
+            If i<dim(n), then C_ijk is the structure coefficient, similarly for k.
+            If C_ijk is zero for all k, then the tuple is (0,0,0).
+            For some i,j there are multiple non-zero C_ijk. If this happens, then
+            s gives the row of the next non-zero C_ijk (the column is still j).
+            If s = -1 then there are no further non-zero structure coefficients.
+            The integer m is then the smallest such that the tensor is big enough.
+        """
 
         # Previously we implemented the action as a dictionary, this will be our starting point
         action_mat = component.action
@@ -265,8 +375,19 @@ class FastLieAlgebraCompositeModule:
                     s_values[j] += 1
         return action_tensor
 
-    def component_symbols_latex(self, component):
-        """Compute a list of latex symbols to put in between indices to display them in latex"""
+    def _component_symbols_latex(self, component):
+        """Compute a list of latex symbols to put in between indices to display them in latex.
+        
+        Parameters
+        ----------
+        component : List[tuple(str, int, str)]
+            The direct sum component.  This is one entry of `self.components`
+        
+        Returns
+        -------
+        list[str]
+            list of symbols to put in between indices
+        """
         symbols = []
         for _, num, t in component:
             if t == "sym":
@@ -279,9 +400,9 @@ class FastLieAlgebraCompositeModule:
         symbols[-1] = ""
         return symbols
 
-    def component_latex_basis(self, comp_num, basis):
+    def _component_latex_basis(self, comp_num, basis):
         """Given a basis of a weight component, convert all the indices to latex"""
-        comp_symbols = self.component_symbols_latex(self.components[comp_num])
+        comp_symbols = self._component_symbols_latex(self.components[comp_num])
         basis_latex_dic = dict()
         for i, b in enumerate(basis):
             basis_strings = [self.factory.root_latex_dic[j] for j in b]
@@ -293,21 +414,20 @@ class FastLieAlgebraCompositeModule:
 
     @property
     def latex_basis_dic(self):
-        """Compute a dictionary sending each weight to a dictionary of latex strings encoding the basis elements
-        of the associated weight component (one dictionary for each direct sum component)"""
-        try:  # Use cached version if available. Ugly hack.
-            return self._latex_basis_dic
-        except AttributeError:
+        """Compute a dictionary sending each weight to a dictionary of latex strings encoding the 
+        basis elements of the associated weight component 
+        (one dictionary for each direct sum component)"""
+        if self._latex_basis_dic is None:
             basis_dic = dict()
             for mu, wcomps in self.weight_components.items():
                 mu_dict = dict()
                 for comp_num, basis in wcomps:
-                    mu_dict[comp_num] = self.component_latex_basis(comp_num, basis)
+                    mu_dict[comp_num] = self._component_latex_basis(comp_num, basis)
                 basis_dic[mu] = mu_dict
             self._latex_basis_dic = basis_dic
-            return basis_dic
+        return self._latex_basis_dic
 
-    def weight_latex_basis(self, mu):
+    def _weight_latex_basis(self, mu):
         """Turn a list of dictionaries into a list of all their values"""
         return list(
             itertools.chain.from_iterable(
@@ -317,8 +437,15 @@ class FastLieAlgebraCompositeModule:
 
     def display_action(self, BGG, arrow, dominant_weight):
         """Display the action on a basis. Mainly for debugging purposes.
-        Here BGG is a BGGComplex. arrow is a pair of strings encoding vertices in the Bruhat graph.
-        Dominant weight is a tuple of same lenght as the rank of the lie algebra encoding a dominant weight"""
+
+        Parameters
+        ----------
+        BGG : BGGComplex
+        arrow : tuple(str, str)
+            Pair of strings ecndoing an edge in the Bruhat graph
+        dominant_weight : tuple[int]
+            The dominant weight for which to compute the BGG complex
+        """
         weight_set = WeightSet(BGG)
         vertex_weights = weight_set.get_vertex_weights(dominant_weight)
         mu = vertex_weights[arrow[0]]
@@ -345,8 +472,8 @@ class FastLieAlgebraCompositeModule:
                     source_target_pairs[source] = []
                 source_target_pairs[source].append((target, coeff))
 
-            source_latex = self.weight_latex_basis(mu)
-            target_latex = self.weight_latex_basis(new_mu)
+            source_latex = self._weight_latex_basis(mu)
+            target_latex = self._weight_latex_basis(new_mu)
 
             for source, targets in source_target_pairs.items():
                 source_string = source_latex[source]
@@ -379,61 +506,128 @@ class FastLieAlgebraCompositeModule:
             source_counter += len(weight_comp)
 
 
-class FastModuleComponent:
-    """Class encoding a building-block for lie algebra modules. Input is a list of basis indices (assumed to be ints),
-    a rank 3 tensor $C^k_{i,j}$ encoding the action of the Lie algebra, and a FastModuleFactory object creating this
-    instance of FastModuleComponent.
-     The action tensor is encoded as a dict (i,j)->{k: C^k_{i,j} for k in basis if C^k_{i,j}!=0}"""
+class ModuleComponent:
+    """Class encoding a building-block for lie algebra modules.
+
+    This class is a data container.
+    
+    Parameters
+    ----------
+    basis : list[int]
+        List of integers indexing the basis of a Lie algebra.
+    action : dict[tuple(int,int), dict[int, int]]
+        Dictionary encoding the structure coefficients :math:`C^k_{i,j}`. This is encoded
+        by mapping (i,j) to {k: Cijk if Cijk !=0}.
+    factory : ModuleFactory
+        The ModuleFactory that created this instance of ModuleComponent
+    """
 
     def __init__(self, basis, action, factory):
         self.basis = basis
         self.action = action
         self.factory = factory
 
-    @staticmethod
-    def action_on_vector(i, X, action):
-        """Compute the action of a Lie algebra element X on basis element of index i.
-        Return output as dictionary index -> coefficient"""
-        output = defaultdict(int)
-        for j, c1 in X.items():
-            bracket = action[(i, j)]
-            for k, c2 in bracket.items():
-                output[k] += c1 * c2
-        return dict(output)
+    # these methods are all unused. It seems that we really just use this class as a
+    # data container.
+    # @staticmethod
+    # def action_on_vector(i, X, action):
+    #     """Compute the action of a Lie algebra element on a basis element.
 
-    @staticmethod
-    def add_dicts(dict1, dict2):
-        """Helper function for merging two dicts, summing common keys"""
-        for k, v in dict2.items():
-            if k in dict1:
-                dict1[k] += v
-            else:
-                dict1[k] = v
-        return dict1
+    #     Parameters
+    #     ----------
+    #     i : int
+    #         Basis index (element of `self.basis`)
+    #     X : element of LieAlgebra
 
-    def pbw_action_matrix(self, pbw_elt):
-        """Given a PBW element, compute the matrix encoding the action of this PBW element.
-        Output is encoded as a list of tuples (basis index, dict), where each dict
-          consists of target index -> coefficient, iff coefficient is non-zero. (most dicts are empty in practice."""
-        total = [(m, dict()) for m in self.basis]
-        for monomial, coefficient in pbw_elt.monomial_coefficients().items():
-            sub_total = [(m, {m: 1}) for m in self.basis]
-            for term in monomial.to_word_list()[::-1]:
-                index = self.factory.root_to_index[term]
-                sub_total = [
-                    (m, self.action_on_vector(index, image, self.action))
-                    for m, image in sub_total
-                ]
-            total = [
-                (m, self.add_dicts(t, s)) for ((m, t), (_, s)) in zip(total, sub_total)
-            ]
-        total = [(m, {k: v for k, v in d.items() if v != 0}) for m, d in total]
-        return total
+    #     Returns
+    #     -------
+    #     dict[int, int] : dictionary mapping basis index -> coefficient
+    #     """
+    #     output = defaultdict(int)
+    #     for j, c1 in X.items():
+    #         bracket = action[(i, j)]
+    #         for k, c2 in bracket.items():
+    #             output[k] += c1 * c2
+    #     return dict(output)
+
+    # @staticmethod
+    # def add_dicts(dict1, dict2):
+    #     """Helper function for merging two dicts, summing common keys"""
+    #     for k, v in dict2.items():
+    #         if k in dict1:
+    #             dict1[k] += v
+    #         else:
+    #             dict1[k] = v
+    #     return dict1
+
+    # function is unused, and contains possible error (why is coefficient unused?)
+    # def pbw_action_matrix(self, pbw_elt):
+    #     """Given a PBW element, compute the matrix encoding the action of this PBW element.
+    #     Output is encoded as a list of tuples (basis index, dict), where each dict
+    #     consists of target index -> coefficient, iff coefficient is non-zero.
+    #     (most dicts are empty in practice."""
+    #     total = [(m, dict()) for m in self.basis]
+    #     for monomial, coefficient in pbw_elt.monomial_coefficients().items():
+    #         sub_total = [(m, {m: 1}) for m in self.basis]
+    #         for term in monomial.to_word_list()[::-1]:
+    #             index = self.factory.root_to_index[term]
+    #             sub_total = [
+    #                 (m, self.action_on_vector(index, image, self.action))
+    #                 for m, image in sub_total
+    #             ]
+    #         total = [
+    #             (m, self.add_dicts(t, s)) for ((m, t), (_, s)) in zip(total, sub_total)
+    #         ]
+    #     total = [(m, {k: v for k, v in d.items() if v != 0}) for m, d in total]
+    #     return total
 
 
-class FastModuleFactory:
-    """A factory class making FastModuleComponent. It can create modules for (co)adjoint actions on parabolic
-    subalgebras of the input Lie algebra."""
+class ModuleFactory:
+    """A factory class making ModuleComponent.
+
+    It can create modules for (co)adjoint actions on parabolic subalgebras of the input Lie algebra.
+
+    Parameters
+    ----------
+    lie_algebra : LieAlgebra
+        The input lie algebra, typically created as `LieAlgebra(QQ, cartan_type=root_system)`.
+        The Lie algebra is assumed to be simple.
+
+    Attributes
+    ----------
+    lie_algebra : LieAlgebra
+    lattice : RootSpace
+        The root lattice associated the the simple Lie algebra
+    rank : int
+        Rank of the Lie algebra / root system
+    lie_algebra_basis : dict[RootSpace.element_class, LieAlgebra.element_class]
+        Dictionary mapping roots in the rootspace to basis elements of the Lie algebra
+    sorted_basis : list[RootSpace.element_class]
+        Elements of the root lattice indexing the basis, sorted such that this
+        list starts with the negative roots.
+    root_to_index : dict[RootSpace.element_class, int]
+        Dictionary mapping elements of root lattice to their index in `self.sorted_basis`.
+    g_basis : List[int]
+        sorted list of indices corresponding to a basis of the entire Lie algebra
+    index_to_lie_algebra : dict[int, LieAlgebra.element_class]
+        Dictionary mapping basis indices to their corresponding basis element of the Lie algebra
+    f_roots : List[RootSpace.element_class]
+        List of negative roots
+    e_roots : List[RootSpace.element_class]
+        List of positive roots
+    h_roots : List[RootSpace.element_class]
+        List of roots belonging to Cartan subalgebra
+    basis : Dict[str, List[int]]
+        Dictionary with keys {'u','n','h','b',b+'} and values the list of indices
+        corresponding to the subalgebra's of the Lie algebra.
+    dual_root_dict : Dict[int, int]
+        Dictionary mapping negative roots to their corresponding positive roots and vice versa,
+        where the roots are represented by their integer indices. Indices corresponding
+        to the Cartan subalgebra are mapped to themselves.
+    weight_dic : Dict[int, np.array[np.int32]]
+        Dictionary mapping the basis indices to the weights of the Lie algebra elements,
+        encoded as vector with length given by rank of Lie algebra.
+    """
 
     def __init__(self, lie_algebra):
         self.lie_algebra = lie_algebra
@@ -464,7 +658,7 @@ class FastModuleFactory:
             i: self.root_to_latex(root) for i, root in enumerate(self.sorted_basis)
         }
 
-        # Make a list of indices for the (non parabolic) 'g','u','n','b'
+        # Make a list of indices for the (non parabolic) 'u','n','h','b',b+'
         self.basis = dict()
         self.basis["u"] = sorted([self.root_to_index[r] for r in self.e_roots])
         self.basis["n"] = sorted([self.root_to_index[r] for r in self.f_roots])
@@ -498,7 +692,20 @@ class FastModuleFactory:
 
     @staticmethod
     def dic_to_vec(dic, rank):
-        """Helper function turning a (sparse) dic of index->coefficient into a dense np.array of given length (rank)"""
+        """Turn dict encoding sparse vector into dense vector.
+
+        Parameters
+        ----------
+        dic : Dict[int, int]
+            Dictionary index->coefficient of non-zero entries
+        rank : int
+            Lenght of the vector (i.e. rank of Lie algebra / root system)
+
+        Returns
+        -------
+        np.array[int]
+            Dense vector of length `rank`.
+        """
 
         vec = np.zeros(rank, dtype=INT_PRECISION)
         for key, value in dic.items():
@@ -506,8 +713,20 @@ class FastModuleFactory:
         return vec
 
     def parabolic_p_basis(self, subset=None):
-        """Give parabolic p_subalgebra.
-         It is spanned by the subalgebra b and the e_roots whose components lie entirely in subset."""
+        """Give parabolic p subalgebra.
+
+        Parameters
+        ----------
+        subset : List[int] or `None` (default: None)
+            Parabolic subset. If `None`, returns non-parabolic.
+
+        Returns
+        -------
+        List[int]
+            list of basis indices corresponding to this subalgebra.
+            It is spanned by the subalgebra `b` and the positive whose components
+            lie entirely in `subset`.
+        """
 
         if subset is None:
             subset = []
@@ -520,8 +739,20 @@ class FastModuleFactory:
         return sorted(basis)
 
     def parabolic_n_basis(self, subset=None):
-        """Give parabolic n_subalgebra.
-         It is spanned by all the f_roots whose components are not entirely contained in subset"""
+        """Give parabolic n subalgebra.
+
+        Parameters
+        ----------
+        subset : List[int] or `None` (default: None)
+            Parabolic subset. If `None`, returns non-parabolic.
+        
+        Returns
+        -------
+        List[int]
+            list of basis indices corresponding to this subalgebra.
+            It is spanned by all negative roots whose components are not entirely
+            contained entirely in `subset`.
+        """
 
         if subset is None:
             subset = []
@@ -534,8 +765,20 @@ class FastModuleFactory:
         return sorted(basis)
 
     def parabolic_u_basis(self, subset=None):
-        """Give parabolic u_subalgebra.
-         It is spanned by all the e_roots whose components are not entirely contained in subset"""
+        """Give parabolic u subalgebra.
+
+        Parameters
+        ----------
+        subset : List[int] or `None` (default: None)
+            Parabolic subset. If `None`, returns non-parabolic.
+        
+        Returns
+        -------
+        List[int]
+            list of basis indices corresponding to this subalgebra.
+            It is spanned by all positive roots whose components are not entirely
+            contained entirely in `subset`.
+        """
 
         if subset is None:
             subset = []
@@ -548,9 +791,23 @@ class FastModuleFactory:
         return sorted(basis)
 
     def adjoint_action_tensor(self, lie_algebra, module):
-        """Compute the action tensor C^k_{i,j} for the adjoint action of a lie_subalgebra on a given module.
-        Here lie_algebra and module are a list of indices corresponding a linear subspace of the base Lie algebra.
-        Output is a dictionary of indices (i,j) -> {k->C^k_{i,j}} for non-zero C^k_{i,j}"""
+        """Compute structure coefficients of the adjoint action of subalgebra on a module.
+
+        Parameters
+        ----------
+        lie_algbera : List[int]
+            List of indices corresponding to the Lie subalgebra
+        module : List[int]
+            List of indices curresponding to a module (i.e. a subspace of the
+            Lie algebra that is fixed under the adjoint action of the subalgebra)
+
+        Returns
+        -------
+        dict[tuple(int, int), Dict[int,int]]
+            Dictionary mapping (i,j) to
+            a dictionary index->coeffcient encoding the non-zero structure
+            coefficients :math:`C^k_{i,j}`.
+        """
 
         action = defaultdict(dict)
         action_keys = set()
@@ -586,10 +843,22 @@ class FastModuleFactory:
         return action
 
     def coadjoint_action_tensor(self, lie_algebra, module):
-        """Compute the action tensor C^k_{i,j} for the coadjoint action of a lie_subalgebra on a given module.
-        Here lie_algebra and module are a list of indices corresponding a linear subspace of the base Lie algebra.
-        The output is per definition restricted to the module.
-        Output is a dictionary of indices (i,j) -> {k->C^k_{i,j}} for non-zero C^k_{i,j}"""
+        """Compute structure coefficients of the coadjoint action of subalgebra on a module.
+
+        Parameters
+        ----------
+        lie_algbera : List[int]
+            List of indices corresponding to the Lie subalgebra
+        module : List[int]
+            List of indices curresponding to a module (i.e. a linear subspace of the Lie algebra)
+
+        Returns
+        -------
+        dict[tuple(int, int), Dict[int,int]]
+            Dictionary mapping (i,j) to
+            a dictionary index->coeffcient encoding the non-zero structure
+            coefficients :math:`C^k_{i,j}`.
+        """
 
         action = defaultdict(dict)
         module_set = set(module)
@@ -621,10 +890,27 @@ class FastModuleFactory:
     def build_component(
         self, subalgebra, action_type="ad", subset=None, acting_lie_algebra="n"
     ):
-        """Given a subalgebra (either 'g','n','u','b' or 'p'), a type of action (either 'ad' or 'coad'),
-        a subset (a list of indices, corresponding to parabolic subalgebras) and an acting lie algebra
-        (same type as subalgebra argument), returns a FastModuleComponent corresponding to the
-        Lie algebra module of the input."""
+        """Build a ModuleComponent
+        
+        Parameters
+        ----------
+        subalgebra : {'g','n','u','b','b+','p'}
+            Character indicating the type of subalgebra. Here 'g' is full Lie algbera,
+            'n' corresponds to negative roots, 'u' to positive roots, 'b' to (negative) Borel,
+            'b+' to positive Borel, and 'p' to (negative) parabolic.
+        action_type : {'ad', 'coad'} (default: 'ad')
+            Whether to use adjoint action ('ad') or coadjoint action ('coad')
+        subset : List[int] or None (default: None)
+            Subset indicating parabolic subalgebra. If `None`, use non-parabolic.
+        acting_lie_algebra : {'g','n','u','b','b+','p'}, (default:  'n')
+            The Lie (sub)algebra which acts on `subalgebra`.
+            `subset` has no effect on this subalgebra, and therefore 'p' and 'b' are equivalent.
+        
+        Returns
+        -------
+        ModuleComponent
+            The ModuleComponent storing the data for this module.
+        """
 
         if subset is None:
             subset = []
@@ -663,10 +949,20 @@ class FastModuleFactory:
             action = self.coadjoint_action_tensor(lie_alg, module)
         else:
             raise ValueError("'%s' is not a valid type of action" % action_type)
-        return FastModuleComponent(module, action, self)
+        return ModuleComponent(module, action, self)
 
     def root_to_latex(self, root):
-        """Convert a root (an element of the sagemath root lattice)  a latex expression"""
+        """Convert a root to a latex expression
+        
+        Parameters
+        ----------
+        root : RootSpace.element_class
+
+        Returns
+        -------
+        str
+            String containing LaTeX expression for this root. 
+        """
         root_type = ""
 
         if root in self.h_roots:
@@ -684,9 +980,12 @@ class FastModuleFactory:
 
 
 class WeightSet:
-    """Class to do simple computations with the weights of a weight module. Elements of the Weyl group
-    are wherever possible encoded as a string encoding it as a product of simple reflections.
-    The class needs an instance of BGGComplex to instantiate. """
+    """Class to do simple computations with the weights of a weight module.
+
+    Parameters
+    ----------
+    BGG : BGGComplex
+    """
 
     def __init__(self, BGG):
         self.reduced_words = BGG.reduced_words
@@ -704,19 +1003,47 @@ class WeightSet:
         self.action_dic, self.rho_action_dic = self.get_action_dic()
 
     def weight_to_tuple(self, weight):
-        """Convert element of weight lattice to a sum of simple roots by solving a matrix equation"""
+        """Convert element of weight lattice to a sum of simple roots.
+
+        Parameters
+        ----------
+        weight : RootSpace.element_class
+
+        Returns
+        -------
+        tuple[int]
+            tuple representing root as linear combination of simple roots
+        
+        """
 
         b = weight.to_vector()
         b = matrix(b).transpose()
         return tuple(self.simple_root_matrix.solve_right(b).transpose().list())
 
     def tuple_to_weight(self, t):
-        """Inverse of operation above"""
+        """Inverse of `weight_to_tuple`
+        
+        Parameters
+        ----------
+        t : tuple[int]
+
+        Returns
+        -------
+        RootSpace.element_class
+        """
         return sum(int(a) * b for a, b in zip(t, self.simple_roots))
 
     def get_action_dic(self):
-        """Compute dictionary encoding Weyl group action, and dic encoding just the action on rho.
-        action_dic constists of dictionary Weyl group -> matrix, and rho_action_dic Weyl group -> vector"""
+        """Compute weyl group action as well as action on rho.
+
+        Returns
+        -------
+        Dict[str, np.array(np.int32, np.int32)] : dictionary mapping each string representing an
+            element of the Weyl group to a matrix expressing the action on the simple roots.
+        Dict[str, np.array(np.int32)] : dictionary mapping each string representing an
+            element of the Weyl group to a vector representing the image
+            of the dot action on rho.
+        """
         action_dic = dict()
         rho_action_dic = dict()
         for s, w in self.weyl_dic.items():  # s is a string, w is a matrix
@@ -733,7 +1060,20 @@ class WeightSet:
         return action_dic, rho_action_dic
 
     def dot_action(self, w, mu):
-        """Compute the dot action of w on mu"""
+        """Compute the dot action of w on mu
+        
+        Parameters
+        ----------
+        w : str
+            string representing the weyl group element
+        mu : iterable(int)
+            the weight
+
+        Returns
+        -------
+        np.array[np.int32]
+            vector encoding the new weight
+        """
         # The dot action w.mu = w(mu+rho)-rho = w*mu + (w*rho-rho).
         # The former term is given by action_dic, the latter by rho_action_dic
         return (
@@ -742,17 +1082,39 @@ class WeightSet:
         )
 
     def is_dot_regular(self, mu):
-        """Check if mu has a non-trivial stabilizer under the dot action"""
+        """Check if mu has a non-trivial stabilizer under the dot action
+        
+        Parameters
+        ----------
+        mu : iterable(int)
+            The weight
+
+        Returns
+        -------
+        bool
+            `True` if the weight is dot-regular
+        """
         for s in self.reduced_words[1:]:
             if np.all(self.dot_action(s, mu) == mu):
                 return False
-        else:
-            return True
+        # no stabilizer found
+        return True
 
     def compute_weights(self, weights):
-        """For each weight, check whether it is dot-regular. If so, compute it's associated dominant and the
-        length of the Weyl group element making it dominant.
-         Returns a list of triples (dot-regular weight, associated dominant, Weyl group element length)"""
+        """Finds dot-regular weights and associated dominant weights of a set of weights.
+
+        Parameters
+        ----------
+        weights : iterable(iterable(int))
+            Iterable of weights
+        
+        returns
+        -------
+        list(tuple[tuple(int), tuple(int), int])
+            list of triples consisting of
+            dot-regular weight, associated dominant, and the length of the Weyl group
+            element making the weight dominant under the dot action.
+        """
 
         regular_weights = []
         for mu in weights:
@@ -762,13 +1124,38 @@ class WeightSet:
         return regular_weights
 
     def is_dominant(self, mu):
-        """Use sagemath built-in function to check if something is dominant"""
+        """Use sagemath built-in function to check if weight is dominant
+        
+        Parameters
+        ----------
+        mu : iterable(int)
+            the weight
+
+        Returns
+        -------
+        bool
+            `True` if weight is dominant
+        """
 
         return self.tuple_to_weight(mu).is_dominant()
 
     def make_dominant(self, mu):
-        """For a dot regular weight mu, iterate over all w in W and check if w.mu is dominant. Once found,
-         return w.mu and w. It is known that such a w always exists and is unique."""
+        """For a dot-regular weight mu, w such that if w.mu is dominant.
+        
+         Such a w exists iff mu is dot-regular, in which case it is also unique.
+
+        Parameters
+        ----------
+        mu : iterable(int)
+            the dot-regular weight
+        
+        Returns
+        -------
+        tuple(int)
+            The dominant weight w.mu
+        str
+            the string representing the Weyl group element w.
+        """
 
         for w in self.reduced_words:
             new_mu = self.dot_action(w, mu)
@@ -780,8 +1167,17 @@ class WeightSet:
             )
 
     def get_vertex_weights(self, mu):
-        """For a given dot-regular mu, return its dot orbit. The orbit is returned as a list of tuples encoding
-        weights. This is because an immutable type is required for applications."""
+        """For a given dot-regular mu, return its orbit under the dot-action.
+        
+        Parameters
+        ----------
+        mu : iterable(int)
+
+        Returns
+        -------
+        list[tuple[int]]
+            list of weights
+        """
 
         vertex_weights = dict()
         for w in self.reduced_words:
@@ -789,8 +1185,19 @@ class WeightSet:
         return vertex_weights
 
     def highest_weight_rep_dim(self, mu):
-        """Uses the Weyl dimension formula to obtain the dimension of the highest weight
-        representation of a integral dominant weight `mu`."""
+        """Gives dimension of highest weight representation of integral dominant weight.
+
+        Parameters
+        ----------
+        mu : tuple(int)
+            A integral dominant weight
+
+        Returns
+        -------
+        int
+            dimension of highest weight representation.
+        """
+
         mu_weight = self.tuple_to_weight(mu)
         numerator = 1
         denominator = 1
@@ -801,9 +1208,41 @@ class WeightSet:
 
 
 class BGGCohomology:
-    """Class for computing the BGG cohomology of a module. This is a seperate class because it needs to comunicate
-    between the module and the BGG complex.
-    Input is a BGGComplex instance, and a FastLieAlgebraCompositeModule instance."""
+    """Class for computing the BGG cohomology of a module.
+
+    Parameters
+    ----------
+    BGG : BGGComplex
+    weight_module : LieAlgebraCompositeModule or `None`
+        The weight module to compute the cohomology of. If `None`,
+        this class offers limited functionality.
+    coker : Dict[tuple(int), matrix] or None (default: None)
+        Dictionary giving a basis of a cokernel for each weight component
+        The matrix is in the ordered basis of the weight component
+        given by the LieAlgebraCompositeModule.
+        If `None`, or if a key is not present in the dicitonary,
+        the entire weight component is used as normal and no reduction is performed.
+    pbars : iterable(tqdm) or `None` (default: `None`)
+        Progress bars to send updates to. If `None`, this feature is disabled.
+        Up to two progress bars are supported for more detailed information.
+
+    Attributes
+    ----------
+    BGG : BGGComplex
+    has_coker : bool
+        True if `self.coker` is not None
+    coker : Dict[tuple(int), matrix] or None
+    weight_set : WeightSet
+    weight_module : LieAlgebraCompositeModule
+    weights : list(tuple(int))
+        list of all the weights occuring in the weight module
+    num_components : int
+        the number of direct sum components
+    regular_weights : list(tuple[tuple(int), tuple(int), int])
+        list of triples consisting of dot-regular weight, associated dominant, and the length of 
+        the Weyl group element making the weight dominant under the dot action.
+
+    """
 
     def __init__(self, BGG, weight_module=None, coker=None, pbars=None):
         self.BGG = BGG
@@ -834,7 +1273,22 @@ class BGGCohomology:
             )  # Find dot-regular weights
 
     def cohomology_component(self, mu, i):
-        """Compute cohomology BGG_i(mu)"""
+        """Compute cohomology BGG_i(mu).
+
+        Parameters
+        ----------
+        mu : tuple(int)
+            Dominant weight used in the BGG complex
+        i : int
+            Degree in which to compute cohomology, equivalently the column
+            in the BGG complex taken.
+
+        Returns
+        -------
+        int
+            The dimension of the cohomology
+        
+        """
         if self.pbar1 is not None:
             self.pbar1.set_description(str(mu) + ", maps")
         mu_converted = self.BGG.weight_to_alpha_sum(self.BGG._tuple_to_weight(mu))
@@ -859,15 +1313,31 @@ class BGGCohomology:
 
     @cached_method
     def cohomology(self, i, mu=None):
-        """Compute full block of cohomology by computing BGG_i(mu) for all dot-regular mu appearing in
-        the weight module of length i.
-        For a given weight mu, if there are no other weights mu' of length i +/- 1 with the
+        """
+        Compute full block of cohomology.
+
+        This is done by computing BGG_i(mu) for all dot-regular mu appearing 
+        in the weight module of length i.
+        For a given weight mu, if there are no other weights of length i +/- 1 with the
         same associated dominant, then the weight component mu is isolated and the associated
         cohomology is the entire weight module.
-        The cohomology is returned as a list of highest weight vectors appearing in the
-        cohomology, together with their multiplicities.
-        
-        If `weight` is a tuple, then only compute the BGG_i(mu) for this mu"""
+
+        Parameters
+        ----------
+        i : int
+            Degree in which to compute cohomology
+        mu : tuple(int) or None (default: None)
+            Optionally restrict computation to a particular weight, for example
+            if computing for all weights is not interesting or not computationally feasible.
+
+        Returns
+        -------
+        list[tuple(tuple(int), int)]
+            List of pairs (weight, multiplicity),
+            where multiplicity is always non-zero, and weight is a dominant weight.
+            This gives the mutliplicity of each highest weight rep in the cohomology.
+            If list is empty, the cohomology in this degree is trivial.
+        """
 
         if self.pbar1 is not None:
             self.pbar1.set_description("Initializing")
@@ -917,9 +1387,18 @@ class BGGCohomology:
         return sorted(cohomology_dic.items(), key=lambda t: (sum(t[0]), t[0][::-1]))
 
     def betti_number(self, cohomology):
-        """Given a list of highest weight vectors + multiplicities, compute
-        the associated betti numbers by taking a weighted sum of the dimensions of
-        the associated highest weight representations.
+        """Compute Betti number from list of dominant weights and multiplicities
+
+        Parameters
+        ----------
+        cohomology : list[tuple(tuple(int), int)]
+            List of pairs (weight, multiplicity), typically output of 
+            `self.cohomology`.
+        
+        Returns
+        -------
+        int
+            The Betti number (total dimension)
         """
         if cohomology is None:
             return -1
@@ -941,17 +1420,29 @@ class BGGCohomology:
         compact=False,
         skip_zero=False,
     ):
-        """In a notebook we can use pretty display of cohomology output.
-        Only displays cohomology, does not return anything.
-        We have the following options:
-        i = None, degree to compute cohomology. If none, compute in all degrees
-        mu = None, weight for which to compute cohomoly, if None compute for all
-        complex_string ='', an optional string to cohom as H^i(complex_string) = ...
-        only_non_zero = True, a bool indicating whether to print non-zero cohomologies.
-        print_betti = False, print the Betti numbers
-        print_modules = True, print the decomposition of cohomology into highest weight reps
-        only_strings = False, don't display anything and return a string instead for further processing
-        skip_zero = False, skip the zeroth cohomology"""
+        """Compute cohomology, and display it in a pretty way using LaTeX
+
+        Parameters
+        ----------
+        i : int or None (defualt: None)
+            degree to compute cohomology. If none, compute in all degrees
+        mu : tuple(int) or None (default: None)
+            weight for which to compute cohomoly, if None compute for all
+        complex_string : str (default: "")
+            an optional string to print cohomology as `H^i(complex_string) = ...`
+        only_non_zer0: bool (default: True)
+            If True, print nothing if the cohomology is trivial / 0
+        print_betti : bool (default: False)
+            Print the Betti numbers
+        print_modules : bool (default: True)
+            Print a string to represent the dominant weights occuring
+        only_strings : bool (default: False)
+            Don't print anything, just return a string
+        compact : bool (default : False)
+            Use more compact notation for the dominant weights
+        skip_zero : bool (default: False)
+            Skip the zeroth degree of cohomology if `i is None`
+        """
 
         # If there is a complex_string, insert it between brackets, otherwise no brackets.
         if len(complex_string) > 0:
@@ -1010,7 +1501,20 @@ class BGGCohomology:
                         )
 
     def tuple_to_latex(self, tup, compact=False):
-        """LaTeX string representing a tuple of highest weight vector and it's multiplicity"""
+        """ Get LaTeX string representing a tuple of highest weight vector and it's multiplicity
+        
+        Parameters
+        ----------
+        tup : (tuple(int), int)
+            Pair of dominant weight and its associated multiplicity
+        compact : bool (default False)
+            Whether or not to use more compact notation
+
+        Returns
+        -------
+        str
+            LaTeX string representing the highest weight module with multiplicity
+        """
         (mu, mult) = tup
         if compact:  # compact display
             alpha_string = ",".join([str(m) for m in mu])
@@ -1049,8 +1553,16 @@ class BGGCohomology:
                     return r"L\left(%s\right)" % alphas_string
 
     def cohom_to_latex(self, cohom, compact=False):
-        """String together the tuple_to_latex function multiple times to turn a list of mu, multiplicity
-        into one big LaTeX string."""
+        """Represent output of `self.cohomology` by a LaTeX string
+        
+        Parameters
+        ----------
+        cohom : list[tuple(tuple(int), int)]
+            List of pairs of dominant weight and multiplicity,
+            typically output of `self.cohomology`
+        compact : bool (default: False)
+            Whether or not to use more compact notation
+        """
 
         # Entry hasn't been computed yet
         if cohom is None:
@@ -1064,13 +1576,14 @@ class BGGCohomology:
         else:  # If there is no cohomology just print the string '0'
             return r"0"
 
-    def display_coker(self, mu, transpose=False):
-        """Display the cokernel of a quotient module. This is mainly implemented for debugging purposes."""
+    def _display_coker(self, mu, transpose=False):
+        """Display the cokernel of a quotient module. 
+        This is mainly implemented for debugging purposes."""
         if self.has_coker:
             if mu in self.coker:
                 if not transpose:
                     coker_mat = self.coker[mu]
-                    latex_basis = self.weight_module.weight_latex_basis(mu)
+                    latex_basis = self.weight_module._weight_latex_basis(mu)
                     for row_num, row in enumerate(coker_mat.rows()):
                         row_strings = [r"%d\colon\," % row_num]
 
@@ -1096,7 +1609,7 @@ class BGGCohomology:
 
                 else:  # it's transposed
                     coker_mat = self.coker[mu]
-                    latex_basis = self.weight_module.weight_latex_basis(mu)
+                    latex_basis = self.weight_module._weight_latex_basis(mu)
                     for col_num, col in enumerate(coker_mat.columns()):
                         col_strings = [
                             (r"(%d)" % col_num) + latex_basis[col_num] + r"\mapsto \,"
@@ -1123,4 +1636,3 @@ class BGGCohomology:
                         display(Math("".join(col_strings)))
         else:
             print("No cokernel (weight = %s)" % str(mu))
-

@@ -1,8 +1,15 @@
 """
-Implement the BGG complex
+This module implements the BGG complex.
 
-Uses compute_maps.py and compute_signs.py to obtain the maps with associated signs of the BGG complex.
-To use the BGG complex to compute cohomology we can use fast_module.
+Example usage:
+
+.. code:: python
+
+    >>> bgg = BGGComplex('A2')
+    >>> bgg.plot_graph() # Show the Bruhat graph
+    >>> bgg.display_maps((0,0)) # Give the maps of the BGG complex (without sing)
+    >>> bgg.compute_signs() # Give signs in the complex, turning maps into differential
+
 """
 
 from itertools import groupby, chain
@@ -10,7 +17,7 @@ from itertools import groupby, chain
 import os
 import pickle
 
-import sage.all
+import sage.all  # pylint: disable=unused-import
 
 from sage.rings.rational_field import QQ
 from sage.matrix.constructor import matrix
@@ -22,20 +29,63 @@ from sage.modules.free_module_element import vector
 
 from numpy import array
 
-from compute_signs import compute_signs
-from compute_maps import BGGMapSolver
-
-from pbw import PoincareBirkhoffWittBasis
-
-from fast_module import WeightSet
+from .compute_signs import compute_signs
+from .compute_maps import BGGMapSolver
+from .pbw import PoincareBirkhoffWittBasis
+from .la_modules import WeightSet
 
 from collections import defaultdict
 
-from IPython.display import display, Math, Latex
+from IPython.display import display, Math
 
 
 class BGGComplex:
-    """A class encoding all the things we need of the BGG complex"""
+    """A class encoding all the things we need of the BGG complex. 
+    
+    Parameters
+    ----------
+    root_system : str
+        String encoding the Dynkin diagram of the root system (e.g. `'A3'`)
+    pickle_directory : str (optional)
+            Directory where to store `.pkl` files to save computations
+            regarding maps in the BGG complex. If `None`, maps are not saved. (default: `None`)
+
+
+    Attributes
+    -------
+    root_system : str
+        String encoding Dynkin diagram.
+    W : WeylGroup
+        Object encoding the Weyl group.
+    LA : LieAlgebraChevalleyBasis
+        Object encoding the Lie algebra in the Chevalley basis over Q
+    PBW : PoincareBirkhoffWittBasis
+        Poincaré-Birkhoff-Witt basis of the universal enveloping 
+        algebra. The maps in the BGG complex are elements of this basis. This package uses
+        a slight modification of the PBW class as implemented in Sagemath proper.
+    lattice : RootSpace
+        The space of roots
+    S : FiniteFamily
+        Set of simple reflections in the Weyl group
+    T : FIniteFamily
+        Set of reflections in the Weyl group
+    cycles : List 
+        List of 4-tuples encoding the length-4 cycles in the Bruhat graph
+    simple_roots : List
+        (Ordered) list of the simple roots as elements of `lattice`
+    rank : int
+        Rank of the root system
+    neg_roots : list
+        List of the negative roots in the root system, encoded as `numpy.ndarray`.
+    alpha_to_index : dict
+        Dictionary mapping negative roots (as elements of `lattice`) to
+        an ordered index encoding the negative root as basis element of the lie algebra $n$
+        spanned by the negative roots.
+    zero_root : element of `lattice`
+        The zero root
+    rho : element of `lattice`
+        Half the sum of all positive roots
+    """
 
     def __init__(self, root_system, pickle_directory=None):
         self.root_system = root_system
@@ -48,6 +98,8 @@ class BGGComplex:
         self.lattice = self.domain.root_system.root_lattice()
         self.S = self.W.simple_reflections()
         self.T = self.W.reflections()
+        self.signs = None
+        self.cycles = None
 
         self._compute_weyl_dictionary()
         self._construct_BGG_graph()
@@ -143,7 +195,7 @@ class BGGComplex:
 
     def plot_graph(self):
         """Create a pretty plot of the BGG graph. Each word length is encoded by a different color.
-        Usage: _.plot_graph().plot()"""
+        """
         BGGVertices = sorted(self.reduced_words, key=len)
         BGGPartition = [list(v) for k, v in groupby(BGGVertices, len)]
 
@@ -153,14 +205,15 @@ class BGGComplex:
         display(BGGGraphPlot.plot())
 
     def find_cycles(self):
-        """Find all the admitted cycles in the BGG graph. An admitted cycle consists of two paths a->b->c and a->b'->c,
-         where the word length increases by 1 each step. The cycles are returned as tuples (a,b,c,b',a)."""
+        """Find all the admitted cycles in the BGG graph. 
+        
+        An admitted cycle consists of two paths a->b->c and a->b'->c, 
+        where the word length increases by 1 each step. 
+        The cycles are returned as tuples (a,b,c,b',a).
+        """
 
         # only compute cycles if we haven't yet done so already
-        # this isn't very pythonic, but it works
-        try:
-            self.cycles
-        except AttributeError:
+        if self.cycles is None:
             # for faster searching, make a dictionary of pairs (v,[u_1,...,u_k]) where v is a vertex and u_i
             # are vertices such that there is an arrow v->u_i
             first = lambda x: x[0]
@@ -198,18 +251,41 @@ class BGGComplex:
 
     def compute_signs(self, force_recompute=False):
         """Computes signs for all the edges so that the product of signs around any admissible cycle is -1.
-        Returns a dictionary with the edges as keys and the signs as values."""
+
+        Returns
+        -------
+        dict with the edges pf the Bruhat grpah as keys and the signs as values.
+        """
+
         if not force_recompute:
-            try:  # Not super pythonic, but alright
+            if self.signs is not None:
                 return self.signs
-            except AttributeError:
-                pass
 
         self.signs = compute_signs(self)
         return self.signs
 
     def compute_maps(self, root, column=None, check=False, pbar=None):
-        """For the given weight, compute the maps of the BGG complex"""
+        """Compute the (unsigned) maps of the BGG complex for a given weight.
+
+        Parameters
+        ----------
+        root : element of `self.lattice`
+            root for which to compute the maps. Use `self.weight_to_alpha_sum(weight)` to 
+            convert tuples encoding a weight into this format.
+        column : int or `None` (default: `None`)
+            Try to only compute the maps up to this particular column if not `None`. This
+            is faster in particular for small or large values of `column`. 
+        check : bool (default: False)
+            After computing all the maps, perform a check whether they are correct for 
+            debugging purposes.
+        pbar : tqdm (default: None)
+            tqdm progress bar to give status updates about the progress. If `None` this 
+            feature is disabled.
+
+        Returns
+        -------
+        dict mapping edges (in form ('w1', 'w2')) to elements of `self.PBW`.
+        """
 
         # If the maps are not in the cache, compute them and cache the result
         if root in self._maps:
@@ -261,12 +337,14 @@ class BGGComplex:
         return tuple(A.solve_right(b).transpose().list())
 
     def weight_to_alpha_sum(self, weight):
-        """Express a weight in the lattice as a linear combination of alpha[i]'s. These objects form the keys
-        for elements of the Lie algebra, and for factors in the universal enveloping algebra."""
-        tuple = self._weight_to_tuple(weight)
+        """Express a weight in the lattice as a linear combination of alpha[i]'s.
+        
+        These objects form the keys for elements of the Lie algebra, and for factors in the universal enveloping algebra."""
+        if type(weight) is not tuple and type(weight) is not list:
+            tup = self._weight_to_tuple(weight)
         alpha = self.lattice.alpha()
         zero = self.lattice.zero()
-        return sum((int(c) * alpha[i + 1] for i, c in enumerate(tuple)), zero)
+        return sum((int(c) * alpha[i + 1] for i, c in enumerate(tup)), zero)
 
     def alpha_sum_to_array(self, weight):
         output = array(vector(ZZ, self.rank))
@@ -279,32 +357,63 @@ class BGGComplex:
         return sum(int(a) * b for a, b in zip(t, self.simple_roots))
 
     def dot_action(self, reflection, weight):
-        """Compute the dot action of a reflection on a weight. The reflection should be an element of the Weyl group
-        self.W and the weight should be given as a tuple encoding it as a linear combination of simple roots."""
+        """Compute the dot action of a reflection on a weight.
+        
+        Parameters
+        ----------
+        reflection : element of `self.W`
+        weight : tuple
+            tuple encoding the weight as linear combination of simple roots
+
+        Returns
+        -------
+        tuple encoding result as linear combination of simple roots
+        """
         weight = self._tuple_to_weight(weight)
         new_weight = reflection.action(weight + self.rho) - self.rho
         return self._weight_to_tuple(new_weight)
 
     def is_dot_regular(self, mu):
-        """Check if a weight is dot-regular by checking that it has trivial stabilizer"""
+        """Check if a weight is dot-regular by checking that it has trivial stabilizer under dot action.
+        
+        Parameters
+        ----------
+        mu : element of `self.lattice`
+            Weight encoded as linear combination of `alpha[i]`, use `self.weight_to_alpha_sum()`
+            to convert to this format
+        """
         for w in self.reduced_words[1:]:
             if (
                 self.fast_dot_action(w, mu) == mu
             ):  # Stabilizer is non-empty, mu is not dot regular
                 return False
-        else:
-            return True
+
+        # No nontrivial stabilizer found
+        return True
 
     def make_dominant(self, mu):
+        """Given a dot-regular weight, find the associated dominant weight.
+
+        Parameters
+        ----------
+        mu : element of `self.lattice`
+            Weight encoded as linear combination of `alpha[i]`, use `self.weight_to_alpha_sum()`
+            to convert to this format
+
+        Returns
+        -------
+        dominant weight encoded in same format as input
+        """
         for w in self.reduced_words:
             new_mu = self.fast_dot_action(w, mu)
             if new_mu.is_dominant():
                 return new_mu, w
-        else:
-            raise Exception(
-                "The weight %s can not be made dominant. Probably it is not dot-regular."
-                % mu
-            )
+
+        # Nothing found
+        raise Exception(
+            "The weight %s can not be made dominant. Probably it is not dot-regular."
+            % mu
+        )
 
     def compute_weights(self, weight_module):
         all_weights = weight_module.weight_dic.keys()
@@ -319,6 +428,16 @@ class BGGComplex:
         return all_weights, regular_weights
 
     def fast_dot_action(self, w, mu):
+        """Faster implementation of `self.dot_action`, uses cached results for speedup.
+
+        Parameters
+        ----------
+        w : element of `self.W`
+        mu : element of `self.lattice`
+            Weight encoded as linear combination of `alpha[i]`, use `self.weight_to_alpha_sum()`
+            to convert to this format
+
+        """
         action = self._action_dic[w]
         mu_action = sum(
             [action[i] * int(c) for i, c in mu.monomial_coefficients().items()],
@@ -328,7 +447,14 @@ class BGGComplex:
 
     def display_pbw(self, f, notebook=True):
         """Typesets an element of PBW of the universal enveloping algebra with LaTeX.
-        Options: notebook = True; uses IPython display with math if True, otherwise just returns the LaTeX code."""
+
+        Parameters
+        ----------
+        f : element of `self.PBW`
+            The element to display
+        notebook : bool (optional, default: `True`)
+            Uses IPython display with math if `True`, otherwise just returns the LaTeX code as string.
+        """
 
         map_string = []
         first_term = True
@@ -375,7 +501,12 @@ class BGGComplex:
 
     def display_maps(self, mu):
         """Displays all the maps of the BGG complex for a given mu, in appropriate order.
-        mu is assumed to be a tuple encoding it as a linear combination of weights."""
+        
+        Parameters
+        ----------
+        mu : tuple
+            tuple encoding the weight as linar combination of simple roots
+        """
 
         mu_weight = WeightSet(self).tuple_to_weight(mu)
         if not mu_weight.is_dominant():

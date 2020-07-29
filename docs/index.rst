@@ -7,10 +7,12 @@ Welcome to bgg-cohomology's documentation!
 ==========================================
 
 .. toctree::
-   :maxdepth: 2
+   :maxdepth: 3
 
    installation
    bggcomplex
+   la_modules
+   quantum_center
 
 Indices and tables
 ==================

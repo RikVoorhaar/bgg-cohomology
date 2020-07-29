@@ -1,5 +1,42 @@
 """
-Implementation of the module describing the hochschild cohomology of the center of the small quantum group.
+Implementation of the module describing the hochschild cohomology of flag varieties, or
+the center of the small quantum group, as described in the two papers by
+Annach Lachowska and You Qi:
+
+https://arxiv.org/abs/1604.07380v3
+
+https://arxiv.org/abs/1703.02457v3
+
+Let :math:`G` be a complex simple Lie group, and let :math:`P` be a parabolic subgroup. 
+Then we consider the cotangent bundle of the associated partial flag variety:
+
+.. math::
+    \\tilde{\\mathcal N}_P :=T^*(G/P)
+
+We are then interested in computing
+
+.. math::
+    HH^s(\\tilde{\\mathcal N}_P)\\cong \\bigoplus_{i+j+k=s}H^i(\\tilde{\\mathcal N}_P,\\wedge^jT
+    \\tilde{\\mathcal N}_P)^k
+
+This can be computed by using the BGG resolution. We define the following module:
+
+.. math::
+    M_j^k = \\bigoplus_r \\operatorname{Sym}^{j-r+k/2}\\mathfrak u_P\\otimes \\wedge^r\\mathfrak
+    g\\otimes \\wedge^{j-r}\\mathfrak n_P
+
+Let :math:`\\Delta\\colon\\mathfrak p\\to \\mathfrak g\\oplus \\mathfrak u_P\\otimes\\mathfrak n_P`
+be given by the inclusion in the first component and in the second component by the 
+adjoint action (after identifying :math:`\\operatorname{End}(\\mathfrak n_P)` with 
+:math:`\\mathfrak u_P\\otimes \\mathfrak n_P`). Then :math:`\\Delta` induces a map 
+:math:`M_{j-1}^k\\to M_j^k`. We define the module
+
+.. math::
+    E_j^k = M_j^k\\big/\\Delta(M_{j-1}^k)
+
+Then the cohomology of the BGG resolution of :math:`E_j^k` in degree :math:`i` with respect 
+to a dominant weight :math:`\\mu` computes the multiplicity of :math:`\\mu` of 
+:math:`H^i(\\tilde{\\mathcal N}_P,\\wedge^jT\\tilde{\\mathcal N}_P)^k`.
 """
 import csv
 import time
@@ -10,9 +47,9 @@ from os.path import join
 import numpy as np
 from IPython.display import Latex, Math, display
 
-import cohomology
-from bggcomplex import BGGComplex
-from fast_module import FastLieAlgebraCompositeModule, FastModuleFactory, BGGCohomology
+from . import cohomology
+from .bggcomplex import BGGComplex
+from .la_modules import LieAlgebraCompositeModule, ModuleFactory, BGGCohomology
 
 from sage.matrix.constructor import matrix
 from sage.parallel.decorate import normalize_input, parallel
@@ -22,9 +59,23 @@ from sage.rings.integer_ring import ZZ
 import pickle
 
 
-def Mijk(BGG, i, j, k, subset=[]):
-    """Define the module Mijk. Here i is the cohomology degreee, j and k are parameters."""
-    factory = FastModuleFactory(BGG.LA)
+def Mjk(BGG, j, k, subset=[]):
+    """Define the module Mjk:
+
+    .. math::
+        M_j^k = \\bigoplus_r \\operatorname{Sym}^{j-r+k/2}\\mathfrak u_P\\otimes \\wedge^r\\mathfrak
+        g\\otimes \\wedge^{j-r}\\mathfrak n_P
+    
+    Parameters
+    ----------
+    j : int
+    k : int
+
+    Returns
+    -------
+    LieAlgebraCompositeModule
+    """
+    factory = ModuleFactory(BGG.LA)
 
     component_dic = {
         "u": factory.build_component("u", "coad", subset=subset),
@@ -43,16 +94,27 @@ def Mijk(BGG, i, j, k, subset=[]):
                 [("u", j + k // 2 - r, "sym"), ("g", r, "wedge"), ("n", j - r, "wedge")]
             )
 
-    module = FastLieAlgebraCompositeModule(factory, components, component_dic)
+    module = LieAlgebraCompositeModule(factory, components, component_dic)
 
     return module
 
 
-def sort_sign(A):
-    """Sort a numpy array which is sorted except for the first entry.
-     Compute the signs of the permutations sorting them.
-     Returns the sorted array, the signs for each row, 
-     and a mask with False for every row where sign is zero (i.e. if there is a duplicate entry)"""
+def _sort_sign(A):
+    """Sort a numpy array which is sorted except for the first entry, and give sign of permutation.
+
+    Parameters
+    ----------
+    A : numpy.array[int, int]
+
+    Returns
+    -------
+    numpy.array[int, int]
+        Sorted array
+    numpy.array[int]
+        Signs of permutations sorting the array
+    numpy.array[bool]
+        Mask which is `False` in every row where there was a duplicate entry
+    """
     num_cols = A.shape[1]
     if num_cols > 1:
         signs = (-1) ** (sum([(A[:, 0] < A[:, i]) for i in range(1, num_cols)]))
@@ -63,10 +125,23 @@ def sort_sign(A):
 
 
 def compute_phi(BGG, subset=[]):
-    """Computes the map b->g oplus n otimes u. It is returned as a dictionary
-    b-> n otimes u, where the latter is stored as an array with rows (n_index, u_index, coefficient)"""
+    r"""Computes the map :math:`\mathfrak b\to \mathfrak n\otimes \mathfrak u`. 
+    
+    Parameters
+    ----------
+    BGG : BGGComplex
+    subset : list[int] (default: [])
+        Subset defining parabolic
 
-    factory = FastModuleFactory(BGG.LA)
+    Returns
+    -------
+    dict[int, np.array[int]]
+        Dictionary mapping basis indices of :math:`\mathfrak b` to an array with rows
+        `(n_index, u_index, coeff)`, where `n_index` is index in basis of :math:`\mathfrak n`,
+        `u_index` is the index in basis of :math:`\mathfrak u`, and `coeff` is the coefficient.
+    """
+
+    factory = ModuleFactory(BGG.LA)
 
     b_basis = factory.parabolic_p_basis(subset)
     n_basis = factory.parabolic_n_basis(subset)
@@ -90,9 +165,26 @@ def compute_phi(BGG, subset=[]):
     return phi_image
 
 
-def Tijk_basis(BGG, i, j, k, subset=[], pbar=None, rels_only=False):
-    """Gives a basis of the quotient Ejk = Mjk/Tjk for each weight component"""
-    factory = FastModuleFactory(BGG.LA)
+def Eijk_basis(BGG, j, k, subset=[], pbar=None):
+    """Gives a basis of the quotient :math:`E_j^k = M_j^k\\big/\\Delta(M_{j-1}^k)`.
+    
+    Parameters
+    ----------
+    BGG : BGGComplex
+    j : int
+    k : int
+    subset : list[int] (default: [])
+        Subset defining parabolic
+    pbar : tqdm or `None` (default `None`)
+        tqdm instance to send status updates to. If `None` this feature is disable.
+
+    Returns
+    -------
+    CokerCache
+        Object that stores basis of :math:`M_j^k` and frame of :math:`\\Delta(M_{j-1}^k)`,
+        so that basis of :math:`E_j^k` can be computed when needed.
+    """
+    factory = ModuleFactory(BGG.LA)
 
     # Change progress bar status.
     if pbar is not None:
@@ -100,10 +192,10 @@ def Tijk_basis(BGG, i, j, k, subset=[], pbar=None, rels_only=False):
         pbar.set_description("Creating modules")
 
     # target module
-    wc_mod = Mijk(BGG, i, j, k, subset=subset)
+    wc_mod = Mjk(BGG, j, k, subset=subset)
 
     # source module
-    wc_rel = Mijk(BGG, i, j - 1, k, subset=subset)
+    wc_rel = Mjk(BGG, j - 1, k, subset=subset)
 
     coker_dic = dict()
 
@@ -161,7 +253,7 @@ def Tijk_basis(BGG, i, j, k, subset=[], pbar=None, rels_only=False):
                             basis[:, num_u:],
                         ]
                     )
-                    sort_basis, signs, mask = sort_sign(
+                    sort_basis, signs, mask = _sort_sign(
                         new_basis[:, num_u + 1 : num_u + num_g + 2]
                     )
                     new_basis[:, num_u + 1 : num_u + num_g + 2] = sort_basis
@@ -199,7 +291,7 @@ def Tijk_basis(BGG, i, j, k, subset=[], pbar=None, rels_only=False):
                         new_basis[:, 1 : num_u + 2] = np.sort(
                             new_basis[:, 1 : num_u + 2]
                         )
-                        sort_basis, signs, mask = sort_sign(
+                        sort_basis, signs, mask = _sort_sign(
                             new_basis[:, num_u + num_g + 2 :]
                         )
                         new_basis[:, num_u + num_g + 2 :] = sort_basis
@@ -230,30 +322,30 @@ def Tijk_basis(BGG, i, j, k, subset=[], pbar=None, rels_only=False):
         for mu, rels in coker_dic.items()
     }
 
-    # Special mode just to estimate the size of the computation
-    if rels_only:
-        return coker_dic, mu_source_counters, wc_mod.dimensions
-
     return CokerCache(coker_dic, mu_source_counters, wc_mod.dimensions)
-
-    # T = dict()
-    # total_rels = len(coker_dic)
-    # if pbar is not None:
-    #     pbar.reset(total=total_rels)
-    #     pbar.set_description("Computing kernels")
-
-    # for mu, rels in coker_dic.items():
-    #     source_dim = mu_source_counters[mu]
-    #     target_dim = wc_mod.dimensions[mu]
-    #     ker = _compute_kernel(source_dim, target_dim, rels, pbar)
-    #     T[mu] = ker
-
-    # return T
 
 
 class CokerCache:
-    """Wrapper to compute cokernels on demand. Stores only the relations
-    defining the kernels, but only computes the kernel of the matrix when needed."""
+    """Wrapper to compute cokernels on demand. 
+    
+    Stores the image of a map of weight spaces, and computes the 
+    cokernel of the map when needed. Acts like a dictionary, and
+    caches results.
+
+    Parameters
+    ----------
+    rel_dic : dict[tuple(int), array[int]]
+        Dictionary mapping weights to arrays encoding sparse matrix of 
+        relations to quotient by in DOK format.
+    source_dims : dict[tuple(int), int]
+        Dictionary mapping weights to dimensions of the weight components
+        in the source space.
+    target_dims : dict[tuple(int), int]
+        Dictionary mapping weights to dimensions of the weight components
+        in the target space. 
+    pbar : tqdm or `None` (default `None`)
+        tqdm instance to send status updates to. If `None` this feature is disable.
+    """
 
     def __init__(self, rel_dic, source_dims, target_dims, pbar=None):
         self.rel_dic = rel_dic
@@ -278,6 +370,10 @@ class CokerCache:
 
 
 def _compute_kernel(source_dim, target_dim, rels, pbar=None):
+    """Given dimensions of source and target of a map, 
+    as well as the image of the map in DOK sparse matrix format, 
+    compute the cokernel of this map and return as a (dense) matrix. 
+    """
 
     # build the matrix of relations
     sparse_dic = dict()
@@ -307,9 +403,19 @@ def _compute_kernel(source_dim, target_dim, rels, pbar=None):
 
 
 def all_abijk(BGG, s=0, subset=[], half_only=False):
-    """Returns a list of all the (a,b) in the bigraded table. If half_only=True then only
-    half of the table is returned; the other half can be deduced by symmetry."""
-    dim_n = len(FastModuleFactory(BGG.LA).parabolic_n_basis(subset))
+    """Returns a list of all the (a,b) in the bigraded table. 
+    
+    Parameters
+    ----------
+    BGG : BGGComplex
+    s : int (default: 0)
+        The cohomological degree of Hochschild complex
+    subset : list[int]
+        The parabolic subset
+    half_only : bool
+        If True then only half of the table is returned; the other half can be deduced by symmetry.
+    """
+    dim_n = len(ModuleFactory(BGG.LA).parabolic_n_basis(subset))
     output = []
     # the maximal value of a is the dimension of n, +1 depending on the parity of s.
     s_mod = s % 2
@@ -336,7 +442,7 @@ def all_abijk(BGG, s=0, subset=[], half_only=False):
 
 
 def extend_from_symmetry(table, max_a=None):
-    "Use symmetry to compute an entire bigraded table from just the top half"
+    """Use symmetry to compute an entire bigraded table from just the top half"""
     if max_a is None:
         max_a = max(a for a, b in table.keys())
     max_a = max_a + (max_a % 2)
@@ -434,6 +540,7 @@ def display_cohomology_stats(cohom_dic, BGG, text_only=False):
 
 
 def prepare_texfile(tables, title=None):
+    """Given some tables, join them together and create a LaTeX document to contain them."""
     preamble = [
         r"\documentclass[crop,border=2mm]{standalone}",
         r"",
