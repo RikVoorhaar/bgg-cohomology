@@ -3,3 +3,4 @@ nbsphinx
 nbsphinx_link
 numpy
 IPython
+-e .
