@@ -6,7 +6,7 @@ setuptools.setup(
     version="1.6",
     autho="Rik Voorhaar",
     url="https://github.com/RikVoorhaar/bgg-cohomology",
-    ext_modules=cythonize("bggcohomology/*.pyx"),
-    packages=["bggcohomology"],
+    ext_modules=cythonize("bgg-cohomology/bggcohomology/*.pyx"),
+    packages=["bgg-cohomology"],
     install_requires=["tqdm"],
 )
