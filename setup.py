@@ -2,7 +2,7 @@ import setuptools
 from Cython.Build import cythonize
 
 setuptools.setup(
-    name="bgg-cohomology",
+    name="bggcohomology",
     version="1.6",
     autho="Rik Voorhaar",
     url="https://github.com/RikVoorhaar/bgg-cohomology",

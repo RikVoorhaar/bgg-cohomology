@@ -20,5 +20,6 @@ computations/tables/pdfs
 build/*
 docs/_build
 bgg_cohomology.egg-info
+bggcohomology.egg-info
 
 nohup.out
