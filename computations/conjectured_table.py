@@ -2,6 +2,7 @@ from sage.all import *
 from datetime import datetime
 import argparse
 
+
 with open('conjecture.log','w') as log:
     log.write(f'{datetime.now()}\tInitializing...\n')
 

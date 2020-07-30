@@ -38,22 +38,15 @@ Then the cohomology of the BGG resolution of :math:`E_j^k` in degree :math:`i` w
 to a dominant weight :math:`\\mu` computes the multiplicity of :math:`\\mu` of 
 :math:`H^i(\\tilde{\\mathcal N}_P,\\wedge^jT\\tilde{\\mathcal N}_P)^k`.
 """
-import csv
-import time
 from collections import defaultdict
-from os import mkdir
-from os.path import join
 
 import numpy as np
-from IPython.display import Latex, Math, display
+from IPython.display import Math, display
 
 from . import cohomology
-from .bggcomplex import BGGComplex
 from .la_modules import LieAlgebraCompositeModule, ModuleFactory, BGGCohomology
 
 from sage.matrix.constructor import matrix
-from sage.parallel.decorate import normalize_input, parallel
-from sage.parallel.multiprocessing_sage import parallel_iter
 from sage.rings.integer_ring import ZZ
 
 import pickle
@@ -526,7 +519,7 @@ def display_cohomology_stats(cohom_dic, BGG, text_only=False):
         + str(total_dim)
         + " "
     ]
-    for i, mu in enumerate(multiplicities.keys()):
+    for mu in multiplicities.keys():
         rows.append(
             "&".join(
                 [latex_strings[mu], str(multiplicities[mu]), str(betti_numbers[mu])]

@@ -1,5 +1,6 @@
-"""Script to call PDFLaTeX on all files in a folder and put the resulting PDF's in a new folder.
-Also produces a file with all the PDF's merged"""
+"""Script to call PDFLaTeX on all files in a folder.
+
+Puts the resulting PDF's in a new folder, and also produces a file with all the PDF's merged"""
 
 import os
 import sys

@@ -1,14 +1,35 @@
 """
 Compute signs for the BGG complex.
+
+For every edge in the Bruhat graph, we need to find a sign such that
+the product of signs in every square is -1. Mutliplying the maps
+in the BGG complex by these signs ensures that the differential
+squares to zero.
+
+The algorithm used to compute this is a randomized greedy algorithms.
+We start with a random configuration of signs. Then we flip the sign
+of an edge if it reduces the number of squares where the product
+of signs is -1. We keep up with this procedure until there is nothing left,
+in which case we are either done, or we got stuck and we flip
+the signs of some random edges.
 """
 
-
-from numpy.random import randint, choice
+from numpy.random import randint, choice 
 from itertools import chain
 
 
 def compute_signs(BGG):
-    """Computes signs for all the edges so that the product of signs around any admissible cycle is -1"""
+    """Computes signs for all the edges in Bruhat graph
+    
+    Parameters
+    ----------
+    BGG : BGGComplex
+    
+    Returns
+    -------
+    dict(tuple(str, str), int)
+        An int (+1 or -1) describing the sign of each edge in the Bruhat graph. 
+    """
     edges = BGG.arrows
     BGG.find_cycles()
 
