@@ -65,6 +65,8 @@ napoleon_use_ivar = True
 napoleon_use_param = True
 napoleon_use_rtype = True
 
+autodoc_mock_imports = ["sage"]
+
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ["_templates"]
 
