@@ -1,21 +1,28 @@
 ## bgg-cohomology
 
-This is an implementation of a computer algorithm to compute the BGG resolution and its cohomology 
-of a Verma module. 
+This is an implementation of a computer algorithm to compute the BGG resolution and its cohomology of a Verma module. 
+
+You can find the documentation for this package right here:
+https://bgg-cohomology.readthedocs.io/en/latest/
 
 ## Installation
 
-Install sagemath. The code is currently developed for sage 9.0, but should still work on 8.9.
+After installing `sage` run the following command:
 
-Download the latest version from the `releases`tab. Run the following command in the `bggcomplex` folder to 
-compile the code before first usage. 
-    
-    sage setup.py build_ext -i
+```
+    sage -pip install git+https://github.com/RikVoorhaar/bgg-cohomology.git
+```
 
-Some parts require `tdqm` to display progress bars. This can be installed by running
+In MacOS and linux this should run just fine. When using Windows,
+make sure to run this command from the Sagemath Shell.
 
-    sage -pip install tqdm
-    
+To open the `.ipynb` files in the `computations` and `examples` folders, you need to
+first of all clone this repository. Then you can either launch `Sagemath Notebook` (on Windows) or run the following in the command line:
+
+```
+    sage -n
+```
+
 ## Usage
 
 There is a basic tutorial of how to use this module in the `examples` directory. 
