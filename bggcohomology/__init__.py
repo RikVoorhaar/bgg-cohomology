@@ -8,3 +8,4 @@ from . import (
     quantum_center,
 )
 
+__version__ = "1.6"
