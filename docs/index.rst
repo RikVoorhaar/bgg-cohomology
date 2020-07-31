@@ -31,6 +31,7 @@ API Reference
    bggcomplex
    la_modules
    quantum_center
+   weight_set
 
 Indices and tables
 ==================

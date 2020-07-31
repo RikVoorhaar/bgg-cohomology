@@ -14,6 +14,7 @@ from collections import defaultdict
 import numpy as np
 
 from . import cohomology
+from .weight_set import WeightSet
 
 INT_PRECISION = np.int32
 
@@ -22,7 +23,6 @@ __all__ = [
     "BGGCohomology",
     "ModuleComponent",
     "ModuleFactory",
-    "WeightSet",
 ]
 
 
@@ -446,15 +446,14 @@ class LieAlgebraCompositeModule:
         dominant_weight : tuple[int]
             The dominant weight for which to compute the BGG complex
         """
-        weight_set = WeightSet(BGG)
+        weight_set = WeightSet.from_bgg(BGG)
         vertex_weights = weight_set.get_vertex_weights(dominant_weight)
         mu = vertex_weights[arrow[0]]
         new_mu = vertex_weights[arrow[1]]
 
         mu_weight = weight_set.tuple_to_weight(dominant_weight)
-        alpha_mu = BGG.weight_to_alpha_sum(mu_weight)
 
-        bgg_map = BGG.compute_maps(alpha_mu)[arrow]
+        bgg_map = BGG.compute_maps(mu_weight)[arrow]
 
         source_counter = 0
         for comp_num, weight_comp in self.weight_components[mu]:
@@ -978,235 +977,6 @@ class ModuleFactory:
 
         return root_string
 
-
-class WeightSet:
-    """Class to do simple computations with the weights of a weight module.
-
-    Parameters
-    ----------
-    BGG : BGGComplex
-    """
-
-    def __init__(self, BGG):
-        self.reduced_words = BGG.reduced_words
-        self.weyl_dic = BGG.reduced_word_dic
-        self.simple_roots = BGG.simple_roots
-        self.rho = BGG.rho
-        self.rank = BGG.rank
-        self.pos_roots = [self.tuple_to_weight(w) for w in BGG.neg_roots]
-
-        # Matrix of all simple roots, for faster matrix solving
-        self.simple_root_matrix = matrix(
-            [list(s.to_vector()) for s in self.simple_roots]
-        ).transpose()
-
-        self.action_dic, self.rho_action_dic = self.get_action_dic()
-
-    def weight_to_tuple(self, weight):
-        """Convert element of weight lattice to a sum of simple roots.
-
-        Parameters
-        ----------
-        weight : RootSpace.element_class
-
-        Returns
-        -------
-        tuple[int]
-            tuple representing root as linear combination of simple roots
-        
-        """
-
-        b = weight.to_vector()
-        b = matrix(b).transpose()
-        return tuple(self.simple_root_matrix.solve_right(b).transpose().list())
-
-    def tuple_to_weight(self, t):
-        """Inverse of `weight_to_tuple`
-        
-        Parameters
-        ----------
-        t : tuple[int]
-
-        Returns
-        -------
-        RootSpace.element_class
-        """
-        return sum(int(a) * b for a, b in zip(t, self.simple_roots))
-
-    def get_action_dic(self):
-        """Compute weyl group action as well as action on rho.
-
-        Returns
-        -------
-        Dict[str, np.array(np.int32, np.int32)] : dictionary mapping each string representing an
-            element of the Weyl group to a matrix expressing the action on the simple roots.
-        Dict[str, np.array(np.int32)] : dictionary mapping each string representing an
-            element of the Weyl group to a vector representing the image
-            of the dot action on rho.
-        """
-        action_dic = dict()
-        rho_action_dic = dict()
-        for s, w in self.weyl_dic.items():  # s is a string, w is a matrix
-            # Compute action of w on every simple root, decompose result in simple roots, encode result as matrix.
-            action_mat = []
-            for mu in self.simple_roots:
-                action_mat.append(self.weight_to_tuple(w.action(mu)))
-            action_dic[s] = np.array(action_mat, dtype=INT_PRECISION)
-
-            # Encode the dot action of w on rho.
-            rho_action_dic[s] = np.array(
-                self.weight_to_tuple(w.action(self.rho) - self.rho), dtype=INT_PRECISION
-            )
-        return action_dic, rho_action_dic
-
-    def dot_action(self, w, mu):
-        """Compute the dot action of w on mu
-        
-        Parameters
-        ----------
-        w : str
-            string representing the weyl group element
-        mu : iterable(int)
-            the weight
-
-        Returns
-        -------
-        np.array[np.int32]
-            vector encoding the new weight
-        """
-        # The dot action w.mu = w(mu+rho)-rho = w*mu + (w*rho-rho).
-        # The former term is given by action_dic, the latter by rho_action_dic
-        return (
-            np.matmul(self.action_dic[w].T, np.array(mu, dtype=INT_PRECISION))
-            + self.rho_action_dic[w]
-        )
-
-    def is_dot_regular(self, mu):
-        """Check if mu has a non-trivial stabilizer under the dot action
-        
-        Parameters
-        ----------
-        mu : iterable(int)
-            The weight
-
-        Returns
-        -------
-        bool
-            `True` if the weight is dot-regular
-        """
-        for s in self.reduced_words[1:]:
-            if np.all(self.dot_action(s, mu) == mu):
-                return False
-        # no stabilizer found
-        return True
-
-    def compute_weights(self, weights):
-        """Finds dot-regular weights and associated dominant weights of a set of weights.
-
-        Parameters
-        ----------
-        weights : iterable(iterable(int))
-            Iterable of weights
-        
-        returns
-        -------
-        list(tuple[tuple(int), tuple(int), int])
-            list of triples consisting of
-            dot-regular weight, associated dominant, and the length of the Weyl group
-            element making the weight dominant under the dot action.
-        """
-
-        regular_weights = []
-        for mu in weights:
-            if self.is_dot_regular(mu):
-                mu_prime, w = self.make_dominant(mu)
-                regular_weights.append((mu, tuple(mu_prime), len(w)))
-        return regular_weights
-
-    def is_dominant(self, mu):
-        """Use sagemath built-in function to check if weight is dominant
-        
-        Parameters
-        ----------
-        mu : iterable(int)
-            the weight
-
-        Returns
-        -------
-        bool
-            `True` if weight is dominant
-        """
-
-        return self.tuple_to_weight(mu).is_dominant()
-
-    def make_dominant(self, mu):
-        """For a dot-regular weight mu, w such that if w.mu is dominant.
-        
-         Such a w exists iff mu is dot-regular, in which case it is also unique.
-
-        Parameters
-        ----------
-        mu : iterable(int)
-            the dot-regular weight
-        
-        Returns
-        -------
-        tuple(int)
-            The dominant weight w.mu
-        str
-            the string representing the Weyl group element w.
-        """
-
-        for w in self.reduced_words:
-            new_mu = self.dot_action(w, mu)
-            if self.is_dominant(new_mu):
-                return new_mu, w
-        else:
-            raise ValueError(
-                "Could not make weight %s dominant, probably it is not dot-regular."
-            )
-
-    def get_vertex_weights(self, mu):
-        """For a given dot-regular mu, return its orbit under the dot-action.
-        
-        Parameters
-        ----------
-        mu : iterable(int)
-
-        Returns
-        -------
-        list[tuple[int]]
-            list of weights
-        """
-
-        vertex_weights = dict()
-        for w in self.reduced_words:
-            vertex_weights[w] = tuple(self.dot_action(w, mu))
-        return vertex_weights
-
-    def highest_weight_rep_dim(self, mu):
-        """Gives dimension of highest weight representation of integral dominant weight.
-
-        Parameters
-        ----------
-        mu : tuple(int)
-            A integral dominant weight
-
-        Returns
-        -------
-        int
-            dimension of highest weight representation.
-        """
-
-        mu_weight = self.tuple_to_weight(mu)
-        numerator = 1
-        denominator = 1
-        for alpha in self.pos_roots:
-            numerator *= (mu_weight + self.rho).dot_product(alpha)
-            denominator *= self.rho.dot_product(alpha)
-        return numerator // denominator
-
-
 class BGGCohomology:
     """Class for computing the BGG cohomology of a module.
 
@@ -1260,7 +1030,7 @@ class BGGCohomology:
         if pbars is not None:
             self.pbar1, self.pbar2 = pbars
 
-        self.weight_set = WeightSet(BGG)
+        self.weight_set = WeightSet.from_bgg(BGG)
 
         if weight_module is not None:
             self.weight_module = weight_module
@@ -1291,8 +1061,7 @@ class BGGCohomology:
         """
         if self.pbar1 is not None:
             self.pbar1.set_description(str(mu) + ", maps")
-        mu_converted = self.BGG.weight_to_alpha_sum(self.BGG._tuple_to_weight(mu))
-        self.BGG.compute_maps(mu_converted, pbar=self.pbar2, column=i)
+        self.BGG.compute_maps(mu, pbar=self.pbar2, column=i)
 
         if self.pbar1 is not None:
             self.pbar1.set_description(str(mu) + ", diff")

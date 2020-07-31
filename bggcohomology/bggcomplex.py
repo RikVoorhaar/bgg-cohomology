@@ -32,7 +32,7 @@ from numpy import array
 from .compute_signs import compute_signs
 from .compute_maps import BGGMapSolver
 from .pbw import PoincareBirkhoffWittBasis
-from .la_modules import WeightSet
+from .weight_set import WeightSet
 
 from collections import defaultdict
 
@@ -113,15 +113,13 @@ class BGGComplex:
         # This order coincides with that of the sagemath source code.
         lie_alg_order = {k: i for i, k in enumerate(self.LA.basis().keys())}
         ordered_roots = sorted(
-            [self.weight_to_alpha_sum(r) for r in self.domain.negative_roots()],
+            [self._weight_to_alpha_sum(r) for r in self.domain.negative_roots()],
             key=lambda rr: lie_alg_order[rr],
         )
-        self.neg_roots = [-self.alpha_sum_to_array(r) for r in ordered_roots]
-        # self.neg_roots = sorted([-array(self._weight_to_tuple(r)) for r in self.domain.negative_roots()],
-        #                         key=lambda l: (sum(l), tuple(l)))
+        self.neg_roots = [-self._alpha_sum_to_array(r) for r in ordered_roots]
 
         self.alpha_to_index = {
-            self.weight_to_alpha_sum(-self._tuple_to_weight(r)): i
+            self._weight_to_alpha_sum(-self._tuple_to_weight(r)): i
             for i, r in enumerate(self.neg_roots)
         }
         self.zero_root = self.domain.zero()
@@ -142,12 +140,12 @@ class BGGComplex:
         self._action_dic = dict()
         for s, w in self.reduced_word_dic.items():
             self._action_dic[s] = {
-                i: self.weight_to_alpha_sum(w.action(mu))
+                i: self._weight_to_alpha_sum(w.action(mu))
                 for i, mu in dict(self.domain.simple_roots()).items()
             }
         self._rho_action_dic = dict()
         for s, w in self.reduced_word_dic.items():
-            self._rho_action_dic[s] = self.weight_to_alpha_sum(
+            self._rho_action_dic[s] = self._weight_to_alpha_sum(
                 w.action(self.rho) - self.rho
             )
 
@@ -254,7 +252,8 @@ class BGGComplex:
 
         Returns
         -------
-        dict with the edges pf the Bruhat grpah as keys and the signs as values.
+        dict[tuple(str,str), int]
+            Dictionary mapping edges in the Bruhat graph to {+1,-1}
         """
 
         if not force_recompute:
@@ -269,9 +268,8 @@ class BGGComplex:
 
         Parameters
         ----------
-        root : element of `self.lattice`
-            root for which to compute the maps. Use `self.weight_to_alpha_sum(weight)` to 
-            convert tuples encoding a weight into this format.
+        root : tuple(int)
+            root for which to compute the maps.
         column : int or `None` (default: `None`)
             Try to only compute the maps up to this particular column if not `None`. This
             is faster in particular for small or large values of `column`. 
@@ -286,6 +284,9 @@ class BGGComplex:
         -------
         dict mapping edges (in form ('w1', 'w2')) to elements of `self.PBW`.
         """
+
+        # Convert to tuple to make sure root is hasheable
+        root = tuple(root)
 
         # If the maps are not in the cache, compute them and cache the result
         if root in self._maps:
@@ -336,17 +337,19 @@ class BGGComplex:
 
         return tuple(A.solve_right(b).transpose().list())
 
-    def weight_to_alpha_sum(self, weight):
+    def _weight_to_alpha_sum(self, weight):
         """Express a weight in the lattice as a linear combination of alpha[i]'s.
         
         These objects form the keys for elements of the Lie algebra, and for factors in the universal enveloping algebra."""
         if type(weight) is not tuple and type(weight) is not list:
             tup = self._weight_to_tuple(weight)
+        else:
+            tup = tuple(weight)
         alpha = self.lattice.alpha()
         zero = self.lattice.zero()
         return sum((int(c) * alpha[i + 1] for i, c in enumerate(tup)), zero)
 
-    def alpha_sum_to_array(self, weight):
+    def _alpha_sum_to_array(self, weight):
         output = array(vector(ZZ, self.rank))
         for i, c in weight.monomial_coefficients().items():
             output[i - 1] = c
@@ -356,48 +359,31 @@ class BGGComplex:
         """Turn a tuple encoding a linear combination of simple roots back into a weight"""
         return sum(int(a) * b for a, b in zip(t, self.simple_roots))
 
-    def dot_action(self, reflection, weight):
-        """Compute the dot action of a reflection on a weight.
-        
-        Parameters
-        ----------
-        reflection : element of `self.W`
-        weight : tuple
-            tuple encoding the weight as linear combination of simple roots
-
-        Returns
-        -------
-        tuple encoding result as linear combination of simple roots
-        """
-        weight = self._tuple_to_weight(weight)
-        new_weight = reflection.action(weight + self.rho) - self.rho
-        return self._weight_to_tuple(new_weight)
-
-    def is_dot_regular(self, mu):
+    def _is_dot_regular(self, mu):
         """Check if a weight is dot-regular by checking that it has trivial stabilizer under dot action.
         
         Parameters
         ----------
         mu : element of `self.lattice`
-            Weight encoded as linear combination of `alpha[i]`, use `self.weight_to_alpha_sum()`
+            Weight encoded as linear combination of `alpha[i]`, use `self._weight_to_alpha_sum()`
             to convert to this format
         """
         for w in self.reduced_words[1:]:
             if (
-                self.fast_dot_action(w, mu) == mu
+                self._dot_action(w, mu) == mu
             ):  # Stabilizer is non-empty, mu is not dot regular
                 return False
 
         # No nontrivial stabilizer found
         return True
 
-    def make_dominant(self, mu):
+    def _make_dominant(self, mu):
         """Given a dot-regular weight, find the associated dominant weight.
 
         Parameters
         ----------
         mu : element of `self.lattice`
-            Weight encoded as linear combination of `alpha[i]`, use `self.weight_to_alpha_sum()`
+            Weight encoded as linear combination of `alpha[i]`, use `self._weight_to_alpha_sum()`
             to convert to this format
 
         Returns
@@ -405,7 +391,7 @@ class BGGComplex:
         dominant weight encoded in same format as input
         """
         for w in self.reduced_words:
-            new_mu = self.fast_dot_action(w, mu)
+            new_mu = self._dot_action(w, mu)
             if new_mu.is_dominant():
                 return new_mu, w
 
@@ -420,21 +406,21 @@ class BGGComplex:
 
         regular_weights = []
         for mu in all_weights:
-            if self.is_dot_regular(mu):
-                mu_prime, w = self.make_dominant(mu)
-                # mu_prime = self.weight_to_alpha_sum(mu_prime)
+            if self._is_dot_regular(mu):
+                mu_prime, w = self._make_dominant(mu)
+                # mu_prime = self._weight_to_alpha_sum(mu_prime)
                 # w = self.reduced_word_dic_reversed[w]
                 regular_weights.append((mu, mu_prime, len(w)))
         return all_weights, regular_weights
 
-    def fast_dot_action(self, w, mu):
-        """Faster implementation of `self.dot_action`, uses cached results for speedup.
+    def _dot_action(self, w, mu):
+        """Dot action of Weyl group on weights
 
         Parameters
         ----------
         w : element of `self.W`
-        mu : element of `self.lattice`
-            Weight encoded as linear combination of `alpha[i]`, use `self.weight_to_alpha_sum()`
+        mu : RootSpace.element_class
+            Weight encoded as linear combination of `alpha[i]`, use `self._weight_to_alpha_sum()`
             to convert to this format
 
         """
@@ -450,7 +436,7 @@ class BGGComplex:
 
         Parameters
         ----------
-        f : element of `self.PBW`
+        f : PoincareBirkhoffWittBasis.element_class
             The element to display
         notebook : bool (optional, default: `True`)
             Uses IPython display with math if `True`, otherwise just returns the LaTeX code as string.
@@ -505,13 +491,10 @@ class BGGComplex:
         Parameters
         ----------
         mu : tuple
-            tuple encoding the weight as linar combination of simple roots
+            tuple encoding the weight as linear combination of simple roots
         """
 
-        mu_weight = WeightSet(self).tuple_to_weight(mu)
-        if not mu_weight.is_dominant():
-            raise ValueError("The weight %s is not dominant." % mu)
-        maps = self.compute_maps(self.weight_to_alpha_sum(mu_weight))
+        maps = self.compute_maps(mu)
         maps = sorted(maps.items(), key=lambda s: (len(s[0][0]), s[0]))
         for arrow, f in maps:
             self._display_map(arrow, f)

@@ -6,9 +6,9 @@ Works for any dominant weight. Typically the methods in this module are called
 directly from a BGGComplex instance.
 """
 
+from .weight_set import WeightSet
 
 from numpy import greater_equal, array_equal
-
 
 from sage.matrix.constructor import matrix
 
@@ -57,10 +57,9 @@ class BGGMapSolver:
 
         self.pbar = pbar
 
-        self.action_dic = {
-            w: BGG.alpha_sum_to_array(BGG.fast_dot_action(w, weight))
-            for w in BGG.reduced_words
-        }
+        weight_set = WeightSet.from_bgg(BGG)
+        self.action_dic = weight_set.dot_orbit(weight)
+
         self.max_len = max(len(v) for v in self.action_dic.keys())
 
         if cached_results is not None:

@@ -7,6 +7,7 @@ from . import (
     la_modules,
     pbw,
     quantum_center,
+    weight_set,
 )
 
 # ReadTheDocs cannot import cython modules.

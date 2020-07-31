@@ -1,4 +1,5 @@
 *.pyc
+*.pyd
 .idea
 .project
 .pydevproject
@@ -19,7 +20,6 @@ computations/tables/pdfs
 # *.pkl
 build/*
 docs/_build
-bgg_cohomology.egg-info
-bggcohomology.egg-info
+*.egg-info
 
 nohup.out
