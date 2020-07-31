@@ -23,7 +23,9 @@ can either launch `Sagemath Notebook` or run the following in the command line::
 
 Usage
 -----
-We strongly recommend reading the :doc:`general tutorial </tutorial>` to get started
+We strongly recommend reading the :doc:`general tutorial </tutorial>` to get started.
+If you are only interested in the BGG complex itself, then look at the 
+:doc:`maps in BGG complex tutorial </maps_nb>`.
 If you want to compute the BGG cohomology of a lie algebra module defined
 as a quotient, see the :doc:`tutorial on using cokernels </cokernels>`. 
 Finally for an introduction on how to use the functionality related to

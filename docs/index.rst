@@ -19,8 +19,9 @@ Installation and Usage
 .. toctree::
 
    installation
-   Tutorial <tutorial>
-   Cokernels <cokernels>
+   tutorial
+   maps_nb
+   cokernels
    quantum_center_nb
 
 API Reference
