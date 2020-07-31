@@ -1,7 +1,7 @@
-"""
-Implementation of the module describing the hochschild cohomology of flag varieties, or
-the center of the small quantum group, as described in the two papers by
-Annach Lachowska and You Qi:
+"""Implementation of the module describing the hochschild cohomology of flag varieties.
+
+Equivalently this givesthe center of the small quantum group, as described in the
+two papers by Anna Lachowska and You Qi:
 
 https://arxiv.org/abs/1604.07380v3
 
@@ -53,11 +53,11 @@ import pickle
 
 
 def Mjk(BGG, j, k, subset=[]):
-    """Define the module Mjk:
+    r"""Define the module Mjk.
 
     .. math::
-        M_j^k = \\bigoplus_r \\operatorname{Sym}^{j-r+k/2}\\mathfrak u_P\\otimes \\wedge^r\\mathfrak
-        g\\otimes \\wedge^{j-r}\\mathfrak n_P
+        M_j^k = \bigoplus_r \operatorname{Sym}^{j-r+k/2}\mathfrak u_P\otimes \wedge^r\mathfrak
+        g\otimes \wedge^{j-r}\mathfrak n_P
     
     Parameters
     ----------
@@ -118,7 +118,7 @@ def _sort_sign(A):
 
 
 def compute_phi(BGG, subset=[]):
-    r"""Computes the map :math:`\mathfrak b\to \mathfrak n\otimes \mathfrak u`. 
+    r"""Compute the map :math:`\mathfrak b\to \mathfrak n\otimes \mathfrak u`.
     
     Parameters
     ----------
@@ -133,7 +133,6 @@ def compute_phi(BGG, subset=[]):
         `(n_index, u_index, coeff)`, where `n_index` is index in basis of :math:`\mathfrak n`,
         `u_index` is the index in basis of :math:`\mathfrak u`, and `coeff` is the coefficient.
     """
-
     factory = ModuleFactory(BGG.LA)
 
     b_basis = factory.parabolic_p_basis(subset)
@@ -159,7 +158,7 @@ def compute_phi(BGG, subset=[]):
 
 
 def Eijk_basis(BGG, j, k, subset=[], pbar=None):
-    """Gives a basis of the quotient :math:`E_j^k = M_j^k\\big/\\Delta(M_{j-1}^k)`.
+    r"""Give a basis of the quotient :math:`E_j^k = M_j^k\big/\Delta(M_{j-1}^k)`.
     
     Parameters
     ----------
@@ -174,7 +173,7 @@ def Eijk_basis(BGG, j, k, subset=[], pbar=None):
     Returns
     -------
     CokerCache
-        Object that stores basis of :math:`M_j^k` and frame of :math:`\\Delta(M_{j-1}^k)`,
+        Object that stores basis of :math:`M_j^k` and frame of :math:`\Delta(M_{j-1}^k)`,
         so that basis of :math:`E_j^k` can be computed when needed.
     """
     factory = ModuleFactory(BGG.LA)
@@ -319,7 +318,7 @@ def Eijk_basis(BGG, j, k, subset=[], pbar=None):
 
 
 class CokerCache:
-    """Wrapper to compute cokernels on demand. 
+    """Wrapper to compute cokernels on demand.
     
     Stores the image of a map of weight spaces, and computes the 
     cokernel of the map when needed. Acts like a dictionary, and
@@ -363,11 +362,12 @@ class CokerCache:
 
 
 def _compute_kernel(source_dim, target_dim, rels, pbar=None):
-    """Given dimensions of source and target of a map, 
+    """Compute cokernel.
+    
+    Given dimensions of source and target of a map, 
     as well as the image of the map in DOK sparse matrix format, 
     compute the cokernel of this map and return as a (dense) matrix. 
     """
-
     # build the matrix of relations
     sparse_dic = dict()
     for source, target, coeff in rels:
@@ -396,7 +396,7 @@ def _compute_kernel(source_dim, target_dim, rels, pbar=None):
 
 
 def all_abijk(BGG, s=0, subset=[], half_only=False):
-    """Returns a list of all the (a,b) in the bigraded table. 
+    """Return a list of all the (a,b) in the bigraded table.
     
     Parameters
     ----------
@@ -435,7 +435,7 @@ def all_abijk(BGG, s=0, subset=[], half_only=False):
 
 
 def extend_from_symmetry(table, max_a=None):
-    """Use symmetry to compute an entire bigraded table from just the top half"""
+    """Use symmetry to compute an entire bigraded table from just the top half."""
     if max_a is None:
         max_a = max(a for a, b in table.keys())
     max_a = max_a + (max_a % 2)
@@ -445,9 +445,11 @@ def extend_from_symmetry(table, max_a=None):
 
 
 def display_bigraded_table(table, text_only=False):
-    """Generates LaTeX code to display the bigraded table. Takes a dictionary (a,b) -> LaTeX string.
-    If extend_half = True, we extend the table by using the symmetry"""
-
+    """Generate LaTeX code to display the bigraded table.
+    
+    Takes a dictionary (a,b) -> LaTeX string.
+    If extend_half = True, we extend the table by using the symmetry
+    """
     # Find all the values of a,b
     a_set = set()
     b_set = set()
@@ -490,7 +492,7 @@ def display_bigraded_table(table, text_only=False):
 
 
 def display_cohomology_stats(cohom_dic, BGG, text_only=False):
-    "Display multiplicities and dimensions of all the entries in bigraded table"
+    """Display multiplicities and dimensions of all the entries in bigraded table."""
     multiplicities = defaultdict(int)
 
     bgg_cohomology = BGGCohomology(BGG)

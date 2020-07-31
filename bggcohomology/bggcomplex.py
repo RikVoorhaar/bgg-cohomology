@@ -40,7 +40,7 @@ from IPython.display import display, Math
 
 
 class BGGComplex:
-    """A class encoding all the things we need of the BGG complex. 
+    """A class encoding all the things we need of the BGG complex.
     
     Parameters
     ----------
@@ -131,7 +131,7 @@ class BGGComplex:
             self.pickle_maps = True
 
         if self.pickle_maps:
-            self._maps = self.read_maps()
+            self._maps = self._read_maps()
         else:
             self._maps = dict()
 
@@ -150,8 +150,7 @@ class BGGComplex:
             )
 
     def _compute_weyl_dictionary(self):
-        """Construct a dictionary enumerating all of the elements of the Weyl group.
-        The keys are reduced words of the elements"""
+        """Construct a dictionary enumerating all of the elements of the Weyl group."""
         self.reduced_word_dic = {
             "".join([str(s) for s in g.reduced_word()]): g for g in self.W
         }
@@ -177,7 +176,9 @@ class BGGComplex:
 
     def _construct_BGG_graph(self):
         """Find all the arrows in the BGG Graph.
-        There is an arrow w->w' if len(w')=len(w)+1 and w' = t.w for some t in T."""
+
+        There is an arrow w->w' if len(w')=len(w)+1 and w' = t.w for some t in T.
+        """
         self.arrows = []
         for w in self.reduced_words:
             for t in self.T:
@@ -192,8 +193,7 @@ class BGGComplex:
         self.graph = DiGraph(self.arrows)
 
     def plot_graph(self):
-        """Create a pretty plot of the BGG graph. Each word length is encoded by a different color.
-        """
+        """Create a pretty plot of the BGG graph, with vertices colored by word lenght."""
         BGGVertices = sorted(self.reduced_words, key=len)
         BGGPartition = [list(v) for k, v in groupby(BGGVertices, len)]
 
@@ -203,13 +203,12 @@ class BGGComplex:
         display(BGGGraphPlot.plot())
 
     def find_cycles(self):
-        """Find all the admitted cycles in the BGG graph. 
+        """Find all the admitted cycles in the BGG graph.
         
         An admitted cycle consists of two paths a->b->c and a->b'->c, 
         where the word length increases by 1 each step. 
         The cycles are returned as tuples (a,b,c,b',a).
         """
-
         # only compute cycles if we haven't yet done so already
         if self.cycles is None:
             # for faster searching, make a dictionary of pairs (v,[u_1,...,u_k]) where v is a vertex and u_i
@@ -248,14 +247,13 @@ class BGGComplex:
         return self.cycles
 
     def compute_signs(self, force_recompute=False):
-        """Computes signs for all the edges so that the product of signs around any admissible cycle is -1.
+        """Compute signs making making product of signs around all squares equal to -1.
 
         Returns
         -------
         dict[tuple(str,str), int]
             Dictionary mapping edges in the Bruhat graph to {+1,-1}
         """
-
         if not force_recompute:
             if self.signs is not None:
                 return self.signs
@@ -284,7 +282,6 @@ class BGGComplex:
         -------
         dict mapping edges (in form ('w1', 'w2')) to elements of `self.PBW`.
         """
-
         # Convert to tuple to make sure root is hasheable
         root = tuple(root)
 
@@ -303,11 +300,11 @@ class BGGComplex:
                 )
 
         if self.pickle_maps:
-            self.store_maps()
+            self._store_maps()
 
         return self._maps[root]
 
-    def read_maps(self):
+    def _read_maps(self):
         target_path = os.path.join(
             self.pickle_directory, self.root_system + r"_maps.pkl"
         )
@@ -318,7 +315,7 @@ class BGGComplex:
         except IOError:
             return dict()
 
-    def store_maps(self):
+    def _store_maps(self):
         target_path = os.path.join(
             self.pickle_directory, self.root_system + r"_maps.pkl"
         )
@@ -329,7 +326,7 @@ class BGGComplex:
             pass
 
     def _weight_to_tuple(self, weight):
-        """Decompose a weight into a tuple encoding the weight as a linear combination of the simple roots"""
+        """Convert rootspace element to tuple."""
         b = weight.to_vector()
         b = matrix(b).transpose()
         A = [list(a.to_vector()) for a in self.simple_roots]
@@ -340,7 +337,9 @@ class BGGComplex:
     def _weight_to_alpha_sum(self, weight):
         """Express a weight in the lattice as a linear combination of alpha[i]'s.
         
-        These objects form the keys for elements of the Lie algebra, and for factors in the universal enveloping algebra."""
+        These objects form the keys for elements of the Lie algebra, 
+        and for factors in the universal enveloping algebra.
+        """
         if type(weight) is not tuple and type(weight) is not list:
             tup = self._weight_to_tuple(weight)
         else:
@@ -356,7 +355,7 @@ class BGGComplex:
         return output
 
     def _tuple_to_weight(self, t):
-        """Turn a tuple encoding a linear combination of simple roots back into a weight"""
+        """Turn a tuple encoding a linear combination of simple roots back into a weight."""
         return sum(int(a) * b for a, b in zip(t, self.simple_roots))
 
     def _is_dot_regular(self, mu):
@@ -401,20 +400,20 @@ class BGGComplex:
             % mu
         )
 
-    def compute_weights(self, weight_module):
-        all_weights = weight_module.weight_dic.keys()
+    # def compute_weights(self, weight_module):
+    #     all_weights = weight_module.weight_dic.keys()
 
-        regular_weights = []
-        for mu in all_weights:
-            if self._is_dot_regular(mu):
-                mu_prime, w = self._make_dominant(mu)
-                # mu_prime = self._weight_to_alpha_sum(mu_prime)
-                # w = self.reduced_word_dic_reversed[w]
-                regular_weights.append((mu, mu_prime, len(w)))
-        return all_weights, regular_weights
+    #     regular_weights = []
+    #     for mu in all_weights:
+    #         if self._is_dot_regular(mu):
+    #             mu_prime, w = self._make_dominant(mu)
+    #             # mu_prime = self._weight_to_alpha_sum(mu_prime)
+    #             # w = self.reduced_word_dic_reversed[w]
+    #             regular_weights.append((mu, mu_prime, len(w)))
+    #     return all_weights, regular_weights
 
     def _dot_action(self, w, mu):
-        """Dot action of Weyl group on weights
+        """Dot action of Weyl group on weights.
 
         Parameters
         ----------
@@ -441,7 +440,6 @@ class BGGComplex:
         notebook : bool (optional, default: `True`)
             Uses IPython display with math if `True`, otherwise just returns the LaTeX code as string.
         """
-
         map_string = []
         first_term = True
         for monomial, coefficient in f.monomial_coefficients().items():
@@ -480,20 +478,18 @@ class BGGComplex:
             return " ".join(map_string)
 
     def _display_map(self, arrow, f):
-        """Displays a single arrow plus map of the BGG complex"""
-
+        """Display a single arrow plus map of the BGG complex."""
         f_string = self.display_pbw(f, notebook=False)
         display(Math(r"\to".join(arrow) + r",\,\," + f_string))
 
     def display_maps(self, mu):
-        """Displays all the maps of the BGG complex for a given mu, in appropriate order.
+        """Display all the maps of the BGG complex for a given mu, in appropriate order.
         
         Parameters
         ----------
         mu : tuple
             tuple encoding the weight as linear combination of simple roots
         """
-
         maps = self.compute_maps(mu)
         maps = sorted(maps.items(), key=lambda s: (len(s[0][0]), s[0]))
         for arrow, f in maps:

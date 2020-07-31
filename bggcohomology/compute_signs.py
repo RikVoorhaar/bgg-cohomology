@@ -19,7 +19,7 @@ from itertools import chain
 
 
 def compute_signs(BGG):
-    """Computes signs for all the edges in Bruhat graph
+    """Compute signs for all the edges in Bruhat graph.
     
     Parameters
     ----------

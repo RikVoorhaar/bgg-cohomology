@@ -302,7 +302,7 @@ class LieAlgebraCompositeModule:
         return weight_components
 
     def get_action_tensor(self, component):
-        """Computes a tensor encoding the action for a given tensor component.
+        """Compute a tensor encoding the action for a given tensor component.
 
         Parameters
         ----------
@@ -324,7 +324,6 @@ class LieAlgebraCompositeModule:
             If s = -1 then there are no further non-zero structure coefficients.
             The integer m is then the smallest such that the tensor is big enough.
         """
-
         # Previously we implemented the action as a dictionary, this will be our starting point
         action_mat = component.action
 
@@ -401,7 +400,7 @@ class LieAlgebraCompositeModule:
         return symbols
 
     def _component_latex_basis(self, comp_num, basis):
-        """Given a basis of a weight component, convert all the indices to latex"""
+        """Given a basis of a weight component, convert all the indices to latex."""
         comp_symbols = self._component_symbols_latex(self.components[comp_num])
         basis_latex_dic = dict()
         for i, b in enumerate(basis):
@@ -414,9 +413,11 @@ class LieAlgebraCompositeModule:
 
     @property
     def latex_basis_dic(self):
-        """Compute a dictionary sending each weight to a dictionary of latex strings encoding the 
-        basis elements of the associated weight component 
-        (one dictionary for each direct sum component)"""
+        """Compute a dictionary sending each weight to a dictionary of latex strings.
+        
+        This string encodes the basis elements of the associated weight component 
+        (one dictionary for each direct sum component)
+        """
         if self._latex_basis_dic is None:
             basis_dic = dict()
             for mu, wcomps in self.weight_components.items():
@@ -428,7 +429,7 @@ class LieAlgebraCompositeModule:
         return self._latex_basis_dic
 
     def _weight_latex_basis(self, mu):
-        """Turn a list of dictionaries into a list of all their values"""
+        """Turn a list of dictionaries into a list of all their values."""
         return list(
             itertools.chain.from_iterable(
                 d.values() for d in self.latex_basis_dic[mu].values()
@@ -525,60 +526,6 @@ class ModuleComponent:
         self.basis = basis
         self.action = action
         self.factory = factory
-
-    # these methods are all unused. It seems that we really just use this class as a
-    # data container.
-    # @staticmethod
-    # def action_on_vector(i, X, action):
-    #     """Compute the action of a Lie algebra element on a basis element.
-
-    #     Parameters
-    #     ----------
-    #     i : int
-    #         Basis index (element of `self.basis`)
-    #     X : element of LieAlgebra
-
-    #     Returns
-    #     -------
-    #     dict[int, int] : dictionary mapping basis index -> coefficient
-    #     """
-    #     output = defaultdict(int)
-    #     for j, c1 in X.items():
-    #         bracket = action[(i, j)]
-    #         for k, c2 in bracket.items():
-    #             output[k] += c1 * c2
-    #     return dict(output)
-
-    # @staticmethod
-    # def add_dicts(dict1, dict2):
-    #     """Helper function for merging two dicts, summing common keys"""
-    #     for k, v in dict2.items():
-    #         if k in dict1:
-    #             dict1[k] += v
-    #         else:
-    #             dict1[k] = v
-    #     return dict1
-
-    # function is unused, and contains possible error (why is coefficient unused?)
-    # def pbw_action_matrix(self, pbw_elt):
-    #     """Given a PBW element, compute the matrix encoding the action of this PBW element.
-    #     Output is encoded as a list of tuples (basis index, dict), where each dict
-    #     consists of target index -> coefficient, iff coefficient is non-zero.
-    #     (most dicts are empty in practice."""
-    #     total = [(m, dict()) for m in self.basis]
-    #     for monomial, coefficient in pbw_elt.monomial_coefficients().items():
-    #         sub_total = [(m, {m: 1}) for m in self.basis]
-    #         for term in monomial.to_word_list()[::-1]:
-    #             index = self.factory.root_to_index[term]
-    #             sub_total = [
-    #                 (m, self.action_on_vector(index, image, self.action))
-    #                 for m, image in sub_total
-    #             ]
-    #         total = [
-    #             (m, self.add_dicts(t, s)) for ((m, t), (_, s)) in zip(total, sub_total)
-    #         ]
-    #     total = [(m, {k: v for k, v in d.items() if v != 0}) for m, d in total]
-    #     return total
 
 
 class ModuleFactory:
@@ -705,7 +652,6 @@ class ModuleFactory:
         np.array[int]
             Dense vector of length `rank`.
         """
-
         vec = np.zeros(rank, dtype=INT_PRECISION)
         for key, value in dic.items():
             vec[key - 1] = value
@@ -726,7 +672,6 @@ class ModuleFactory:
             It is spanned by the subalgebra `b` and the positive whose components
             lie entirely in `subset`.
         """
-
         if subset is None:
             subset = []
         e_roots_in_span = [
@@ -752,7 +697,6 @@ class ModuleFactory:
             It is spanned by all negative roots whose components are not entirely
             contained entirely in `subset`.
         """
-
         if subset is None:
             subset = []
         f_roots_not_in_span = [
@@ -778,7 +722,6 @@ class ModuleFactory:
             It is spanned by all positive roots whose components are not entirely
             contained entirely in `subset`.
         """
-
         if subset is None:
             subset = []
         e_roots_not_in_span = [
@@ -807,7 +750,6 @@ class ModuleFactory:
             a dictionary index->coeffcient encoding the non-zero structure
             coefficients :math:`C^k_{i,j}`.
         """
-
         action = defaultdict(dict)
         action_keys = set()
         for i, j in itertools.product(
@@ -858,7 +800,6 @@ class ModuleFactory:
             a dictionary index->coeffcient encoding the non-zero structure
             coefficients :math:`C^k_{i,j}`.
         """
-
         action = defaultdict(dict)
         module_set = set(module)
         for i, k in itertools.product(
@@ -889,7 +830,7 @@ class ModuleFactory:
     def build_component(
         self, subalgebra, action_type="ad", subset=None, acting_lie_algebra="n"
     ):
-        """Build a ModuleComponent
+        """Build a ModuleComponent.
         
         Parameters
         ----------
@@ -910,7 +851,6 @@ class ModuleFactory:
         ModuleComponent
             The ModuleComponent storing the data for this module.
         """
-
         if subset is None:
             subset = []
 
@@ -951,7 +891,7 @@ class ModuleFactory:
         return ModuleComponent(module, action, self)
 
     def root_to_latex(self, root):
-        """Convert a root to a latex expression
+        """Convert a root to a latex expression.
         
         Parameters
         ----------
@@ -1082,8 +1022,7 @@ class BGGCohomology:
 
     @cached_method
     def cohomology(self, i, mu=None):
-        """
-        Compute full block of cohomology.
+        """Compute full block of cohomology.
 
         This is done by computing BGG_i(mu) for all dot-regular mu appearing 
         in the weight module of length i.
@@ -1107,7 +1046,6 @@ class BGGCohomology:
             This gives the mutliplicity of each highest weight rep in the cohomology.
             If list is empty, the cohomology in this degree is trivial.
         """
-
         if self.pbar1 is not None:
             self.pbar1.set_description("Initializing")
 
@@ -1156,7 +1094,7 @@ class BGGCohomology:
         return sorted(cohomology_dic.items(), key=lambda t: (sum(t[0]), t[0][::-1]))
 
     def betti_number(self, cohomology):
-        """Compute Betti number from list of dominant weights and multiplicities
+        """Compute Betti number from list of dominant weights and multiplicities.
 
         Parameters
         ----------
@@ -1189,7 +1127,7 @@ class BGGCohomology:
         compact=False,
         skip_zero=False,
     ):
-        """Compute cohomology, and display it in a pretty way using LaTeX
+        """Compute cohomology, and display it in a pretty way using LaTeX.
 
         Parameters
         ----------
@@ -1212,7 +1150,6 @@ class BGGCohomology:
         skip_zero : bool (default: False)
             Skip the zeroth degree of cohomology if `i is None`
         """
-
         # If there is a complex_string, insert it between brackets, otherwise no brackets.
         if len(complex_string) > 0:
             display_string = r"(%s)=" % complex_string
@@ -1270,7 +1207,7 @@ class BGGCohomology:
                         )
 
     def tuple_to_latex(self, tup, compact=False):
-        """ Get LaTeX string representing a tuple of highest weight vector and it's multiplicity
+        """Get LaTeX string representing a tuple of highest weight vector and it's multiplicity.
         
         Parameters
         ----------
@@ -1322,7 +1259,7 @@ class BGGCohomology:
                     return r"L\left(%s\right)" % alphas_string
 
     def cohom_to_latex(self, cohom, compact=False):
-        """Represent output of `self.cohomology` by a LaTeX string
+        """Represent output of `self.cohomology` by a LaTeX string.
         
         Parameters
         ----------
@@ -1332,7 +1269,6 @@ class BGGCohomology:
         compact : bool (default: False)
             Whether or not to use more compact notation
         """
-
         # Entry hasn't been computed yet
         if cohom is None:
             return "???"
@@ -1346,8 +1282,10 @@ class BGGCohomology:
             return r"0"
 
     def _display_coker(self, mu, transpose=False):
-        """Display the cokernel of a quotient module. 
-        This is mainly implemented for debugging purposes."""
+        """Display the cokernel of a quotient module.
+        
+        This is mainly implemented for debugging purposes.
+        """
         if self.has_coker:
             if mu in self.coker:
                 if not transpose:

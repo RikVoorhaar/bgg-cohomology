@@ -19,7 +19,7 @@ from sage.modules.free_module_element import vector
 
 
 class BGGMapSolver:
-    """Class encoding the methods to compute all the maps in the BGG complex
+    """Class encoding the methods to compute all the maps in the BGG complex.
     
     Parameters
     ----------
@@ -71,9 +71,12 @@ class BGGMapSolver:
         self.problem_dic = dict()
 
     def _compute_initial_maps(self):
-        """If the difference the dot action between source and target vertex is a multiple of a 
-        simple root, then the map must be of form f_i^k, where k is the multiple of the simple root,
-        and i is the index of the simple root"""
+        """Find the trivial maps.
+        
+        If the difference the dot action between source and target vertex is a multiple of a 
+        simple root, then the map must be of form f_i^k, where k is the multiple of the simple 
+        root, and i is the index of the simple root
+        """
         num_trivial_maps = 0
         for s, t in self.BGG.arrows:
             diff = self.action_dic[s] - self.action_dic[t]
@@ -86,10 +89,13 @@ class BGGMapSolver:
         return num_trivial_maps
 
     def _get_available_problems(self, final_column=None):
-        """Find all the admissible cycles in the BGG graph where we know three out of the four maps,
-        for each such cycle, create a dictionary containing all the information needed to solve
+        """Find all the problems for which we have enough information to solve.
+        
+        Find all the admissible cycles in the BGG graph where we know three out of the four maps.
+        For each such cycle, create a dictionary containing all the information needed to solve
         for the remaining fourth map. We only store the problem of lowest total degree for any 
-        undetermined edge."""
+        undetermined edge.
+        """
         for c in self.BGG.cycles:
             edg = (
                 c[0:2],
@@ -168,7 +174,7 @@ class BGGMapSolver:
                     self.problem_dic[current_edge] = problem
 
     def solve(self, column=None):
-        """Iterate over all the problems to find all the maps, and return the result
+        """Iterate over all the problems to find all the maps, and return the result.
         
         Parameters
         ----------
@@ -176,7 +182,6 @@ class BGGMapSolver:
             Aim to compute maps in a particular column, and stop once these maps
             are computed. If `None`, compute the entire complex.
         """
-
         # Iterate in the opposite direction if we only need a column on the far side of the middle.
         if (column is not None) and (column > self.max_len / 2):
             columns = range(column, self.max_len + 1)[::-1]
@@ -208,7 +213,7 @@ class BGGMapSolver:
         return self.maps
 
     def _multidegree_to_root_sum(self, deg):
-        """Compute a PBW basis of a given multi-degree"""
+        """Compute a PBW basis of a given multi-degree."""
         queue = [(deg, [0])]
         output = []
         while len(queue) > 0:
@@ -223,7 +228,7 @@ class BGGMapSolver:
         return output
 
     def _partition_to_PBW(self, partition):
-        "Given a partition, produce a PBW element with this multidegree"
+        """Given a partition, produce a PBW element with this multidegree."""
         output = 1
         for index in partition:
             root = sum(
@@ -234,11 +239,11 @@ class BGGMapSolver:
         return output
 
     def _monomial_to_tuple(self, monomial):
-        "Turn a PBW monomial into a tuple of ints"
+        """Turn a PBW monomial into a tuple of ints."""
         return tuple(self.BGG.alpha_to_index[r] for r in monomial.to_word_list())
 
     def _vectorize_polynomial(self, polynomial, target_basis):
-        """given a dictionary of monomial->index, turn a polynomial into a vector"""
+        """Given a dictionary of monomial->index, turn a polynomial into a vector."""
         coeffs = polynomial.monomial_coefficients()
 
         vectorized = vector(QQ, len(target_basis))
@@ -256,7 +261,7 @@ class BGGMapSolver:
         return vectorized
 
     def _solve_problem(self, problem):
-        """solve the division problem in PBW basis"""
+        """Solve the division problem in PBW basis."""
         basis = [
             self._partition_to_PBW(partition)
             for partition in self._multidegree_to_root_sum(problem["deg"])
@@ -284,16 +289,17 @@ class BGGMapSolver:
         self.maps[problem["edge"]] = output
 
     def _dual_edge(self, edge):
-        """Give dual edge in Bruhat graph, this is induced by the Z2 action of longest word"""
+        """Give dual edge in Bruhat graph, this is induced by the Z2 action of longest word."""
         return self.BGG.dual_words[edge[1]], self.BGG.dual_words[edge[0]]
 
     def check_maps(self):
-        """Checks whether the squares commute. 
+        """Check whether all the squares commute.
         
         Returns
         -------
         bool
-            True if all the squares in the BGG complex commute, False otherwise."""
+            True if all the squares in the BGG complex commute, False otherwise.
+        """
         for c in self.BGG.cycles:
             edg = (c[0:2], c[1:3], c[4:2:-1], c[3:1:-1])
             if (

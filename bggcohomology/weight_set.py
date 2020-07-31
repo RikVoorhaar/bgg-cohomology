@@ -1,3 +1,5 @@
+"""Module for doing computations with the weights of a weight module and action of Weyl group."""
+
 import numpy as np
 
 from sage.combinat.root_system.weyl_group import WeylGroup
@@ -84,7 +86,9 @@ class WeightSet:
 
     def _compute_weyl_dictionary(self):
         """Construct a dictionary enumerating all of the elements of the Weyl group.
-        The keys are reduced words of the elements"""
+
+        The keys are reduced words of the elements
+        """
         reduced_word_dic = {
             "".join([str(s) for s in g.reduced_word()]): g for g in self.W
         }
@@ -101,15 +105,13 @@ class WeightSet:
         -------
         tuple[int]
             tuple representing root as linear combination of simple roots
-        
         """
-
         b = weight.to_vector()
         b = matrix(b).transpose()
         return tuple(self.simple_root_matrix.solve_right(b).transpose().list())
 
     def tuple_to_weight(self, t):
-        """Inverse of `weight_to_tuple`
+        """Inverse of `weight_to_tuple`.
         
         Parameters
         ----------
@@ -148,7 +150,7 @@ class WeightSet:
         return action_dic, rho_action_dic
 
     def dot_action(self, w, mu):
-        """Compute the dot action of w on mu
+        """Compute the dot action of w on mu.
         
         Parameters
         ----------
@@ -170,7 +172,7 @@ class WeightSet:
         )
 
     def dot_orbit(self, mu):
-        """Compute the orbit of the Weyl group action on a weight
+        """Compute the orbit of the Weyl group action on a weight.
 
         Parameters
         ----------
@@ -182,10 +184,10 @@ class WeightSet:
         dict(str, np.array[np.int32])
             Dictionary mapping Weyl group elements to weights encoded as numpy vectors.
         """
-        return {w : self.dot_action(w, mu) for w in self.reduced_words}
+        return {w: self.dot_action(w, mu) for w in self.reduced_words}
 
     def is_dot_regular(self, mu):
-        """Check if mu has a non-trivial stabilizer under the dot action
+        """Check if mu has a non-trivial stabilizer under the dot action.
         
         Parameters
         ----------
@@ -204,7 +206,7 @@ class WeightSet:
         return True
 
     def compute_weights(self, weights):
-        """Finds dot-regular weights and associated dominant weights of a set of weights.
+        """Find dot-regular weights and associated dominant weights of a set of weights.
 
         Parameters
         ----------
@@ -218,7 +220,6 @@ class WeightSet:
             dot-regular weight, associated dominant, and the length of the Weyl group
             element making the weight dominant under the dot action.
         """
-
         regular_weights = []
         for mu in weights:
             if self.is_dot_regular(mu):
@@ -227,7 +228,7 @@ class WeightSet:
         return regular_weights
 
     def is_dominant(self, mu):
-        """Use sagemath built-in function to check if weight is dominant
+        """Use sagemath built-in function to check if weight is dominant.
         
         Parameters
         ----------
@@ -239,7 +240,6 @@ class WeightSet:
         bool
             `True` if weight is dominant
         """
-
         return self.tuple_to_weight(mu).is_dominant()
 
     def make_dominant(self, mu):
@@ -259,7 +259,6 @@ class WeightSet:
         str
             the string representing the Weyl group element w.
         """
-
         for w in self.reduced_words:
             new_mu = self.dot_action(w, mu)
             if self.is_dominant(new_mu):
@@ -281,14 +280,13 @@ class WeightSet:
         list[tuple[int]]
             list of weights
         """
-
         vertex_weights = dict()
         for w in self.reduced_words:
             vertex_weights[w] = tuple(self.dot_action(w, mu))
         return vertex_weights
 
     def highest_weight_rep_dim(self, mu):
-        """Gives dimension of highest weight representation of integral dominant weight.
+        """Give dimension of highest weight representation of integral dominant weight.
 
         Parameters
         ----------
@@ -300,7 +298,6 @@ class WeightSet:
         int
             dimension of highest weight representation.
         """
-
         mu_weight = self.tuple_to_weight(mu)
         numerator = 1
         denominator = 1
