@@ -1,8 +1,9 @@
 """
 Lie algebra modules with weight decomposition and their BGG cohomology
 
-Provides functionality to construct weight modules with a Lie algebra action. Given a BGG complex, it can
-subsequently compute the cohomology of the module. See the tutorial notebook for example usage.
+Provides functionality to construct weight modules with a Lie algebra action. Given a BGG complex,
+it can subsequently compute the cohomology of the module. See the tutorial notebook for 
+example usage.
 """
 
 from IPython.display import display, Math, Latex
@@ -61,6 +62,8 @@ class LieAlgebraCompositeModule:
         of self.compute_weight_components.
     dimensions : dict[str, int]
         Dictionary containing the total dimension of each weight component
+    total_dimension : int
+        Total dimension of the entire module
     dimensions_components : list[dict[str, int]]
         For each direct sum component seperately, a dictionary containing the 
         total dimension of each weight component
@@ -95,7 +98,7 @@ class LieAlgebraCompositeModule:
         self.modules = {
             k: component_dic[k].basis for k in component_dic.keys()
         }  # basis of each component type
-        self._latex_basis_dic = None
+        #self._latex_basis_dic = None
 
         # length of all the indices occurring in any module
         self.len_basis = len(set(itertools.chain.from_iterable(self.modules.values())))
@@ -108,6 +111,9 @@ class LieAlgebraCompositeModule:
         self.dimensions = {
             w: sum((len(c) for _, c in p)) for w, p in self.weight_components.items()
         }
+
+        # Compute total dimension
+        self.total_dimension = sum(self.dimensions.values(), 0)
 
         # Compute the dimension of each weight component for each direct sum component
         self.dimensions_components = [
@@ -412,21 +418,22 @@ class LieAlgebraCompositeModule:
         return basis_latex_dic
 
     @property
-    def latex_basis_dic(self):
+    def _latex_basis_dic(self):
         """Compute a dictionary sending each weight to a dictionary of latex strings.
         
         This string encodes the basis elements of the associated weight component 
         (one dictionary for each direct sum component)
         """
-        if self._latex_basis_dic is None:
-            basis_dic = dict()
-            for mu, wcomps in self.weight_components.items():
-                mu_dict = dict()
-                for comp_num, basis in wcomps:
-                    mu_dict[comp_num] = self._component_latex_basis(comp_num, basis)
-                basis_dic[mu] = mu_dict
-            self._latex_basis_dic = basis_dic
-        return self._latex_basis_dic
+        # if self._latex_basis_dic is None:
+        basis_dic = dict()
+        for mu, wcomps in self.weight_components.items():
+            mu_dict = dict()
+            for comp_num, basis in wcomps:
+                mu_dict[comp_num] = self._component_latex_basis(comp_num, basis)
+            basis_dic[mu] = mu_dict
+        # self._latex_basis_dic = basis_dic
+        #return self._latex_basis_dic
+        return basis_dic
 
     def _weight_latex_basis(self, mu):
         """Turn a list of dictionaries into a list of all their values."""
@@ -1137,7 +1144,7 @@ class BGGCohomology:
             weight for which to compute cohomoly, if None compute for all
         complex_string : str (default: "")
             an optional string to print cohomology as `H^i(complex_string) = ...`
-        only_non_zer0: bool (default: True)
+        only_non_zero: bool (default: True)
             If True, print nothing if the cohomology is trivial / 0
         print_betti : bool (default: False)
             Print the Betti numbers

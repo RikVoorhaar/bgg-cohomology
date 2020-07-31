@@ -150,7 +150,10 @@ class WeightSet:
         return action_dic, rho_action_dic
 
     def dot_action(self, w, mu):
-        """Compute the dot action of w on mu.
+        r"""Compute the dot action of w on mu.
+
+        The dot action :math:`w\cdot\mu = w(\mu+\rho)-\rho`, with :math:`\rho` half
+        the sum of all the positive roots.
         
         Parameters
         ----------
