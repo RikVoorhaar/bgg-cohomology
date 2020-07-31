@@ -1,18 +1,25 @@
 *.pyc
+*.pyd
 .idea
 .project
 .pydevproject
 plan.md
-bggcomplex/.idea
-bggcomplex/.ipynb_checkpoints
-bggcomplex/build
+bggcohomology/.idea
+bggcohomology/.ipynb_checkpoints
+bggcohomology/build
 computations/.ipynb_checkpoints
 examples/.ipynb_checkpoints
 */.ipynb_checkpoints
-bggcomplex/python2.7.exe.stackdump
-bggcomplex/python2.7.exe.stackdump
+computations/tables/pdfs
+# computations/pickles
 *.stackdump
 *.dll
 *.c
 *.o
 *.json
+# *.pkl
+build/*
+docs/_build
+*.egg-info
+
+nohup.out

@@ -1,0 +1,46 @@
+\documentclass[crop,border=2mm]{standalone}
+
+\usepackage{amsfonts, amsmath, amssymb}
+
+\begin{document}
+\begin{tabular}{l}
+{\huge type B2, s=2, subset=[]}\\ \\
+
+
+$\displaystyle
+\begin{array}{r|l l l l l}
+	{\scriptstyle i+j=0}&L_{1,2}&&&&\\
+	{\scriptstyle i+j=2}&L_{1,1}L_{1,2}^{2}&L_{1,2}^{3}L_{2,3}&&&\\
+	{\scriptstyle i+j=4}&L_{1,2}&\mathbb{C}^{2}L_{1,1}^{4}L_{1,2}^{7}L_{2,2}L_{2,3}^{3}&L_{1,2}^{3}L_{2,3}&&\\
+	{\scriptstyle i+j=6}&0&\mathbb{C}L_{1,1}L_{1,2}^{2}L_{2,3}&\mathbb{C}^{2}L_{1,1}^{4}L_{1,2}^{7}L_{2,2}L_{2,3}^{3}&L_{1,2}^{3}L_{2,3}&\\
+	{\scriptstyle i+j=8}&0&0&L_{1,2}&L_{1,1}L_{1,2}^{2}&L_{1,2}\\
+	\hline h^{i,j}&{\scriptstyle j-i=0}&{\scriptstyle j-i=2}&{\scriptstyle j-i=4}&{\scriptstyle j-i=6}&{\scriptstyle j-i=8}
+\end{array}
+$ \\ \\
+
+
+$\displaystyle
+\begin{array}{r|l l l l l}
+	{\scriptstyle i+j=0}&10&&&&\\
+	{\scriptstyle i+j=2}&25&65&&&\\
+	{\scriptstyle i+j=4}&10&211&65&&\\
+	{\scriptstyle i+j=6}&0&61&211&65&\\
+	{\scriptstyle i+j=8}&0&0&10&25&10\\
+	\hline h^{i,j}&{\scriptstyle j-i=0}&{\scriptstyle j-i=2}&{\scriptstyle j-i=4}&{\scriptstyle j-i=6}&{\scriptstyle j-i=8}
+\end{array}
+$ \\ \\
+
+
+$\displaystyle
+\begin{array}{rll}
+	\text{module}&\text{multiplicity}&\text{dimension} \\ \hline \text{all}&&768 \\
+	L\left(\alpha_{1}+ 2\alpha_{2}\right)&33&10\\
+	L\left(\alpha_{1}+\alpha_{2}\right)&11&5\\
+	L\left( 2\alpha_{1}+ 3\alpha_{2}\right)&10&35\\
+	\mathbb{C}&5&1\\
+	L\left( 2\alpha_{1}+ 2\alpha_{2}\right)&2&14
+\end{array}
+$ \\ \\
+
+\end{tabular}
+\end{document}

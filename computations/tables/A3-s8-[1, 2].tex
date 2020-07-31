@@ -1,0 +1,47 @@
+\documentclass[crop,border=2mm]{standalone}
+
+\usepackage{amsfonts, amsmath, amssymb}
+
+\begin{document}
+\begin{tabular}{l}
+{\huge type A3, s=8, subset=[1, 2]}\\ \\
+
+
+$\displaystyle
+\begin{array}{r|l l l l}
+	{\scriptstyle i+j=0}&L_{4,4,4}&&&\\
+	{\scriptstyle i+j=2}&0&L_{4,4,3}L_{3,4,4}L_{5,4,3}L_{4,4,4}^{2}L_{3,4,5}L_{4,5,4}L_{5,5,4}L_{4,5,5}&&\\
+	{\scriptstyle i+j=4}&0&0&L_{4,4,3}L_{3,4,4}L_{5,4,3}L_{4,4,4}^{2}L_{3,4,5}L_{4,5,4}L_{5,5,4}L_{4,5,5}&\\
+	{\scriptstyle i+j=6}&0&0&0&L_{4,4,4}\\
+	\hline h^{i,j}&{\scriptstyle j-i=0}&{\scriptstyle j-i=2}&{\scriptstyle j-i=4}&{\scriptstyle j-i=6}
+\end{array}
+$ \\ \\
+
+
+$\displaystyle
+\begin{array}{r|l l l l}
+	{\scriptstyle i+j=0}&825&&&\\
+	{\scriptstyle i+j=2}&0&11396&&\\
+	{\scriptstyle i+j=4}&0&0&11396&\\
+	{\scriptstyle i+j=6}&0&0&0&825\\
+	\hline h^{i,j}&{\scriptstyle j-i=0}&{\scriptstyle j-i=2}&{\scriptstyle j-i=4}&{\scriptstyle j-i=6}
+\end{array}
+$ \\ \\
+
+
+$\displaystyle
+\begin{array}{rll}
+	\text{module}&\text{multiplicity}&\text{dimension} \\ \hline \text{all}&&24442 \\
+	L\left( 4\alpha_{1}+ 4\alpha_{2}+ 4\alpha_{3}\right)&6&825\\
+	L\left( 4\alpha_{1}+ 4\alpha_{2}+ 3\alpha_{3}\right)&2&875\\
+	L\left( 3\alpha_{1}+ 4\alpha_{2}+ 4\alpha_{3}\right)&2&875\\
+	L\left( 5\alpha_{1}+ 4\alpha_{2}+ 3\alpha_{3}\right)&2&616\\
+	L\left( 3\alpha_{1}+ 4\alpha_{2}+ 5\alpha_{3}\right)&2&616\\
+	L\left( 4\alpha_{1}+ 5\alpha_{2}+ 4\alpha_{3}\right)&2&2156\\
+	L\left( 5\alpha_{1}+ 5\alpha_{2}+ 4\alpha_{3}\right)&2&2304\\
+	L\left( 4\alpha_{1}+ 5\alpha_{2}+ 5\alpha_{3}\right)&2&2304
+\end{array}
+$ \\ \\
+
+\end{tabular}
+\end{document}

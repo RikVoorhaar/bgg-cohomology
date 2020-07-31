@@ -1,0 +1,49 @@
+\documentclass[crop,border=2mm]{standalone}
+
+\usepackage{amsfonts, amsmath, amssymb}
+
+\begin{document}
+\begin{tabular}{l}
+{\huge type A2, s=7, subset=[]}\\ \\
+
+
+$\displaystyle
+\begin{array}{r|l l l}
+	{\scriptstyle i+j=1}&L_{1,1}L_{2,1}^{2}L_{1,2}^{2}L_{2,2}^{5}L_{3,2}^{3}L_{2,3}^{3}L_{3,3}^{4}L_{4,3}L_{3,4}L_{4,4}&&\\
+	{\scriptstyle i+j=3}&L_{3,3}^{2}L_{4,3}^{2}L_{3,4}^{2}L_{4,4}^{2}&L_{1,1}^{5}L_{2,1}^{5}L_{1,2}^{5}L_{2,2}^{13}L_{3,2}^{9}L_{2,3}^{9}L_{4,2}L_{3,3}^{10}L_{2,4}L_{4,3}^{4}L_{3,4}^{4}L_{4,4}^{2}&\\
+	{\scriptstyle i+j=5}&0&L_{3,3}^{2}L_{4,3}^{2}L_{3,4}^{2}L_{4,4}^{2}&L_{1,1}L_{2,1}^{2}L_{1,2}^{2}L_{2,2}^{5}L_{3,2}^{3}L_{2,3}^{3}L_{3,3}^{4}L_{4,3}L_{3,4}L_{4,4}\\
+	\hline h^{i,j}&{\scriptstyle j-i=1}&{\scriptstyle j-i=3}&{\scriptstyle j-i=5}
+\end{array}
+$ \\ \\
+
+
+$\displaystyle
+\begin{array}{r|l l l}
+	{\scriptstyle i+j=1}&936&&\\
+	{\scriptstyle i+j=3}&702&2715&\\
+	{\scriptstyle i+j=5}&0&702&936\\
+	\hline h^{i,j}&{\scriptstyle j-i=1}&{\scriptstyle j-i=3}&{\scriptstyle j-i=5}
+\end{array}
+$ \\ \\
+
+
+$\displaystyle
+\begin{array}{rll}
+	\text{module}&\text{multiplicity}&\text{dimension} \\ \hline \text{all}&&5991 \\
+	L\left(\alpha_{1}+\alpha_{2}\right)&7&8\\
+	L\left( 2\alpha_{1}+\alpha_{2}\right)&9&10\\
+	L\left(\alpha_{1}+ 2\alpha_{2}\right)&9&10\\
+	L\left( 2\alpha_{1}+ 2\alpha_{2}\right)&23&27\\
+	L\left( 3\alpha_{1}+ 2\alpha_{2}\right)&15&35\\
+	L\left( 2\alpha_{1}+ 3\alpha_{2}\right)&15&35\\
+	L\left( 3\alpha_{1}+ 3\alpha_{2}\right)&22&64\\
+	L\left( 4\alpha_{1}+ 3\alpha_{2}\right)&10&81\\
+	L\left( 3\alpha_{1}+ 4\alpha_{2}\right)&10&81\\
+	L\left( 4\alpha_{1}+ 4\alpha_{2}\right)&8&125\\
+	L\left( 4\alpha_{1}+ 2\alpha_{2}\right)&1&28\\
+	L\left( 2\alpha_{1}+ 4\alpha_{2}\right)&1&28
+\end{array}
+$ \\ \\
+
+\end{tabular}
+\end{document}
