@@ -8,13 +8,17 @@ https://bgg-cohomology.readthedocs.io/en/latest/
 ## Installation
 
 After installing `sage` run the following command:
+```
+    sage -pip install bggcohomology
+```
+In MacOS and linux this should run just fine. When using Windows,
+make sure to run this command from the Sagemath Shell (or properly add sage to PATH).
 
+To install the latest version directly from GitHub, run:
 ```
     sage -pip install git+https://github.com/RikVoorhaar/bgg-cohomology.git
 ```
-
-In MacOS and linux this should run just fine. When using Windows,
-make sure to run this command from the Sagemath Shell (or properly add sage to PATH).
+Note that this version may be less stable.
 
 To open the `.ipynb` files in the `computations` and `examples` folders, you need to
 first of all clone this repository. Then you can either launch `Sagemath Notebook` application if installed,

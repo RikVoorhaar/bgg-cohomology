@@ -4,20 +4,22 @@ Installation and Usage
 Installation
 ------------
 
-This project relies on Sagemath, for installation instructions
-see: `install Sagemath <https://doc.sagemath.org/html/en/installation/>`_.
-The most recent version of this package is developed with Sagemath 9.0, but
-more recent versions should also work. 
+After installing `sage` run the following command:
 
-After installing `sage` run the following command::
+    sage -pip install bggcohomology
+    
+In MacOS and linux this should run just fine. When using Windows,
+make sure to run this command from the Sagemath Shell (or properly add sage to PATH).
+
+To install the latest version directly from GitHub, run:
 
     sage -pip install git+https://github.com/RikVoorhaar/bgg-cohomology.git
 
-In MacOS and linux this should run just fine. When using Windows, 
-make sure to run this command from the Sagemath Shell. 
+Note that this version may be less stable.
 
-To open the `.ipynb` files in the `computations` and `examples` folders, you
-can either launch `Sagemath Notebook` or run the following in the command line::
+To open the `.ipynb` files in the `computations` and `examples` folders, you need to
+first of all clone this repository. Then you can either launch `Sagemath Notebook` application if installed,
+or run the following in the command line:
 
     sage -n
 
