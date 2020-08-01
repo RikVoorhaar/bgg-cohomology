@@ -14,10 +14,11 @@ After installing `sage` run the following command:
 ```
 
 In MacOS and linux this should run just fine. When using Windows,
-make sure to run this command from the Sagemath Shell.
+make sure to run this command from the Sagemath Shell (or properly add sage to PATH).
 
 To open the `.ipynb` files in the `computations` and `examples` folders, you need to
-first of all clone this repository. Then you can either launch `Sagemath Notebook` (on Windows) or run the following in the command line:
+first of all clone this repository. Then you can either launch `Sagemath Notebook` application if installed,
+or run the following in the command line:
 
 ```
     sage -n
@@ -25,9 +26,10 @@ first of all clone this repository. Then you can either launch `Sagemath Noteboo
 
 ## Usage
 
-There is a basic tutorial of how to use this module in the `examples` directory. 
-Furthermore the `computations` directory contains notebooks with the code we used
-for the results in our preprint. 
+There are several tutorials of how to use this module in the `examples` directory.
+These same tutorials can also be found in the docs. 
+Furthermore the `computations` directory contains notebooks and scripts with the code we used
+for the results in our preprint, and upcoming preprint.
 
 ## Credit
 All the code has been written by **Rik Voorhaar**. 
