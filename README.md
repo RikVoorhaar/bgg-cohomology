@@ -38,7 +38,16 @@ for the results in our preprint, and upcoming preprint.
 ## Credit
 All the code has been written by **Rik Voorhaar**. 
  Additional credit goes to **Nicolas Hemelsoet** for many aspects of the algorithm implemented here.
- This work has been partially financially supported by **NCCR SwissMAP**. 
+ This work has been financially supported by [**NCCR SwissMAP**](https://www.nccr-swissmap.ch/). 
  
 This software is free to use and edit. When using this software for academic purposes, please cite 
-the following preprint: https://arxiv.org/abs/1911.00871
+the following paper: [A computer algorithm for the BGG resolution](https://www.sciencedirect.com/science/article/abs/pii/S0021869320305135)
+
+```
+@article{
+    title = "A computer algorithm for the BGG resolution",
+    journal = "Journal of Algebra",
+    year = "2020",
+    author = "Nicolas Hemelsoet and Rik Voorhaar",
+}
+```
