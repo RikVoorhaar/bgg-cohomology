@@ -1,0 +1,42 @@
+\documentclass[crop,border=2mm]{standalone}
+
+\usepackage{amsfonts, amsmath, amssymb}
+
+\begin{document}
+\begin{tabular}{l}
+{\huge type A2, s=4, subset=[1]}\\ \\
+
+
+$\displaystyle
+\begin{array}{r|l l l}
+	{\scriptstyle i+j=0}&L_{2,2}&&\\
+	{\scriptstyle i+j=2}&0&L_{2,1}L_{1,2}L_{2,2}^{2}L_{3,2}L_{2,3}&\\
+	{\scriptstyle i+j=4}&0&0&L_{2,2}\\
+	\hline h^{i,j}&{\scriptstyle j-i=0}&{\scriptstyle j-i=2}&{\scriptstyle j-i=4}
+\end{array}
+$ \\ \\
+
+
+$\displaystyle
+\begin{array}{r|l l l}
+	{\scriptstyle i+j=0}&27&&\\
+	{\scriptstyle i+j=2}&0&144&\\
+	{\scriptstyle i+j=4}&0&0&27\\
+	\hline h^{i,j}&{\scriptstyle j-i=0}&{\scriptstyle j-i=2}&{\scriptstyle j-i=4}
+\end{array}
+$ \\ \\
+
+
+$\displaystyle
+\begin{array}{rll}
+	\text{module}&\text{multiplicity}&\text{dimension} \\ \hline \text{all}&&198 \\
+	L\left( 2\alpha_{1}+ 2\alpha_{2}\right)&4&27\\
+	L\left( 2\alpha_{1}+\alpha_{2}\right)&1&10\\
+	L\left(\alpha_{1}+ 2\alpha_{2}\right)&1&10\\
+	L\left( 3\alpha_{1}+ 2\alpha_{2}\right)&1&35\\
+	L\left( 2\alpha_{1}+ 3\alpha_{2}\right)&1&35
+\end{array}
+$ \\ \\
+
+\end{tabular}
+\end{document}

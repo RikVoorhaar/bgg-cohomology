@@ -439,7 +439,7 @@ class LieAlgebraCompositeModule:
         """Turn a list of dictionaries into a list of all their values."""
         return list(
             itertools.chain.from_iterable(
-                d.values() for d in self.latex_basis_dic[mu].values()
+                d.values() for d in self._latex_basis_dic[mu].values()
             )
         )
 
@@ -459,10 +459,13 @@ class LieAlgebraCompositeModule:
         mu = vertex_weights[arrow[0]]
         new_mu = vertex_weights[arrow[1]]
 
-        mu_weight = weight_set.tuple_to_weight(dominant_weight)
+        #mu_weight = weight_set.tuple_to_weight(dominant_weight)
 
-        bgg_map = BGG.compute_maps(mu_weight)[arrow]
-
+        bgg_map = BGG.compute_maps(dominant_weight)[arrow]
+        
+        source_latex = self._weight_latex_basis(mu)
+        target_latex = self._weight_latex_basis(new_mu)
+        
         source_counter = 0
         for comp_num, weight_comp in self.weight_components[mu]:
             basis_action = cohomology.action_on_basis(
@@ -479,12 +482,17 @@ class LieAlgebraCompositeModule:
                     source_target_pairs[source] = []
                 source_target_pairs[source].append((target, coeff))
 
-            source_latex = self._weight_latex_basis(mu)
-            target_latex = self._weight_latex_basis(new_mu)
+            
 
-            for source, targets in source_target_pairs.items():
-                source_string = source_latex[source]
-                target_strings = []
+            #for source, targets in source_target_pairs.items():
+            for source in range(self.dimensions_components[comp_num][mu]):
+                source_string = source_latex[source+source_counter]
+                if source in source_target_pairs:
+                    targets = source_target_pairs[source]
+                    target_strings = []
+                else:
+                    targets = []
+                    target_strings = ["0"]
 
                 first = True
                 for target, coeff in targets:
@@ -1062,7 +1070,8 @@ class BGGCohomology:
         ]
 
         # Split the set of dominant weights in those which are isolated, and therefore don't require
-        # us to run the BGG machinery, and those which are not isolated and require the BGG machinery.
+        # us to run the BGG machinery, and those which are not isolated and require the BGG
+        # machinery.
         dominant_non_trivial = set()
         dominant_trivial = []
         for w, w_dom, _ in length_i_weights:

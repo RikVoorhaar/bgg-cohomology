@@ -58,7 +58,7 @@ def Mjk(BGG, j, k, subset=[]):
     .. math::
         M_j^k = \bigoplus_r \operatorname{Sym}^{j-r+k/2}\mathfrak u_P\otimes \wedge^r\mathfrak
         g\otimes \wedge^{j-r}\mathfrak n_P
-    
+
     Parameters
     ----------
     j : int
@@ -84,7 +84,11 @@ def Mjk(BGG, j, k, subset=[]):
     for r in range(j + k // 2 + 1):
         if (j - r <= dim_n) and (j - r >= 0):
             components.append(
-                [("u", j + k // 2 - r, "sym"), ("g", r, "wedge"), ("n", j - r, "wedge")]
+                [
+                    ("u", j + k // 2 - r, "sym"),
+                    ("g", r, "wedge"),
+                    ("n", j - r, "wedge"),
+                ]
             )
 
     module = LieAlgebraCompositeModule(factory, components, component_dic)
@@ -110,7 +114,9 @@ def _sort_sign(A):
     """
     num_cols = A.shape[1]
     if num_cols > 1:
-        signs = (-1) ** (sum([(A[:, 0] < A[:, i]) for i in range(1, num_cols)]))
+        signs = (-1) ** (
+            sum([(A[:, 0] < A[:, i]) for i in range(1, num_cols)])
+        )
         mask = sum([(A[:, 0] == A[:, i]) for i in range(1, num_cols)]) == 0
         return (np.sort(A), signs, mask)
     else:
@@ -119,7 +125,7 @@ def _sort_sign(A):
 
 def compute_phi(BGG, subset=[]):
     r"""Compute the map :math:`\mathfrak b\to \mathfrak n\otimes \mathfrak u`.
-    
+
     Parameters
     ----------
     BGG : BGGComplex
@@ -157,9 +163,9 @@ def compute_phi(BGG, subset=[]):
     return phi_image
 
 
-def Eijk_basis(BGG, j, k, subset=[], pbar=None):
+def Eijk_basis(BGG, j, k, subset=[], pbar=None, method=0):
     r"""Give a basis of the quotient :math:`E_j^k = M_j^k\big/\Delta(M_{j-1}^k)`.
-    
+
     Parameters
     ----------
     BGG : BGGComplex
@@ -186,6 +192,8 @@ def Eijk_basis(BGG, j, k, subset=[], pbar=None):
     # target module
     wc_mod = Mjk(BGG, j, k, subset=subset)
 
+    basis_indices = _quotient_basis_indices(wc_mod)
+
     # source module
     wc_rel = Mjk(BGG, j - 1, k, subset=subset)
 
@@ -211,10 +219,11 @@ def Eijk_basis(BGG, j, k, subset=[], pbar=None):
             # put relations in sparse matrix.
             sparse_relations = []
             for comp_num, basis in components:
-                # Find the index of the direct sum component at which to insert respectively g and u \otimes n
+                # Find the index of the direct sum component at which to insert respectively g and u
+                # \otimes n
                 r = wc_rel.components[comp_num][1][1]
-                t_un_insert = None
-                t_g_insert = None
+                t_un_insert = None  # component number where u / n are inserted
+                t_g_insert = None  # component number where g is inserted
                 for c, comp_list in enumerate(wc_mod.components):
                     if comp_list[1][1] == r:
                         t_un_insert = c
@@ -254,12 +263,14 @@ def Eijk_basis(BGG, j, k, subset=[], pbar=None):
                     # For each row, look up the index in the target module
                     # then put the tuple (soruce, target, sign) in the list of relations.
                     basis_g = np.zeros(shape=(len(new_basis), 3), dtype=int)
-                    for row_num, (row, sign) in enumerate(zip(new_basis, signs[mask])):
+                    for row_num, (row, sign) in enumerate(
+                        zip(new_basis, signs[mask])
+                    ):
                         source = row[0]
                         target = wc_mod.weight_comp_index_numbers[new_mu][
                             tuple(list(row[1:]) + [t_g_insert])
                         ]
-                        basis_g[row_num] = [source, target, -sign]
+                        basis_g[row_num] = [source, target, sign]
                     if len(basis_g) > 0:
                         sparse_relations.append(basis_g)
 
@@ -291,9 +302,13 @@ def Eijk_basis(BGG, j, k, subset=[], pbar=None):
                         new_basis = new_basis[mask]
 
                         # For each row, look up the index in the target module
-                        # then put the tuple (soruce, target, sign*coefficient) in the list of relations.
-                        basis_un = np.zeros(shape=(len(new_basis), 3), dtype=int)
-                        for row_num, (row, sign) in enumerate(zip(new_basis, signs)):
+                        # then put the tuple (source, target, sign*coefficient) in the list of relations.
+                        basis_un = np.zeros(
+                            shape=(len(new_basis), 3), dtype=int
+                        )
+                        for row_num, (row, sign) in enumerate(
+                            zip(new_basis, signs)
+                        ):
                             source = row[0]
                             target = wc_mod.weight_comp_index_numbers[new_mu][
                                 tuple(list(row[1:]) + [t_un_insert])
@@ -314,37 +329,74 @@ def Eijk_basis(BGG, j, k, subset=[], pbar=None):
         for mu, rels in coker_dic.items()
     }
 
-    return CokerCache(coker_dic, mu_source_counters, wc_mod.dimensions)
+    return CokerCache(
+        coker_dic,
+        mu_source_counters,
+        wc_mod.dimensions,
+        basis_indices,
+        method=method,
+    )
+
+
+def _quotient_basis_indices(mjk):
+    g_locations = [
+        [i for i, s in enumerate(l) if s == "g"] for l in mjk.type_lists
+    ]
+    indices = dict()
+    for mu in mjk.weight_components.keys():
+        quotient_indices = []
+        u_basis = mjk.component_dic["u"].basis
+        for elem, index in mjk.weight_comp_index_numbers[mu].items():
+            elem, comp_num = elem[:-1], elem[-1]
+            keep = True
+            for j in g_locations[comp_num]:
+                if elem[j] not in u_basis:
+                    keep = False
+                    break
+            if keep:
+                quotient_indices.append(index)
+        indices[mu] = quotient_indices
+    return indices
 
 
 class CokerCache:
     """Wrapper to compute cokernels on demand.
-    
-    Stores the image of a map of weight spaces, and computes the 
+
+    Stores the image of a map of weight spaces, and computes the
     cokernel of the map when needed. Acts like a dictionary, and
     caches results.
 
     Parameters
     ----------
     rel_dic : dict[tuple(int), array[int]]
-        Dictionary mapping weights to arrays encoding sparse matrix of 
+        Dictionary mapping weights to arrays encoding sparse matrix of
         relations to quotient by in DOK format.
     source_dims : dict[tuple(int), int]
         Dictionary mapping weights to dimensions of the weight components
         in the source space.
     target_dims : dict[tuple(int), int]
         Dictionary mapping weights to dimensions of the weight components
-        in the target space. 
+        in the target space.
     pbar : tqdm or `None` (default `None`)
         tqdm instance to send status updates to. If `None` this feature is disable.
     """
 
-    def __init__(self, rel_dic, source_dims, target_dims, pbar=None):
+    def __init__(
+        self,
+        rel_dic,
+        source_dims,
+        target_dims,
+        basis_indices,
+        pbar=None,
+        method=0,
+    ):
         self.rel_dic = rel_dic
         self.source_dims = source_dims
         self.target_dims = target_dims
         self.computed_cokernels = dict()
+        self.basis_indices = basis_indices
         self.pbar = pbar
+        self.method = method
 
     def __getitem__(self, mu):
         if mu in self.computed_cokernels:
@@ -353,9 +405,18 @@ class CokerCache:
             rels = self.rel_dic[mu]
             source_dim = self.source_dims[mu]
             target_dim = self.target_dims[mu]
-            ker = _compute_kernel(source_dim, target_dim, rels, self.pbar)
+            basis = self.basis_indices[mu]
+            if self.method == 0:
+                ker = _compute_kernel2(
+                    source_dim, target_dim, rels, basis, self.pbar
+                )
+            else:
+                ker = _compute_kernel(source_dim, target_dim, rels, self.pbar)
             self.computed_cokernels[mu] = ker
             return ker
+
+    def __setitem__(self, mu, value):
+        self.computed_cokernels[mu] = value
 
     def __contains__(self, mu):
         return mu in self.rel_dic
@@ -363,10 +424,10 @@ class CokerCache:
 
 def _compute_kernel(source_dim, target_dim, rels, pbar=None):
     """Compute cokernel.
-    
-    Given dimensions of source and target of a map, 
-    as well as the image of the map in DOK sparse matrix format, 
-    compute the cokernel of this map and return as a (dense) matrix. 
+
+    Given dimensions of source and target of a map,
+    as well as the image of the map in DOK sparse matrix format,
+    compute the cokernel of this map and return as a (dense) matrix.
     """
     # build the matrix of relations
     sparse_dic = dict()
@@ -377,8 +438,9 @@ def _compute_kernel(source_dim, target_dim, rels, pbar=None):
 
     if pbar is not None:
         pbar.update()
-        pbar.update()
-        pbar.set_description("Computing kernels (%d,%d)" % (M.ncols(), M.nrows()))
+        pbar.set_description(
+            "Computing kernels (%d,%d)" % (M.ncols(), M.nrows())
+        )
 
     # compute the right kernel, store it in a dictionary
     try:
@@ -395,9 +457,29 @@ def _compute_kernel(source_dim, target_dim, rels, pbar=None):
     return ker
 
 
+def _compute_kernel2(source_dim, target_dim, rels, basis_indices, check=False):
+    inds_complement = list(set(range(target_dim)) - set(basis_indices))
+
+    M = matrix(ZZ, nrows=source_dim, ncols=target_dim)
+    for source, target, coeff in rels:
+        M[source, target] = coeff
+
+    b = M[:, basis_indices]
+
+    sol = M[:, inds_complement].solve_right(b)
+
+    coker_mat = matrix(ZZ, nrows=target_dim, ncols=len(basis_indices))
+    coker_mat[inds_complement] = -sol
+    coker_mat[basis_indices] = matrix.identity(len(basis_indices))
+    coker_mat = coker_mat.T
+    if check:
+        assert (coker_mat * M.T).norm() == 0
+    return coker_mat
+
+
 def all_abijk(BGG, s=0, subset=[], half_only=False):
     """Return a list of all the (a,b) in the bigraded table.
-    
+
     Parameters
     ----------
     BGG : BGGComplex
@@ -446,7 +528,7 @@ def extend_from_symmetry(table, max_a=None):
 
 def display_bigraded_table(table, text_only=False):
     """Generate LaTeX code to display the bigraded table.
-    
+
     Takes a dictionary (a,b) -> LaTeX string.
     If extend_half = True, we extend the table by using the symmetry
     """
@@ -484,7 +566,11 @@ def display_bigraded_table(table, text_only=False):
 
     # display the generated latex code.
     display_string = (
-        r"\begin{array}" + column_string + "\n\t" + all_strings + "\n\\end{array}"
+        r"\begin{array}"
+        + column_string
+        + "\n\t"
+        + all_strings
+        + "\n\\end{array}"
     )
     if not text_only:
         display(Math(display_string))
@@ -524,11 +610,17 @@ def display_cohomology_stats(cohom_dic, BGG, text_only=False):
     for mu in multiplicities.keys():
         rows.append(
             "&".join(
-                [latex_strings[mu], str(multiplicities[mu]), str(betti_numbers[mu])]
+                [
+                    latex_strings[mu],
+                    str(multiplicities[mu]),
+                    str(betti_numbers[mu]),
+                ]
             )
         )
 
-    array_string = "\\begin{array}{rll}\n\t" + "\\\\\n\t".join(rows) + "\n\\end{array}"
+    array_string = (
+        "\\begin{array}{rll}\n\t" + "\\\\\n\t".join(rows) + "\n\\end{array}"
+    )
     if not text_only:
         display(Math(array_string))
     return array_string

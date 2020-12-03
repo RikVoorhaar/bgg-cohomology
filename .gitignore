@@ -3,6 +3,9 @@
 .idea
 .project
 .pydevproject
+.vscode
+*.pkl
+/dist
 plan.md
 bggcohomology/.idea
 bggcohomology/.ipynb_checkpoints
