@@ -1,0 +1,47 @@
+\documentclass[crop,border=2mm]{standalone}
+
+\usepackage{amsfonts, amsmath, amssymb}
+
+\begin{document}
+\begin{tabular}{l}
+{\huge type A6, s=1, subset=[1, 2, 3, 4, 5]}\\ \\
+
+
+$\displaystyle
+\begin{array}{r|l l l l l l}
+	{\scriptstyle i+j=1}&\mathbb{C}L_{1,1,1,1,1,1}&&&&&\\
+	{\scriptstyle i+j=3}&\mathbb{C}&\mathbb{C}L_{1,1,1,1,1,1}L_{1,2,2,2,2,1}&&&&\\
+	{\scriptstyle i+j=5}&\mathbb{C}&\mathbb{C}&\mathbb{C}L_{1,1,1,1,1,1}L_{1,2,2,2,2,1}L_{1,2,3,3,2,1}&&&\\
+	{\scriptstyle i+j=7}&\mathbb{C}&\mathbb{C}&\mathbb{C}&\mathbb{C}L_{1,1,1,1,1,1}L_{1,2,2,2,2,1}L_{1,2,3,3,2,1}&&\\
+	{\scriptstyle i+j=9}&\mathbb{C}&\mathbb{C}&\mathbb{C}&\mathbb{C}&\mathbb{C}L_{1,1,1,1,1,1}L_{1,2,2,2,2,1}&\\
+	{\scriptstyle i+j=11}&\mathbb{C}&\mathbb{C}&\mathbb{C}&\mathbb{C}&\mathbb{C}&\mathbb{C}L_{1,1,1,1,1,1}\\
+	\hline h^{i,j}&{\scriptstyle j-i=1}&{\scriptstyle j-i=3}&{\scriptstyle j-i=5}&{\scriptstyle j-i=7}&{\scriptstyle j-i=9}&{\scriptstyle j-i=11}
+\end{array}
+$ \\ \\
+
+
+$\displaystyle
+\begin{array}{r|l l l l l l}
+	{\scriptstyle i+j=1}&49&&&&&\\
+	{\scriptstyle i+j=3}&1&441&&&&\\
+	{\scriptstyle i+j=5}&1&1&1225&&&\\
+	{\scriptstyle i+j=7}&1&1&1&1225&&\\
+	{\scriptstyle i+j=9}&1&1&1&1&441&\\
+	{\scriptstyle i+j=11}&1&1&1&1&1&49\\
+	\hline h^{i,j}&{\scriptstyle j-i=1}&{\scriptstyle j-i=3}&{\scriptstyle j-i=5}&{\scriptstyle j-i=7}&{\scriptstyle j-i=9}&{\scriptstyle j-i=11}
+\end{array}
+$ \\ \\
+
+
+$\displaystyle
+\begin{array}{rll}
+	\text{module}&\text{multiplicity}&\text{dimension} \\ \hline \text{all}&&3445 \\
+	\mathbb{C}&21&1\\
+	L\left(\alpha_{1}+\alpha_{2}+\alpha_{3}+\alpha_{4}+\alpha_{5}+\alpha_{6}\right)&6&48\\
+	L\left(\alpha_{1}+ 2\alpha_{2}+ 2\alpha_{3}+ 2\alpha_{4}+ 2\alpha_{5}+\alpha_{6}\right)&4&392\\
+	L\left(\alpha_{1}+ 2\alpha_{2}+ 3\alpha_{3}+ 3\alpha_{4}+ 2\alpha_{5}+\alpha_{6}\right)&2&784
+\end{array}
+$ \\ \\
+
+\end{tabular}
+\end{document}

@@ -33,7 +33,8 @@ or run the following in the command line:
 There are several tutorials of how to use this module in the `examples` directory.
 These same tutorials can also be found in the docs. 
 Furthermore the `computations` directory contains notebooks and scripts with the code we used
-for the results in our preprint, and upcoming preprint.
+for the results in our preprint, and upcoming preprint. In particular `computations/pdfs/merge.pdf`
+contains a comprehensive list of result related to our upcoming preprint.
 
 ## Credit
 All the code has been written by **Rik Voorhaar**. 
@@ -47,7 +48,7 @@ the following paper: [A computer algorithm for the BGG resolution](https://www.s
 @article{
     title = "A computer algorithm for the BGG resolution",
     journal = "Journal of Algebra",
-    year = "2020",
+    year = "2021",
     author = "Nicolas Hemelsoet and Rik Voorhaar",
 }
 ```

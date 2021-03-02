@@ -2,24 +2,49 @@
 
 Puts the resulting PDF's in a new folder, and also produces a file with all the PDF's merged"""
 
+import argparse
+import fnmatch
+import glob
 import os
-import sys
 import re
 import shutil
 import subprocess
-from tqdm.auto import tqdm
+import sys
+
+from tqdm import tqdm
 
 
 def main(args):
-    if len(args) == 2:
-        input_folder, output_folder = args
-    elif len(args) == 1:
-        input_folder = args[0]
-        output_folder = os.path.join(input_folder, "pdfs")
+    parser = argparse.ArgumentParser(
+        description="Turn a list of .tex files into a list of .pdf files, as well as one large pdf file."
+    )
+    parser.add_argument("input", help="Name of input folder")
+    parser.add_argument(
+        "-o", default="", type=str, help="Name of output folder"
+    )
+    parser.add_argument(
+        "-g",
+        default="*",
+        type=str,
+        help="Glob pattern (default: '*'). Only matching .tex files are used, and recursive search is applied.",
+    )
+    parser.add_argument(
+        "-m",
+        default="merge",
+        type=str,
+        help="Name of merged pdf/tex (without file extension) (default: 'merge')",
+    )
+
+    args = parser.parse_args()
+
+    input_folder = args.input
+    if args.o == "":
+        output_folder = input_folder
     else:
-        raise ValueError(
-            "Wrong arguments. Format: `batch_tex.py input_folder (output_folder)`"
-        )
+        output_folder = args.o
+
+    glob_pattern = args.g
+    merge_name = args.m
 
     temp_dir = os.path.join(output_folder, "temp")
     os.makedirs(temp_dir, exist_ok=True)
@@ -27,8 +52,28 @@ def main(args):
         raise IOError(f"Working directory '{temp_dir}' not empty")
 
     tex_files = os.listdir(input_folder)
+    tex_files = [f for f in tex_files if fnmatch.fnmatch(f, glob_pattern)]
+    # tex_files = glob.glob(os.path.join(input_folder, glob_pattern))
     tex_files = [f for f in tex_files if re.match(r".*\.tex$", f)]
     print(f"Found {len(tex_files)} .tex files.")
+
+    sort_keys = []
+    for f in tex_files:
+        try:
+            diag, s, subset = f.split(".")[0].split("-")
+            s = int(s[1:])
+            subset = subset[1:-1]
+            if len(subset) > 0:
+                try:
+                    subset_tuple = (int(subset),)
+                except ValueError:
+                    subset_tuple = tuple(int(i) for i in subset.split(","))
+            else:
+                subset_tuple = tuple()
+            sort_keys.append((diag, subset_tuple, s))
+        except ValueError:
+            sort_keys.append(f)
+    tex_files = [t[1] for t in sorted(zip(sort_keys, tex_files))]
 
     print("Compiling pdfs")
     pbar = tqdm(tex_files)
@@ -41,8 +86,6 @@ def main(args):
         tex_log = subprocess.run(
             [
                 "pdflatex",
-                "-aux-directory",
-                temp_dir,
                 "-output-directory",
                 output_folder,
                 new_path,
@@ -58,34 +101,42 @@ def main(args):
         r"\begin{document}",
     ]
     merge_tex += "\n".join(preamble)
-    for f in tex_files:
+
+    merge_tex += r"\begin{page}"+"\n"
+    merge_tex += r"\begin{tabular}{l}"+"\n"
+    for i, (diag, subset_tuple, s) in enumerate(sorted(sort_keys)):
+        merge_tex += f"Diagram {diag}, subset ${subset_tuple}$, $s={s}$: page {i+2}"+r"\\ " + "\n"
+    merge_tex += r"\end{tabular}"+"\n"
+    merge_tex += r"\end{page}" + "\n"
+
+    for i, f in enumerate(tex_files):
         f = f[:-4]
         merge_tex += "\n"
-        merge_tex += r"\begin{page}\includegraphics{"
+        merge_tex += r"\begin{page} \includegraphics{"
         merge_tex += f
         merge_tex += r"}\end{page}"
     merge_tex += "\n"
     merge_tex += r"\end{document}"
 
-    merge_path = os.path.join(temp_dir, "merge.tex")
+    merge_path = os.path.join(temp_dir, merge_name + ".tex")
     with open(merge_path, "w") as tex_file:
         tex_file.write(merge_tex)
 
     tex_log = subprocess.run(
         [
             "pdflatex",
-            "-aux-directory",
-            temp_dir,
-            "-output-directory",
+            "-output-dir",
             output_folder,
             merge_path,
         ],
         capture_output=True,
     )
 
+
     print("Cleaning up")
     shutil.rmtree(temp_dir, ignore_errors=False)
-
+    for file in glob.glob("pdfs/*.log")+glob.glob("pdfs/*.aux"):
+        os.remove(file)
     print("Done!")
 
 

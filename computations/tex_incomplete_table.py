@@ -9,7 +9,7 @@ import pickle
 import sys
 
 from bggcohomology.bggcomplex import BGGComplex
-from bggcohomology.fast_module import BGGCohomology
+from bggcohomology.la_modules import BGGCohomology
 from bggcohomology.quantum_center import (
     all_abijk,
     display_bigraded_table,
@@ -18,7 +18,8 @@ from bggcohomology.quantum_center import (
     prepare_texfile,
 )
 
-def main(args):
+
+def main():
     parser = argparse.ArgumentParser(description="Produce table from .pkl file")
     parser.add_argument("diagram")
     parser.add_argument("--compact", default=True)
@@ -67,3 +68,6 @@ def main(args):
                 [tab1, tab2, tab3], title=f"type {diagram}, s={s}, subset={subset}"
             )
         )
+
+if __name__ == '__main__':
+    main()

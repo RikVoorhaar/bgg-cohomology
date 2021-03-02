@@ -1,0 +1,42 @@
+\documentclass[crop,border=2mm]{standalone}
+
+\usepackage{amsfonts, amsmath, amssymb}
+
+\begin{document}
+\begin{tabular}{l}
+{\huge type A4, s=1, subset=[1, 2, 3]}\\ \\
+
+
+$\displaystyle
+\begin{array}{r|l l l l}
+	{\scriptstyle i+j=1}&\mathbb{C}L_{1,1,1,1}&&&\\
+	{\scriptstyle i+j=3}&\mathbb{C}&\mathbb{C}L_{1,1,1,1}L_{1,2,2,1}&&\\
+	{\scriptstyle i+j=5}&\mathbb{C}&\mathbb{C}&\mathbb{C}L_{1,1,1,1}L_{1,2,2,1}&\\
+	{\scriptstyle i+j=7}&\mathbb{C}&\mathbb{C}&\mathbb{C}&\mathbb{C}L_{1,1,1,1}\\
+	\hline h^{i,j}&{\scriptstyle j-i=1}&{\scriptstyle j-i=3}&{\scriptstyle j-i=5}&{\scriptstyle j-i=7}
+\end{array}
+$ \\ \\
+
+
+$\displaystyle
+\begin{array}{r|l l l l}
+	{\scriptstyle i+j=1}&25&&&\\
+	{\scriptstyle i+j=3}&1&100&&\\
+	{\scriptstyle i+j=5}&1&1&100&\\
+	{\scriptstyle i+j=7}&1&1&1&25\\
+	\hline h^{i,j}&{\scriptstyle j-i=1}&{\scriptstyle j-i=3}&{\scriptstyle j-i=5}&{\scriptstyle j-i=7}
+\end{array}
+$ \\ \\
+
+
+$\displaystyle
+\begin{array}{rll}
+	\text{module}&\text{multiplicity}&\text{dimension} \\ \hline \text{all}&&256 \\
+	\mathbb{C}&10&1\\
+	L\left(\alpha_{1}+\alpha_{2}+\alpha_{3}+\alpha_{4}\right)&4&24\\
+	L\left(\alpha_{1}+ 2\alpha_{2}+ 2\alpha_{3}+\alpha_{4}\right)&2&75
+\end{array}
+$ \\ \\
+
+\end{tabular}
+\end{document}
