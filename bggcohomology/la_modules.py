@@ -8,6 +8,8 @@ example usage.
 
 from IPython.display import display, Math, Latex
 import itertools
+
+from bggcohomology.profile_tools import compute_integer_dense_rank
 from sage.rings.integer_ring import ZZ
 from sage.matrix.constructor import matrix
 from sage.misc.cachefunc import cached_method
@@ -18,6 +20,8 @@ from . import cohomology
 from .weight_set import WeightSet
 
 INT_PRECISION = np.int32
+RANK_ALGORITHM = "modp"
+PROFILE_FILE = "profiling.pkl"
 
 __all__ = [
     "LieAlgebraCompositeModule",
@@ -1021,17 +1025,19 @@ class BGGCohomology:
         if self.pbar1 is not None:
             self.pbar1.set_description(str(mu) + ", diff")
         try:
-            d_i, chain_dim = cohomology.compute_diff(self, mu, i)
-            d_i_minus_1, _ = cohomology.compute_diff(self, mu, i - 1)
+            d_i, chain_dim = cohomology.compute_diff(self, mu, i, return_sparse=True)
+            d_i_minus_1, _ = cohomology.compute_diff(self, mu, i - 1, return_sparse=True)
         except IndexError as err:
             print(mu, i)
             raise err
 
         if self.pbar1 is not None:
             self.pbar1.set_description(str(mu) + ", rank1")
+        # rank_1 = compute_integer_dense_rank(d_i, profile_file=PROFILE_FILE)
         rank_1 = d_i.rank()
         if self.pbar1 is not None:
             self.pbar1.set_description(str(mu) + ", rank2")
+        # rank_2 = compute_integer_dense_rank(d_i_minus_1, profile_file=PROFILE_FILE)
         rank_2 = d_i_minus_1.rank()
         return chain_dim - rank_1 - rank_2
 

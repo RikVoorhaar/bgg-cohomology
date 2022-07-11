@@ -1,5 +1,7 @@
 import setuptools
 from Cython.Build import cythonize
+from Cython.Compiler import Options
+Options.annotate = True
 
 with open("README.md", "r") as fh:
     long_description = fh.read()

@@ -1,4 +1,5 @@
 # cython: language_level=2
+# distutils: define_macros=CYTHON_TRACE_NOGIL=1
 # cython: profile=True
 """
 Module to compute the differentials of the BGG complex. Implemented in Cython for extra speed, since it
@@ -10,7 +11,6 @@ import numpy as np
 from sage.matrix.constructor import matrix
 from sage.rings.integer_ring import ZZ
 from sage.rings.rational import Rational
-from time import perf_counter
 
 cpdef compute_action(acting_element, action_source, module, comp_num):
     """Computes action of a single lie algebra element on a list of elements of the module. 
@@ -319,7 +319,7 @@ def compute_diff(cohom, mu, i, return_sparse=False):
 
     return d_dense, source_dim
 
-def coker_reduce(target_module, coker, long[:,:] action_image, mu0, mu1, component=0):
+def coker_reduce(target_module, coker, action_image, mu0, mu1, component=0):
     """Projects source and target of an action in the coker quotient coker(f), f:M->N.
     Returns action in the basis of the cokernel.
     `source_module` is the module M
@@ -332,7 +332,7 @@ def coker_reduce(target_module, coker, long[:,:] action_image, mu0, mu1, compone
     # the input is always of shape [i1,i2,..,ik,j,c] where i denotes the indices
     # of the target, j the source index, and c the coefficient.
     # then `num_cols` denotes this number k.
-    cdef size_t num_cols = action_image.shape[1]-2
+    num_cols = action_image.shape[1]-2
 
     # If mu1 is not in the module, then it has to be zero
     if mu1 not in target_module.weight_components:
@@ -341,82 +341,60 @@ def coker_reduce(target_module, coker, long[:,:] action_image, mu0, mu1, compone
     # Convert the sets of indices [i1,...,ik] into a single index i for the whole weight component
     # We do this by looking the index i up in a dictionary.
     target_basis_dic = target_module.weight_comp_index_numbers[mu1]
-    cdef size_t num_action_rows = action_image.shape[0]
-    cdef long[:,:] action_image_target = np.zeros((num_action_rows, 3),dtype=np.int_)
-    cdef long[:,:] new_action_image
-    cdef long i, j, k, c, coeff, target, source
-    cdef long[:] row
-    # for i,row in enumerate(action_image):
-    for i in range(num_action_rows):
-        row = action_image[i]
+    action_image_target = np.zeros((action_image.shape[0],3),dtype=action_image.dtype)
+    for i,row in enumerate(action_image):
         j = target_basis_dic[tuple(list(row[:num_cols])+[component])]
         action_image_target[i][0]=j
         action_image_target[i][1:] = row[num_cols:]
-    
 
     # If mu0 is in the cokernel dictionary, express the action in the basis of the quotient
     # If not, then the basis of the quotient is equal to the basis of the module, so there's nothing to do
-    cdef size_t current_row
-    cdef long[:,:] new_images
-    cdef long[:,:] coker_mat
-    cdef size_t num_coker_rows
     if mu0 in coker:
         # If target vector space is zero, return empty matrix
-        coker_mat = coker[mu0].numpy(dtype=np.int_)
-        num_coker_rows = coker_mat.shape[0]
-        if coker_mat.shape[0]==0:
+        if coker[mu0].nrows()==0:
             return np.array([])
-        new_images = np.zeros((action_image.shape[0]*coker_mat.shape[1],3),dtype=np.int_)
+        new_images = np.zeros((action_image.shape[0]*coker[mu0].ncols(),3),dtype=action_image.dtype)
         current_row = 0
-        for k in range(num_action_rows):
-            target = action_image_target[k][0]
-            source = action_image_target[k][1]
-            coeff = action_image_target[k][2]
-            for i in range(num_coker_rows):
-                c = coker_mat[i,source]
+
+        for action_row in action_image_target:
+            target, source,coeff = action_row
+            for i,c in enumerate(coker[mu0][:,source]):
                 if c!=0:
-                    new_images[current_row][0] = target
-                    new_images[current_row][1] = i
-                    new_images[current_row][2] = coeff * c
+                    new_images[current_row] = [target, i, coeff*c]
                     current_row+=1
         new_action_image = new_images[:current_row]
     else:
         new_action_image = action_image_target
-    
 
     # If mu1 is in the cokernel dictionary, then reduce the image to the quotient
     # We do this by multiplying by the matrix encoding the basis of the cokernel
     # If it's not in the dictionary, no reduction is necessary.
-    cdef long[:,:] new_image_coker
-    cdef size_t nrows_new_action_image = new_action_image.shape[0]
-    cdef long[:] action_row
-    if mu1 in coker:
-        coker_mat = coker[mu1].numpy(dtype=np.int_)
-        num_coker_rows = coker_mat.shape[0]
 
+    if mu1 in coker:
         # If target vector space is zero, return empty matrix
         if coker[mu1].nrows()==0:
             return np.array([])
-        new_image_coker = np.zeros((new_action_image.shape[0]*coker[mu1].ncols(),3),dtype=np.int_)
+        new_image_coker = np.zeros((new_action_image.shape[0]*coker[mu1].ncols(),3),dtype=action_image.dtype)
         current_row = 0
 
-        for k in range(nrows_new_action_image):
-            j = new_action_image[k][0]
-            for i in range(num_coker_rows):
-                c = coker_mat[i,j]
+        for action_row in new_action_image:
+            j = action_row[0]
+            i = 0
+            for i in enumerate(coker[mu1][:,j]):
+                
                 if c!=0:
+                    new_image_coker[current_row]=action_row
                     new_image_coker[current_row][0]=i
-                    new_image_coker[current_row][1]=new_action_image[k][1]
-                    new_image_coker[current_row][2]=new_action_image[k][2]*c
+                    new_image_coker[current_row][2]*=c
                     current_row+=1
+                i+=1
     else:
         new_image_coker = new_action_image
         current_row = len(new_image_coker)
 
-
     # At the end of the day, sort the result and sum coefficients of identical (source, target) tuples.
     # If the final matrix is empty, instead we just return an empty array to avoid errors.
     if current_row>0:
-        return sort_merge(np.array(new_image_coker[:current_row]))
+        return sort_merge(new_image_coker[:current_row])
     else:
         return np.array([])
