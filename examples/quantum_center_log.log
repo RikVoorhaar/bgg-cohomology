@@ -1,0 +1,139 @@
+2022-07-15 16:53:56,504 compute_quantum_center.py / <module>:
+	 
+2022-07-15 16:53:56,504 compute_quantum_center.py / <module>:
+	 ================================================================================
+2022-07-15 16:53:56,505 compute_quantum_center.py / <module>:
+	 script started
+2022-07-15 16:53:56,505 compute_quantum_center.py / <module>:
+	 ================================================================================
+2022-07-15 16:53:56,505 compute_quantum_center.py / <module>:
+	 
+2022-07-15 16:53:56,505 compute_quantum_center.py / <module>:
+	 mu=(0, 0, 0, 0)
+2022-07-15 16:53:56,505 compute_quantum_center.py / <module>:
+	 diagram='B4'
+2022-07-15 16:53:57,995 compute_quantum_center.py / <module>:
+	 subset=[]
+2022-07-15 16:53:57,995 compute_quantum_center.py / <module>:
+	 half_only=True, extend_half=True, exclude_diagonal=True
+2022-07-15 16:53:57,995 compute_quantum_center.py / <module>:
+	 load_pickle=True
+2022-07-15 16:53:57,995 compute_quantum_center.py / <module>:
+	 s=0
+2022-07-15 16:53:57,995 compute_quantum_center.py / <module>:
+	 Loading pickle file
+2022-07-15 16:53:58,001 compute_quantum_center.py / <module>:
+	 Loading (0, 0) from pickle file
+2022-07-15 16:53:58,001 compute_quantum_center.py / <module>:
+	 Loading (2, 0) from pickle file
+2022-07-15 16:53:58,001 compute_quantum_center.py / <module>:
+	 Loading (4, 0) from pickle file
+2022-07-15 16:53:58,001 compute_quantum_center.py / <module>:
+	 Loading (2, 2) from pickle file
+2022-07-15 16:53:58,001 compute_quantum_center.py / <module>:
+	 Loading (6, 0) from pickle file
+2022-07-15 16:53:58,001 compute_quantum_center.py / <module>:
+	 Loading (4, 2) from pickle file
+2022-07-15 16:53:58,002 compute_quantum_center.py / <module>:
+	 Loading (8, 0) from pickle file
+2022-07-15 16:53:58,002 compute_quantum_center.py / <module>:
+	 Loading (6, 2) from pickle file
+2022-07-15 16:53:58,002 compute_quantum_center.py / <module>:
+	 Loading (4, 4) from pickle file
+2022-07-15 16:53:58,002 compute_quantum_center.py / <module>:
+	 Loading (10, 0) from pickle file
+2022-07-15 16:53:58,002 compute_quantum_center.py / <module>:
+	 Loading (8, 2) from pickle file
+2022-07-15 16:53:58,002 compute_quantum_center.py / <module>:
+	 Loading (6, 4) from pickle file
+2022-07-15 16:53:58,002 compute_quantum_center.py / <module>:
+	 Loading (12, 0) from pickle file
+2022-07-15 16:53:58,002 compute_quantum_center.py / <module>:
+	 Loading (10, 2) from pickle file
+2022-07-15 16:53:58,002 compute_quantum_center.py / <module>:
+	 --------------------------------------------------------------------------------
+2022-07-15 16:53:58,002 compute_quantum_center.py / <module>:
+	 Computing cohomology for i+j= 8, j-i = 4
+2022-07-15 16:53:58,051 la_modules.py / initialize_weight_components:
+	 Computing basis for component [('u', 2, 'sym'), ('g', 0, 'wedge'), ('n', 6, 'wedge')] #0
+2022-07-15 16:54:01,625 la_modules.py / initialize_weight_components:
+	 Computing basis for component [('u', 1, 'sym'), ('g', 1, 'wedge'), ('n', 5, 'wedge')] #1
+2022-07-15 16:57:05,312 compute_quantum_center.py / log_except_hook:
+	 Unhandled exception: Traceback (most recent call last):
+  File "/home/rik/git/bgg-cohomology/examples/compute_quantum_center.py", line 31, in <module>
+    raise ValueError("This is a test")
+ValueError: This is a test
+
+2022-07-15 16:57:29,050 compute_quantum_center.py / <module>:
+	 
+2022-07-15 16:57:29,050 compute_quantum_center.py / <module>:
+	 ================================================================================
+2022-07-15 16:57:29,050 compute_quantum_center.py / <module>:
+	 script started
+2022-07-15 16:57:29,050 compute_quantum_center.py / <module>:
+	 ================================================================================
+2022-07-15 16:57:29,050 compute_quantum_center.py / <module>:
+	 
+2022-07-15 16:57:29,050 compute_quantum_center.py / <module>:
+	 mu=(0, 0, 0, 0)
+2022-07-15 16:57:29,050 compute_quantum_center.py / <module>:
+	 diagram='B4'
+2022-07-15 16:57:30,499 compute_quantum_center.py / <module>:
+	 subset=[]
+2022-07-15 16:57:30,499 compute_quantum_center.py / <module>:
+	 half_only=True, extend_half=True, exclude_diagonal=True
+2022-07-15 16:57:30,499 compute_quantum_center.py / <module>:
+	 load_pickle=True
+2022-07-15 16:57:30,499 compute_quantum_center.py / <module>:
+	 s=0
+2022-07-15 16:57:30,499 compute_quantum_center.py / <module>:
+	 Loading pickle file
+2022-07-15 16:57:30,505 compute_quantum_center.py / <module>:
+	 Loading (0, 0) from pickle file
+2022-07-15 16:57:30,505 compute_quantum_center.py / <module>:
+	 Loading (2, 0) from pickle file
+2022-07-15 16:57:30,505 compute_quantum_center.py / <module>:
+	 Loading (4, 0) from pickle file
+2022-07-15 16:57:30,505 compute_quantum_center.py / <module>:
+	 Loading (2, 2) from pickle file
+2022-07-15 16:57:30,505 compute_quantum_center.py / <module>:
+	 Loading (6, 0) from pickle file
+2022-07-15 16:57:30,506 compute_quantum_center.py / <module>:
+	 Loading (4, 2) from pickle file
+2022-07-15 16:57:30,506 compute_quantum_center.py / <module>:
+	 Loading (8, 0) from pickle file
+2022-07-15 16:57:30,506 compute_quantum_center.py / <module>:
+	 Loading (6, 2) from pickle file
+2022-07-15 16:57:30,506 compute_quantum_center.py / <module>:
+	 Loading (4, 4) from pickle file
+2022-07-15 16:57:30,506 compute_quantum_center.py / <module>:
+	 Loading (10, 0) from pickle file
+2022-07-15 16:57:30,506 compute_quantum_center.py / <module>:
+	 Loading (8, 2) from pickle file
+2022-07-15 16:57:30,506 compute_quantum_center.py / <module>:
+	 Loading (6, 4) from pickle file
+2022-07-15 16:57:30,506 compute_quantum_center.py / <module>:
+	 Loading (12, 0) from pickle file
+2022-07-15 16:57:30,506 compute_quantum_center.py / <module>:
+	 Loading (10, 2) from pickle file
+2022-07-15 16:57:30,506 compute_quantum_center.py / <module>:
+	 --------------------------------------------------------------------------------
+2022-07-15 16:57:30,506 compute_quantum_center.py / <module>:
+	 Computing cohomology for i+j= 8, j-i = 4
+2022-07-15 16:57:30,552 la_modules.py / initialize_weight_components:
+	 Computing basis for component [('u', 2, 'sym'), ('g', 0, 'wedge'), ('n', 6, 'wedge')] #0
+2022-07-15 16:57:33,239 compute_quantum_center.py / log_except_hook:
+	 Unhandled exception: Traceback (most recent call last):
+  File "/home/rik/git/bgg-cohomology/examples/compute_quantum_center.py", line 101, in <module>
+    mjk = Mjk(BGG, j, k, subset=subset)
+  File "/home/rik/git/bgg-cohomology/bggcohomology/quantum_center.py", line 95, in Mjk
+    module = LieAlgebraCompositeModule(factory, components, component_dic)
+  File "/home/rik/git/bgg-cohomology/bggcohomology/la_modules.py", line 113, in __init__
+    self.weight_components = self.initialize_weight_components()
+  File "/home/rik/git/bgg-cohomology/bggcohomology/la_modules.py", line 307, in initialize_weight_components
+    direct_sum_weight_components = self.compute_weight_components(
+  File "/home/rik/git/bgg-cohomology/bggcohomology/la_modules.py", line 281, in compute_weight_components
+    if np.all(np.equal(tot_weight[i], last_weight)):  # If weight is the same
+  File "src/cysignals/signals.pyx", line 310, in cysignals.signals.python_check_interrupt
+KeyboardInterrupt
+

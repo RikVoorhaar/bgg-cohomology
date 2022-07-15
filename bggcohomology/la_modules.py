@@ -15,6 +15,7 @@ from sage.matrix.constructor import matrix
 from sage.misc.cachefunc import cached_method
 from collections import defaultdict
 import numpy as np
+import logging
 
 from . import cohomology
 from .weight_set import WeightSet
@@ -301,6 +302,7 @@ class LieAlgebraCompositeModule:
         """
         weight_components = dict()
         for i, comp in enumerate(self.components):
+            logging.info(f"Computing basis for component {comp} #{i}")
             direct_sum_component = self.construct_component(comp)
             direct_sum_weight_components = self.compute_weight_components(
                 direct_sum_component
@@ -1025,7 +1027,9 @@ class BGGCohomology:
         if self.pbar1 is not None:
             self.pbar1.set_description(str(mu) + ", diff")
         try:
+            logging.info(f"Computing first d[{i}] for {mu}")
             d_i, chain_dim = cohomology.compute_diff(self, mu, i, return_sparse=True)
+            logging.info(f"Computing first d[{i-1}] for {mu}")
             d_i_minus_1, _ = cohomology.compute_diff(self, mu, i - 1, return_sparse=True)
         except IndexError as err:
             print(mu, i)
@@ -1034,10 +1038,12 @@ class BGGCohomology:
         if self.pbar1 is not None:
             self.pbar1.set_description(str(mu) + ", rank1")
         # rank_1 = compute_integer_dense_rank(d_i, profile_file=PROFILE_FILE)
+        logging.info(f"Computing first rank")
         rank_1 = d_i.rank()
         if self.pbar1 is not None:
             self.pbar1.set_description(str(mu) + ", rank2")
         # rank_2 = compute_integer_dense_rank(d_i_minus_1, profile_file=PROFILE_FILE)
+        logging.info(f"Computing second rank")
         rank_2 = d_i_minus_1.rank()
         return chain_dim - rank_1 - rank_2
 

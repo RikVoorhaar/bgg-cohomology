@@ -26,3 +26,4 @@ docs/_build
 *.egg-info
 
 nohup.out
+bggcohomology/quantum_center.py

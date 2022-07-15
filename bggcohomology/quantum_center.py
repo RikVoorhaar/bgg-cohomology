@@ -50,6 +50,7 @@ from sage.matrix.constructor import matrix
 from sage.rings.integer_ring import ZZ
 
 import pickle
+import logging
 
 
 def Mjk(BGG, j, k, subset=[]):
@@ -190,11 +191,14 @@ def Eijk_basis(BGG, j, k, subset=[], pbar=None, method=0, sparse=False):
         pbar.set_description("Creating modules")
 
     # target module
+    logging.info(f"Creating target module M_{j,k}")
     wc_mod = Mjk(BGG, j, k, subset=subset)
 
+    logging.info("Computing quotient basis indices")
     basis_indices = _quotient_basis_indices(wc_mod)
 
     # source module
+    logging.info(f"Creating source module M_{j-1,k}")
     wc_rel = Mjk(BGG, j - 1, k, subset=subset)
 
     coker_dic = dict()
@@ -203,11 +207,13 @@ def Eijk_basis(BGG, j, k, subset=[], pbar=None, method=0, sparse=False):
     mu_source_counters = dict()
 
     # The image of the map phi: b -> g\oplus n\otimes u
+    logging.info("Computing phi")
     phi_image = compute_phi(BGG, subset=subset)
 
     if pbar is not None:
         pbar.set_description("Computing modules")
 
+    logging.info("Computing modules")
     for mu, components in wc_rel.weight_components.items():
         for b, n_tensor_u in phi_image.items():
 
@@ -323,12 +329,14 @@ def Eijk_basis(BGG, j, k, subset=[], pbar=None, method=0, sparse=False):
                     coker_dic[new_mu] = []
                 coker_dic[new_mu] += sparse_relations
 
+    logging.info("Storing relations as sparse matrix")
     # we now have a dictionary sending each weight mu to its relations
     coker_dic = {
         mu: cohomology.sort_merge(np.concatenate(rels))
         for mu, rels in coker_dic.items()
     }
 
+    logging.info("Done computing modules")
     return CokerCache(
         coker_dic,
         mu_source_counters,
@@ -405,6 +413,7 @@ class CokerCache:
         if mu in self.computed_cokernels:
             return self.computed_cokernels[mu]
         else:
+            logging.info("Computing cokernel of %s", mu)
             rels = self.rel_dic[mu]
             source_dim = self.source_dims[mu]
             target_dim = self.target_dims[mu]
