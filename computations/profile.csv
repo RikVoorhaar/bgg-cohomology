@@ -1,0 +1,122 @@
+ncalls,tottime,percall,cumtime,percall,filename:lineno(function)
+1,0.000,0.000,4.818,4.818,{built-in method builtins.exec}
+1,0.001,0.001,4.818,4.818,<string>:1(<module>)
+1,0.000,0.000,4.817,4.817,{_home_rik__sage_temp_rik_math_1898836_tmp_f18q0ei8_pyx_0.compute_diff_new}
+1,0.013,0.013,4.817,4.817,_home_rik__sage_temp_rik_math_1898836_tmp_f18q0ei8_pyx_0.pyx:173(compute_diff_new)
+182,0.018,0.000,3.443,0.019,_home_rik__sage_temp_rik_math_1898836_tmp_f18q0ei8_pyx_0.pyx:136(action_on_basis)
+1074,2.208,0.002,2.252,0.002,_home_rik__sage_temp_rik_math_1898836_tmp_f18q0ei8_pyx_0.pyx:20(compute_action)
+182,0.684,0.004,0.973,0.005,_home_rik__sage_temp_rik_math_1898836_tmp_f18q0ei8_pyx_0.pyx:119(sort_cols)
+182,0.161,0.001,0.852,0.005,_home_rik__sage_temp_rik_math_1898836_tmp_f18q0ei8_pyx_0.pyx:326(coker_reduce_new)
+182,0.302,0.002,0.574,0.003,_home_rik__sage_temp_rik_math_1898836_tmp_f18q0ei8_pyx_0.pyx:269(multiindex_to_index)
+1,0.008,0.008,0.506,0.506,_home_rik__sage_temp_rik_math_1898836_tmp_f18q0ei8_pyx_0.pyx:302(assemble_block_diff)
+1,0.040,0.040,0.498,0.498,/usr/lib/python3.10/site-packages/sage/matrix/special.py:1746(block_matrix)
+19,0.255,0.013,0.257,0.014,{method 'stack' of 'sage.matrix.matrix1.Matrix' objects}
+329696,0.113,0.000,0.238,0.000,stringsource:403(__getitem__)
+182,0.008,0.000,0.191,0.001,_home_rik__sage_temp_rik_math_1898836_tmp_f18q0ei8_pyx_0.pyx:102(sort_merge)
+280,0.186,0.001,0.191,0.001,{method 'augment' of 'sage.matrix.matrix_sparse.Matrix_sparse' objects}
+612472,0.120,0.000,0.181,0.000,stringsource:657(memoryview_cwrapper)
+14096/7112,0.097,0.000,0.135,0.000,{built-in method numpy.core._multiarray_umath.implement_array_function}
+182,0.087,0.000,0.126,0.001,_home_rik__sage_temp_rik_math_1898836_tmp_f18q0ei8_pyx_0.pyx:75(merge_sorted_image)
+182,0.080,0.000,0.099,0.001,_home_rik__sage_temp_rik_math_1898836_tmp_f18q0ei8_pyx_0.pyx:285(dok_to_sage_sparse)
+329334,0.047,0.000,0.075,0.000,stringsource:393(get_item_pointer)
+686600,0.064,0.000,0.064,0.000,stringsource:345(__cinit__)
+182,0.000,0.000,0.056,0.000,<__array_function__ internals>:177(lexsort)
+3401,0.002,0.000,0.037,0.000,<__array_function__ internals>:177(zeros_like)
+74128,0.029,0.000,0.036,0.000,stringsource:999(memoryview_fromslice)
+329696,0.036,0.000,0.036,0.000,stringsource:666(_unellipsify)
+611198,0.035,0.000,0.035,0.000,_home_rik__sage_temp_rik_math_1898836_tmp_f18q0ei8_pyx_0.pyx:107(permutation_sign)
+686600,0.034,0.000,0.034,0.000,stringsource:372(__dealloc__)
+1621,0.030,0.000,0.031,0.000,/usr/lib/python3.10/site-packages/sage/matrix/matrix_space.py:819(_element_constructor_)
+3401,0.005,0.000,0.031,0.000,/usr/lib/python3.10/site-packages/numpy/core/numeric.py:76(zeros_like)
+329334,0.028,0.000,0.028,0.000,stringsource:910(pybuffer_index)
+612654,0.028,0.000,0.028,0.000,stringsource:663(memoryview_check)
+2509,0.002,0.000,0.021,0.000,<__array_function__ internals>:177(concatenate)
+294,0.000,0.000,0.017,0.000,<__array_function__ internals>:177(sort)
+294,0.001,0.000,0.016,0.000,/usr/lib/python3.10/site-packages/numpy/core/fromnumeric.py:852(sort)
+294086,0.014,0.000,0.014,0.000,stringsource:979(convert_item_to_object)
+3583,0.002,0.000,0.013,0.000,<__array_function__ internals>:177(copyto)
+1321,0.007,0.000,0.013,0.000,/usr/lib/python3.10/site-packages/sage/matrix/matrix_space.py:513(__classcall__)
+3401,0.002,0.000,0.010,0.000,<__array_function__ internals>:177(empty_like)
+294,0.009,0.000,0.009,0.000,{method 'sort' of 'numpy.ndarray' objects}
+139893,0.007,0.000,0.007,0.000,_home_rik__sage_temp_rik_math_1898836_tmp_f18q0ei8_pyx_0.pyx:54(check_equal)
+182,0.000,0.000,0.006,0.000,<__array_function__ internals>:177(stack)
+294,0.006,0.000,0.006,0.000,{method 'copy' of 'numpy.ndarray' objects}
+1321,0.004,0.000,0.006,0.000,/usr/lib/python3.10/site-packages/sage/matrix/matrix_space.py:87(get_matrix_class)
+362,0.000,0.000,0.006,0.000,<__array_function__ internals>:177(amax)
+436,0.001,0.000,0.005,0.000,/usr/lib/python3.10/site-packages/sage/monoids/indexed_free_monoid.py:336(to_word_list)
+74128,0.005,0.000,0.005,0.000,stringsource:976(__dealloc__)
+362,0.001,0.000,0.005,0.000,/usr/lib/python3.10/site-packages/numpy/core/fromnumeric.py:2675(amax)
+182,0.002,0.000,0.005,0.000,/usr/lib/python3.10/site-packages/numpy/core/shape_base.py:357(stack)
+362,0.001,0.000,0.004,0.000,/usr/lib/python3.10/site-packages/numpy/core/fromnumeric.py:69(_wrapreduction)
+436,0.002,0.000,0.004,0.000,/usr/lib/python3.10/site-packages/sage/monoids/indexed_free_monoid.py:475(_sorted_items)
+73584,0.003,0.000,0.003,0.000,stringsource:559(__get__)
+3401,0.003,0.000,0.003,0.000,{built-in method numpy.zeros}
+362,0.002,0.000,0.002,0.000,{method 'reduce' of 'numpy.ufunc' objects}
+38696,0.002,0.000,0.002,0.000,stringsource:518(__getbuffer__)
+182,0.002,0.000,0.002,0.000,_home_rik__sage_temp_rik_math_1898836_tmp_f18q0ei8_pyx_0.pyx:63(col_nonzero)
+35248,0.002,0.000,0.002,0.000,stringsource:605(__len__)
+436,0.001,0.000,0.001,0.000,{method 'sort' of 'list' objects}
+182,0.000,0.000,0.001,0.000,/usr/lib/python3.10/site-packages/numpy/core/numeric.py:149(ones)
+872,0.001,0.000,0.001,0.000,/usr/lib/python3.10/site-packages/sage/monoids/indexed_free_monoid.py:504(__hash__)
+1,0.000,0.000,0.001,0.001,/home/rik/git/bgg-cohomology/bggcohomology/weight_set.py:274(get_vertex_weights)
+399,0.001,0.000,0.001,0.000,/home/rik/git/bgg-cohomology/bggcohomology/quantum_center.py:421(__contains__)
+120,0.000,0.000,0.001,0.000,/home/rik/git/bgg-cohomology/bggcohomology/weight_set.py:152(dot_action)
+182,0.000,0.000,0.001,0.000,<__array_function__ internals>:177(transpose)
+838,0.000,0.000,0.001,0.000,/home/rik/git/bgg-cohomology/bggcohomology/pbw.py:196(_monoid_key)
+2761,0.001,0.000,0.001,0.000,{built-in method builtins.isinstance}
+182,0.000,0.000,0.001,0.000,/usr/lib/python3.10/site-packages/numpy/core/shape_base.py:420(<listcomp>)
+436,0.001,0.000,0.001,0.000,/usr/lib/python3.10/site-packages/sage/monoids/indexed_free_monoid.py:355(<listcomp>)
+399,0.001,0.000,0.001,0.000,/home/rik/git/bgg-cohomology/bggcohomology/quantum_center.py:404(__getitem__)
+120,0.001,0.000,0.001,0.000,{built-in method numpy.array}
+840,0.001,0.000,0.001,0.000,{built-in method numpy.asanyarray}
+412,0.000,0.000,0.001,0.000,<frozen importlib._bootstrap>:1053(_handle_fromlist)
+412,0.000,0.000,0.001,0.000,<frozen importlib._bootstrap>:404(parent)
+182,0.000,0.000,0.001,0.000,/usr/lib/python3.10/site-packages/numpy/core/fromnumeric.py:601(transpose)
+362,0.000,0.000,0.001,0.000,stringsource:710(memview_slice)
+182,0.000,0.000,0.001,0.000,/usr/lib/python3.10/site-packages/numpy/core/shape_base.py:348(_stack_dispatcher)
+412,0.000,0.000,0.001,0.000,/usr/lib/python3.10/site-packages/sage/rings/rational_field.py:1684(is_RationalField)
+544,0.001,0.000,0.001,0.000,{built-in method builtins.getattr}
+3583,0.001,0.000,0.001,0.000,/usr/lib/python3.10/site-packages/numpy/core/multiarray.py:1071(copyto)
+3401,0.001,0.000,0.001,0.000,/usr/lib/python3.10/site-packages/numpy/core/numeric.py:72(_zeros_like_dispatcher)
+3354,0.000,0.000,0.000,0.000,/usr/lib/python3.10/site-packages/sage/matrix/matrix_space.py:2108(nrows)
+838,0.000,0.000,0.000,0.000,/home/rik/git/bgg-cohomology/bggcohomology/pbw.py:147(_basis_key)
+2509,0.000,0.000,0.000,0.000,/usr/lib/python3.10/site-packages/numpy/core/multiarray.py:148(concatenate)
+182,0.000,0.000,0.000,0.000,/usr/lib/python3.10/site-packages/numpy/core/fromnumeric.py:51(_wrapfunc)
+3401,0.000,0.000,0.000,0.000,/usr/lib/python3.10/site-packages/numpy/core/multiarray.py:80(empty_like)
+3354,0.000,0.000,0.000,0.000,/usr/lib/python3.10/site-packages/sage/matrix/matrix_space.py:2096(ncols)
+182,0.000,0.000,0.000,0.000,{built-in method numpy.empty}
+182,0.000,0.000,0.000,0.000,/usr/lib/python3.10/site-packages/numpy/core/shape_base.py:207(_arrays_for_stack_dispatcher)
+182,0.000,0.000,0.000,0.000,/usr/lib/python3.10/site-packages/numpy/core/shape_base.py:424(<setcomp>)
+436,0.000,0.000,0.000,0.000,/usr/lib/python3.10/site-packages/sage/structure/indexed_generators.py:201(print_options)
+182,0.000,0.000,0.000,0.000,/usr/lib/python3.10/site-packages/numpy/core/shape_base.py:432(<listcomp>)
+1,0.000,0.000,0.000,0.000,/usr/lib/python3.10/site-packages/sage/matrix/special.py:1535(_determine_block_matrix_grid)
+594,0.000,0.000,0.000,0.000,{built-in method builtins.hasattr}
+362,0.000,0.000,0.000,0.000,/usr/lib/python3.10/site-packages/numpy/core/fromnumeric.py:70(<dictcomp>)
+1670,0.000,0.000,0.000,0.000,{method 'items' of 'dict' objects}
+412,0.000,0.000,0.000,0.000,{method 'rpartition' of 'str' objects}
+182,0.000,0.000,0.000,0.000,/usr/lib/python3.10/site-packages/numpy/core/multiarray.py:416(lexsort)
+1621,0.000,0.000,0.000,0.000,/usr/lib/python3.10/site-packages/sage/matrix/matrix_space.py:1856(is_sparse)
+872,0.000,0.000,0.000,0.000,{built-in method builtins.hash}
+1201,0.000,0.000,0.000,0.000,{sage.structure.element.is_Matrix}
+182,0.000,0.000,0.000,0.000,{method 'transpose' of 'numpy.ndarray' objects}
+666,0.000,0.000,0.000,0.000,{method 'parent' of 'sage.structure.element.Element' objects}
+412,0.000,0.000,0.000,0.000,{sage.rings.integer_ring.is_IntegerRing}
+294,0.000,0.000,0.000,0.000,/usr/lib/python3.10/site-packages/numpy/core/fromnumeric.py:848(_sort_dispatcher)
+182,0.000,0.000,0.000,0.000,{built-in method numpy.core._multiarray_umath.normalize_axis_index}
+230,0.000,0.000,0.000,0.000,{built-in method builtins.len}
+362,0.000,0.000,0.000,0.000,/usr/lib/python3.10/site-packages/numpy/core/fromnumeric.py:2670(_amax_dispatcher)
+544,0.000,0.000,0.000,0.000,stringsource:992(__get__)
+182,0.000,0.000,0.000,0.000,/usr/lib/python3.10/site-packages/numpy/core/fromnumeric.py:597(_transpose_dispatcher)
+1,0.000,0.000,0.000,0.000,{method 'subdivide' of 'sage.matrix.matrix2.Matrix' objects}
+140,0.000,0.000,0.000,0.000,{method 'base_ring' of 'sage.matrix.matrix0.Matrix' objects}
+1,0.000,0.000,0.000,0.000,{built-in method builtins.all}
+70,0.000,0.000,0.000,0.000,{method 'is_sparse' of 'sage.matrix.matrix0.Matrix' objects}
+140,0.000,0.000,0.000,0.000,{method 'ncols' of 'sage.matrix.matrix0.Matrix' objects}
+21,0.000,0.000,0.000,0.000,/usr/lib/python3.10/site-packages/sage/matrix/special.py:1994(<genexpr>)
+140,0.000,0.000,0.000,0.000,{method 'nrows' of 'sage.matrix.matrix0.Matrix' objects}
+1,0.000,0.000,0.000,0.000,{sage.rings.ring.is_Ring}
+2,0.000,0.000,0.000,0.000,{sage.misc.misc_c.running_total}
+5,0.000,0.000,0.000,0.000,{method 'get' of 'dict' objects}
+1,0.000,0.000,0.000,0.000,{method 'disable' of '_lsprof.Profiler' objects}
+
+

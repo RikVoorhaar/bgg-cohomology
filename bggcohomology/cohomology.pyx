@@ -10,6 +10,11 @@ import numpy as np
 from sage.matrix.constructor import matrix
 from sage.rings.integer_ring import ZZ
 from sage.rings.rational import Rational
+from sage.rings.integer cimport Integer
+from sage.matrix.matrix_space import MatrixSpace
+from sage.matrix.matrix_integer_dense cimport Matrix_integer_dense
+from sage.matrix.matrix_integer_sparse cimport Matrix_integer_sparse
+from sage.matrix.special import block_matrix
 from time import perf_counter
 
 cpdef compute_action(acting_element, action_source, module, comp_num):
@@ -213,11 +218,10 @@ def compute_diff(cohom, mu, i, return_sparse=False):
 
 
     offset = 0
-    total_diff=[]
+    diff_dict = {}
     for w, arrows in delta_i_arrows:
         initial_vertex = vertex_weights[w]  # weight of vertex
         if initial_vertex in cohom.weights:  # Ensure weight component isn't empty
-            action_images = []
             for a in arrows: # Compute image for each arrow
                 final_vertex = vertex_weights[a[1]]
 
@@ -231,95 +235,94 @@ def compute_diff(cohom, mu, i, return_sparse=False):
                     basis_action = action_on_basis(maps[a]*Rational(sign),weight_comp,module,factory,comp_num)
 
                     basis_action[:,-2] += comp_offset_s # update source
-                    comp_offset_s += module.dimensions_components[comp_num][initial_vertex]
+                    initial_dimension = module.dimensions_components[comp_num][initial_vertex]
+                    comp_offset_s += initial_dimension
 
+                    try:
+                        initial_dim = module.dimensions[initial_vertex]
+                        final_dim = module.dimensions[final_vertex]
+                    except KeyError:  # One of the modules is empty
+                        continue
                     # If there is a cokernel, we have reduce the image of the action
                     # to the basis of the quotient module
                     if cohom.has_coker:
-                        try:
-                            basis_action = coker_reduce(cohom.weight_module,cohom.coker, basis_action,
-                                                        initial_vertex, final_vertex,
-                                                        component=comp_num)
-                        except IndexError as err:
-                            print(final_vertex)
-                            raise err
+                        bas2 = coker_reduce(
+                            cohom.weight_module,cohom.coker, basis_action,
+                            initial_vertex, final_vertex,
+                            initial_dim, final_dim,
+                            component=comp_num
+                        )
+                        bas = bas2
 
-                        if len(basis_action)>0:
-                            basis_action[:,0]+=target_col_dic[a[1]] # offset for weight module
-                            action_images.append(basis_action)
 
-                    # The cokernel reduction automatically inserts appropriate offsets for indices
+
+                    # The cokernel reduction automatically converts to sparse format
                     # In the non-cokernel case we still have to do this manually
                     if len(basis_action)>0:
                         if not cohom.has_coker:
-                            new_basis_action = np.zeros(shape=(basis_action.shape[0],3),dtype=basis_action.dtype)
-
-
-
-                            # Convert the sets of indices [i1,...,ik] into a single index for the whole weight component
-                            # We do this by looking the index i up in a dictionary.
                             target_basis_dic = module.weight_comp_index_numbers[final_vertex]
-                            num_cols = basis_action.shape[1]-2
-                            for i,row in enumerate(basis_action):
-                                j = target_basis_dic[tuple(list(row[:num_cols])+[comp_num])]
-                                new_basis_action[i][0]=j
-                                new_basis_action[i][1:] = row[num_cols:]
-                            new_basis_action[:,0]+=target_col_dic[a[1]]
-
-                            action_images.append(new_basis_action)
-
-            if len(action_images)>0:
-                # Concatenate images for each arrow to get total image
-                sub_diff = np.concatenate(action_images)
-
-                # Each basis element of weight component gets index
-                # Because we have multiple weight components, we need to add a number to this index
-                # So that index remains unique across multiple components
-
-                sub_diff[:,-2]+=offset
-
-                offset+=module.dimensions[initial_vertex]
-                total_diff.append(sub_diff)
+                            basis_action = multiindex_to_index(basis_action,target_basis_dic,comp_num)
+                            bas = dok_to_sage_sparse(basis_action, initial_dim, final_dim)
+                    key = (initial_vertex,final_vertex,comp_num)
+                    if key in diff_dict:
+                        raise ValueError("Found duplicate key in diff_dict")
+                    diff_dict[key] = bas
 
 
-    if len(total_diff)>0: # Sometimes action is trivial, would otherwise raise errors
-        total_diff = np.concatenate(total_diff)
-        total_diff = sort_merge(total_diff) # for cokernels we can get duplicate entries. We need to merge them.
-        total_diff = total_diff[np.lexsort(np.transpose(total_diff[:,:-2]))]  # Sort by source indices
+    d_sparse = assemble_block_diff(diff_dict)
 
-    if len(total_diff) ==0: # Trivial differential
-        return matrix(ZZ,0,0),source_dim
+    return d_sparse, source_dim
 
-     # encode as sparse matrix. each entry is triple of two indices and the value at the two indices
-    diff_entries = np.zeros((len(total_diff),3),np.int64)
-    j = -1
+cdef multiindex_to_index(long [:,:] action_image, target_basis_dic, long component):
+    cdef size_t num_rows = action_image.shape[0]
+    cdef long[:,:] lookup_map = np.concatenate(
+        [action_image[:,:-2], np.ones((num_rows,1), dtype=np.int_) * component], axis=1
+    )
+    cdef long[:] target_inds = np.zeros(num_rows, dtype=np.int_)
+    cdef size_t j
+    for j in range(num_rows):
+        target_inds[j] = target_basis_dic[tuple(lookup_map[j])]
+    cdef long[:,:] result = np.stack([target_inds,action_image[:,-2], action_image[:,-1]],axis=1)
 
-    # If two entries represent the same element in source column, put them in same row j.
-    # This loop merges this an populates a sparse matrix with correct row numbers.
+    return result
 
-    prev_row = np.zeros_like(total_diff[0,:-2])-1  # every row is different from this one
-    for i in range(len(total_diff)):
-        row_num = i
-        row = total_diff[i,:-2]
-        if np.any(np.not_equal(row,prev_row)): # if row is different, it will have different index
-            j+=1
-            prev_row = row
-        diff_entries[row_num,0] = j # populate sparse matrix
-        diff_entries[row_num,1:] = total_diff[i,-2:]
-    j+=1
+# def dok_to_sage_sparse(dok_matrix):
+#     return matrix(ZZ, {(a,b): c for a, b, c in np.array(dok_matrix)}, sparse=True)
 
-    if return_sparse:
-        d_sparse = matrix(ZZ, {(a,b): c for a, b, c in diff_entries}, sparse=True)
-        return d_sparse, source_dim
+def dok_to_sage_sparse(dok_matrix, initial_dim, final_dim):
+    result = matrix(ZZ, final_dim, initial_dim, sparse=True)
+    for a, b, c in np.array(dok_matrix):
+        result[a,b] += c
+    return result
 
-    # turn sparse differential matrix into dense one.
-    d_dense = matrix(ZZ,j,max(diff_entries[:,1])+1)
-    for i in range(len(diff_entries)):
-        d_dense[diff_entries[i,0],diff_entries[i,1]] = diff_entries[i,2]
+def dok_to_sage_dense(dok_matrix):
+    return matrix(ZZ, {(a,b): c for a, b, c in np.array(dok_matrix)}, sparse=False)
 
-    return d_dense, source_dim
+def assemble_block_diff(diff_dict):
+    initial_vertices = set()
+    final_vertices = set()
+    pairs_sums = dict()
+    for (init,final,comp_num),val in diff_dict.items():
+        initial_vertices.add(init)
+        final_vertices.add(final)
+        try:
+            pairs_sums[(init,final)] += val
+        except KeyError:
+            pairs_sums[(init,final)] = val
+        
+    block_rows = []
+    for final in final_vertices:
+        block_row= []
+        for init in initial_vertices:
+            if (init,final) in pairs_sums:
+                block_row.append(pairs_sums[(init,final)])
+            else:
+                block_row.append(Integer(0))
+        block_rows.append(block_row)
+    sparse_new_block= block_matrix(block_rows, sparse=True)
+    return sparse_new_block
 
-def coker_reduce(target_module, coker, long[:,:] action_image, mu0, mu1, component=0):
+def coker_reduce(target_module, coker, long[:,:] action_image, mu0, mu1,initial_dim,final_dim, component=0):
     """Projects source and target of an action in the coker quotient coker(f), f:M->N.
     Returns action in the basis of the cokernel.
     `source_module` is the module M
@@ -341,82 +344,25 @@ def coker_reduce(target_module, coker, long[:,:] action_image, mu0, mu1, compone
     # Convert the sets of indices [i1,...,ik] into a single index i for the whole weight component
     # We do this by looking the index i up in a dictionary.
     target_basis_dic = target_module.weight_comp_index_numbers[mu1]
-    cdef size_t num_action_rows = action_image.shape[0]
-    cdef long[:,:] action_image_target = np.zeros((num_action_rows, 3),dtype=np.int_)
-    cdef long[:,:] new_action_image
-    cdef long i, j, k, c, coeff, target, source
-    cdef long[:] row
-    # for i,row in enumerate(action_image):
-    for i in range(num_action_rows):
-        row = action_image[i]
-        j = target_basis_dic[tuple(list(row[:num_cols])+[component])]
-        action_image_target[i][0]=j
-        action_image_target[i][1:] = row[num_cols:]
-    
+    cdef long[:,:] action_image_target
+
+    action_image_target = multiindex_to_index(
+        action_image, target_basis_dic, component
+    )
+    cdef Matrix_integer_sparse res = dok_to_sage_sparse(action_image_target, initial_dim, final_dim)
+    cdef size_t max_s = res.ncols()
+    cdef size_t max_t = res.nrows()
 
     # If mu0 is in the cokernel dictionary, express the action in the basis of the quotient
     # If not, then the basis of the quotient is equal to the basis of the module, so there's nothing to do
-    cdef size_t current_row
-    cdef long[:,:] new_images
-    cdef long[:,:] coker_mat
-    cdef size_t num_coker_rows
     if mu0 in coker:
-        # If target vector space is zero, return empty matrix
-        coker_mat = coker[mu0].numpy(dtype=np.int_)
-        num_coker_rows = coker_mat.shape[0]
-        if coker_mat.shape[0]==0:
-            return np.array([])
-        new_images = np.zeros((action_image.shape[0]*coker_mat.shape[1],3),dtype=np.int_)
-        current_row = 0
-        for k in range(num_action_rows):
-            target = action_image_target[k][0]
-            source = action_image_target[k][1]
-            coeff = action_image_target[k][2]
-            for i in range(num_coker_rows):
-                c = coker_mat[i,source]
-                if c!=0:
-                    new_images[current_row][0] = target
-                    new_images[current_row][1] = i
-                    new_images[current_row][2] = coeff * c
-                    current_row+=1
-        new_action_image = new_images[:current_row]
-    else:
-        new_action_image = action_image_target
+        # res has shape max_t, max_s
+        res = res*(coker[mu0][:,:max_s].T)
     
 
     # If mu1 is in the cokernel dictionary, then reduce the image to the quotient
     # We do this by multiplying by the matrix encoding the basis of the cokernel
     # If it's not in the dictionary, no reduction is necessary.
-    cdef long[:,:] new_image_coker
-    cdef size_t nrows_new_action_image = new_action_image.shape[0]
-    cdef long[:] action_row
     if mu1 in coker:
-        coker_mat = coker[mu1].numpy(dtype=np.int_)
-        num_coker_rows = coker_mat.shape[0]
-
-        # If target vector space is zero, return empty matrix
-        if coker[mu1].nrows()==0:
-            return np.array([])
-        new_image_coker = np.zeros((new_action_image.shape[0]*coker[mu1].ncols(),3),dtype=np.int_)
-        current_row = 0
-
-        for k in range(nrows_new_action_image):
-            j = new_action_image[k][0]
-            for i in range(num_coker_rows):
-                c = coker_mat[i,j]
-                if c!=0:
-                    new_image_coker[current_row][0]=i
-                    new_image_coker[current_row][1]=new_action_image[k][1]
-                    new_image_coker[current_row][2]=new_action_image[k][2]*c
-                    current_row+=1
-    else:
-        new_image_coker = new_action_image
-        current_row = len(new_image_coker)
-
-
-    # At the end of the day, sort the result and sum coefficients of identical (source, target) tuples.
-    # If the final matrix is empty, instead we just return an empty array to avoid errors.
-    if current_row>0:
-        return sort_merge(np.array(new_image_coker[:current_row]))
-    else:
-        return np.array([])
+        res = coker[mu1][:,:max_t]*res
+    return res

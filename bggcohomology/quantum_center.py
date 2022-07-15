@@ -163,7 +163,7 @@ def compute_phi(BGG, subset=[]):
     return phi_image
 
 
-def Eijk_basis(BGG, j, k, subset=[], pbar=None, method=0):
+def Eijk_basis(BGG, j, k, subset=[], pbar=None, method=0, sparse=False):
     r"""Give a basis of the quotient :math:`E_j^k = M_j^k\big/\Delta(M_{j-1}^k)`.
 
     Parameters
@@ -335,6 +335,7 @@ def Eijk_basis(BGG, j, k, subset=[], pbar=None, method=0):
         wc_mod.dimensions,
         basis_indices,
         method=method,
+        sparse=sparse
     )
 
 
@@ -389,6 +390,7 @@ class CokerCache:
         basis_indices,
         pbar=None,
         method=0,
+        sparse=False
     ):
         self.rel_dic = rel_dic
         self.source_dims = source_dims
@@ -397,6 +399,7 @@ class CokerCache:
         self.basis_indices = basis_indices
         self.pbar = pbar
         self.method = method
+        self.sparse=sparse
 
     def __getitem__(self, mu):
         if mu in self.computed_cokernels:
@@ -406,12 +409,9 @@ class CokerCache:
             source_dim = self.source_dims[mu]
             target_dim = self.target_dims[mu]
             basis = self.basis_indices[mu]
-            if self.method == 0:
-                ker = _compute_kernel2(
-                    source_dim, target_dim, rels, basis, self.pbar
-                )
-            else:
-                ker = _compute_kernel(source_dim, target_dim, rels, self.pbar)
+            ker = _compute_kernel(
+                source_dim, target_dim, rels, basis, self.pbar, sparse=self.sparse
+            )
             self.computed_cokernels[mu] = ker
             return ker
 
@@ -422,45 +422,11 @@ class CokerCache:
         return mu in self.rel_dic
 
 
-def _compute_kernel(source_dim, target_dim, rels, pbar=None):
-    """Compute cokernel.
 
-    Given dimensions of source and target of a map,
-    as well as the image of the map in DOK sparse matrix format,
-    compute the cokernel of this map and return as a (dense) matrix.
-    """
-    # build the matrix of relations
-    sparse_dic = dict()
-    for source, target, coeff in rels:
-        sparse_dic[(source, target)] = coeff
-    M = matrix(ZZ, sparse_dic, nrows=source_dim, ncols=target_dim, sparse=True)
-    M = M.dense_matrix()
-
-    if pbar is not None:
-        pbar.update()
-        pbar.set_description(
-            "Computing kernels (%d,%d)" % (M.ncols(), M.nrows())
-        )
-
-    # compute the right kernel, store it in a dictionary
-    try:
-        ker = M.__pari__().matker(flag=1).mattranspose().sage()
-    except:
-        picklefile = "matrix.pkl"
-        with open(picklefile, "wb") as f:
-            pickle.dump(M, f)
-        print(
-            f"""Error in computing matrix kernel of size {M.ncols()} X {M.nrows()}.
-        Try increasing the size of the PARI stack. The matrix has been stored in {picklefile}."""
-        )
-        raise
-    return ker
-
-
-def _compute_kernel2(source_dim, target_dim, rels, basis_indices, check=False):
+def _compute_kernel(source_dim, target_dim, rels, basis_indices, check=False, sparse=False):
     inds_complement = list(set(range(target_dim)) - set(basis_indices))
 
-    M = matrix(ZZ, nrows=source_dim, ncols=target_dim)
+    M = matrix(ZZ, nrows=source_dim, ncols=target_dim, sparse=True)
     for source, target, coeff in rels:
         M[source, target] = coeff
 
@@ -468,7 +434,7 @@ def _compute_kernel2(source_dim, target_dim, rels, basis_indices, check=False):
 
     sol = M[:, inds_complement].solve_right(b)
 
-    coker_mat = matrix(ZZ, nrows=target_dim, ncols=len(basis_indices))
+    coker_mat = matrix(ZZ, nrows=target_dim, ncols=len(basis_indices), sparse=sparse)
     coker_mat[inds_complement] = -sol
     coker_mat[basis_indices] = matrix.identity(len(basis_indices))
     coker_mat = coker_mat.T
@@ -652,3 +618,4 @@ def prepare_texfile(tables, title=None):
     document = preamble + table_formulas + post
 
     return document
+
