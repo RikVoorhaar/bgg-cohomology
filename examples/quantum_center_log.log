@@ -137,3 +137,620 @@ ValueError: This is a test
   File "src/cysignals/signals.pyx", line 310, in cysignals.signals.python_check_interrupt
 KeyboardInterrupt
 
+2022-07-15 17:00:59,749 compute_quantum_center.py / <module>:
+	 
+2022-07-15 17:00:59,749 compute_quantum_center.py / <module>:
+	 ================================================================================
+2022-07-15 17:00:59,749 compute_quantum_center.py / <module>:
+	 script started
+2022-07-15 17:00:59,749 compute_quantum_center.py / <module>:
+	 ================================================================================
+2022-07-15 17:00:59,749 compute_quantum_center.py / <module>:
+	 
+2022-07-15 17:00:59,749 compute_quantum_center.py / <module>:
+	 mu=(0, 0, 0, 0)
+2022-07-15 17:00:59,749 compute_quantum_center.py / <module>:
+	 diagram='B4'
+2022-07-15 17:01:01,044 compute_quantum_center.py / <module>:
+	 subset=[]
+2022-07-15 17:01:01,044 compute_quantum_center.py / <module>:
+	 half_only=True, extend_half=True, exclude_diagonal=True
+2022-07-15 17:01:01,044 compute_quantum_center.py / <module>:
+	 load_pickle=True
+2022-07-15 17:01:01,044 compute_quantum_center.py / <module>:
+	 s=0
+2022-07-15 17:01:01,044 compute_quantum_center.py / <module>:
+	 Loading pickle file
+2022-07-15 17:01:01,052 compute_quantum_center.py / <module>:
+	 Loading (0, 0) from pickle file
+2022-07-15 17:01:01,052 compute_quantum_center.py / <module>:
+	 Loading (2, 0) from pickle file
+2022-07-15 17:01:01,052 compute_quantum_center.py / <module>:
+	 Loading (4, 0) from pickle file
+2022-07-15 17:01:01,053 compute_quantum_center.py / <module>:
+	 Loading (2, 2) from pickle file
+2022-07-15 17:01:01,053 compute_quantum_center.py / <module>:
+	 Loading (6, 0) from pickle file
+2022-07-15 17:01:01,053 compute_quantum_center.py / <module>:
+	 Loading (4, 2) from pickle file
+2022-07-15 17:01:01,053 compute_quantum_center.py / <module>:
+	 Loading (8, 0) from pickle file
+2022-07-15 17:01:01,053 compute_quantum_center.py / <module>:
+	 Loading (6, 2) from pickle file
+2022-07-15 17:01:01,053 compute_quantum_center.py / <module>:
+	 Loading (4, 4) from pickle file
+2022-07-15 17:01:01,053 compute_quantum_center.py / <module>:
+	 Loading (10, 0) from pickle file
+2022-07-15 17:01:01,053 compute_quantum_center.py / <module>:
+	 Loading (8, 2) from pickle file
+2022-07-15 17:01:01,053 compute_quantum_center.py / <module>:
+	 Loading (6, 4) from pickle file
+2022-07-15 17:01:01,053 compute_quantum_center.py / <module>:
+	 Loading (12, 0) from pickle file
+2022-07-15 17:01:01,053 compute_quantum_center.py / <module>:
+	 Loading (10, 2) from pickle file
+2022-07-15 17:01:01,053 compute_quantum_center.py / <module>:
+	 --------------------------------------------------------------------------------
+2022-07-15 17:01:01,053 compute_quantum_center.py / <module>:
+	 Computing cohomology for i+j= 8, j-i = 4
+2022-07-15 17:01:01,087 la_modules.py / initialize_weight_components:
+	 Computing basis for component [('u', 2, 'sym'), ('g', 0, 'wedge'), ('n', 6, 'wedge')] #0
+2022-07-15 17:01:04,170 la_modules.py / initialize_weight_components:
+	 Computing basis for component [('u', 1, 'sym'), ('g', 1, 'wedge'), ('n', 5, 'wedge')] #1
+2022-07-15 17:01:11,252 la_modules.py / initialize_weight_components:
+	 Computing basis for component [('u', 0, 'sym'), ('g', 2, 'wedge'), ('n', 4, 'wedge')] #2
+2022-07-15 17:01:22,855 compute_quantum_center.py / <module>:
+	 Computed Mjk in 0:00:21.802457
+2022-07-15 17:01:22,861 quantum_center.py / Eijk_basis:
+	 Creating target module M_(6, -8)
+2022-07-15 17:01:22,892 la_modules.py / initialize_weight_components:
+	 Computing basis for component [('u', 2, 'sym'), ('g', 0, 'wedge'), ('n', 6, 'wedge')] #0
+2022-07-15 17:01:25,981 la_modules.py / initialize_weight_components:
+	 Computing basis for component [('u', 1, 'sym'), ('g', 1, 'wedge'), ('n', 5, 'wedge')] #1
+2022-07-15 17:01:33,045 la_modules.py / initialize_weight_components:
+	 Computing basis for component [('u', 0, 'sym'), ('g', 2, 'wedge'), ('n', 4, 'wedge')] #2
+2022-07-15 17:01:45,261 quantum_center.py / Eijk_basis:
+	 Computing quotient basis indices
+2022-07-15 17:02:21,937 quantum_center.py / Eijk_basis:
+	 Creating source module M_(5, -8)
+2022-07-15 17:02:21,969 la_modules.py / initialize_weight_components:
+	 Computing basis for component [('u', 1, 'sym'), ('g', 0, 'wedge'), ('n', 5, 'wedge')] #0
+2022-07-15 17:02:22,166 la_modules.py / initialize_weight_components:
+	 Computing basis for component [('u', 0, 'sym'), ('g', 1, 'wedge'), ('n', 4, 'wedge')] #1
+2022-07-15 17:02:22,581 quantum_center.py / Eijk_basis:
+	 Computing phi
+2022-07-15 17:02:22,593 quantum_center.py / Eijk_basis:
+	 Computing modules
+2022-07-15 17:02:25,244 compute_quantum_center.py / log_except_hook:
+	 Unhandled exception: Traceback (most recent call last):
+  File "/home/rik/git/bgg-cohomology/examples/compute_quantum_center.py", line 106, in <module>
+    coker = Eijk_basis(BGG, j, k, subset=subset, sparse=True)
+  File "/home/rik/git/bgg-cohomology/bggcohomology/quantum_center.py", line 320, in Eijk_basis
+    tuple(list(row[1:]) + [t_un_insert])
+  File "src/cysignals/signals.pyx", line 310, in cysignals.signals.python_check_interrupt
+KeyboardInterrupt
+
+2022-07-15 17:03:23,160 compute_quantum_center.py / <module>:
+	 
+2022-07-15 17:03:23,160 compute_quantum_center.py / <module>:
+	 ================================================================================
+2022-07-15 17:03:23,160 compute_quantum_center.py / <module>:
+	 script started
+2022-07-15 17:03:23,160 compute_quantum_center.py / <module>:
+	 ================================================================================
+2022-07-15 17:03:23,160 compute_quantum_center.py / <module>:
+	 
+2022-07-15 17:03:23,160 compute_quantum_center.py / <module>:
+	 mu=(0, 0, 0, 0)
+2022-07-15 17:03:23,160 compute_quantum_center.py / <module>:
+	 diagram='B4'
+2022-07-15 17:03:24,475 compute_quantum_center.py / <module>:
+	 subset=[]
+2022-07-15 17:03:24,475 compute_quantum_center.py / <module>:
+	 half_only=True, extend_half=True, exclude_diagonal=True
+2022-07-15 17:03:24,475 compute_quantum_center.py / <module>:
+	 load_pickle=True
+2022-07-15 17:03:24,475 compute_quantum_center.py / <module>:
+	 s=0
+2022-07-15 17:03:24,475 compute_quantum_center.py / <module>:
+	 Loading pickle file
+2022-07-15 17:03:24,481 compute_quantum_center.py / <module>:
+	 Loading (0, 0) from pickle file
+2022-07-15 17:03:24,481 compute_quantum_center.py / <module>:
+	 Loading (2, 0) from pickle file
+2022-07-15 17:03:24,481 compute_quantum_center.py / <module>:
+	 Loading (4, 0) from pickle file
+2022-07-15 17:03:24,481 compute_quantum_center.py / <module>:
+	 Loading (2, 2) from pickle file
+2022-07-15 17:03:24,481 compute_quantum_center.py / <module>:
+	 Loading (6, 0) from pickle file
+2022-07-15 17:03:24,481 compute_quantum_center.py / <module>:
+	 Loading (4, 2) from pickle file
+2022-07-15 17:03:24,481 compute_quantum_center.py / <module>:
+	 Loading (8, 0) from pickle file
+2022-07-15 17:03:24,481 compute_quantum_center.py / <module>:
+	 Loading (6, 2) from pickle file
+2022-07-15 17:03:24,481 compute_quantum_center.py / <module>:
+	 Loading (4, 4) from pickle file
+2022-07-15 17:03:24,481 compute_quantum_center.py / <module>:
+	 Loading (10, 0) from pickle file
+2022-07-15 17:03:24,481 compute_quantum_center.py / <module>:
+	 Loading (8, 2) from pickle file
+2022-07-15 17:03:24,481 compute_quantum_center.py / <module>:
+	 Loading (6, 4) from pickle file
+2022-07-15 17:03:24,481 compute_quantum_center.py / <module>:
+	 Loading (12, 0) from pickle file
+2022-07-15 17:03:24,481 compute_quantum_center.py / <module>:
+	 Loading (10, 2) from pickle file
+2022-07-15 17:03:24,481 compute_quantum_center.py / <module>:
+	 --------------------------------------------------------------------------------
+2022-07-15 17:03:24,481 compute_quantum_center.py / <module>:
+	 Computing cohomology for i+j= 8, j-i = 4
+2022-07-15 17:03:24,517 la_modules.py / initialize_weight_components:
+	 Computing basis for component [('u', 2, 'sym'), ('g', 0, 'wedge'), ('n', 6, 'wedge')] #0
+2022-07-15 17:03:27,761 la_modules.py / initialize_weight_components:
+	 Computing basis for component [('u', 1, 'sym'), ('g', 1, 'wedge'), ('n', 5, 'wedge')] #1
+2022-07-15 17:03:35,224 la_modules.py / initialize_weight_components:
+	 Computing basis for component [('u', 0, 'sym'), ('g', 2, 'wedge'), ('n', 4, 'wedge')] #2
+2022-07-15 17:03:46,938 compute_quantum_center.py / <module>:
+	 Computed Mjk in 0:00:22.456838
+2022-07-15 17:03:46,942 quantum_center.py / Eijk_basis:
+	 Creating target module M_(6, -8)
+2022-07-15 17:03:46,975 la_modules.py / initialize_weight_components:
+	 Computing basis for component [('u', 2, 'sym'), ('g', 0, 'wedge'), ('n', 6, 'wedge')] #0
+2022-07-15 17:03:50,223 la_modules.py / initialize_weight_components:
+	 Computing basis for component [('u', 1, 'sym'), ('g', 1, 'wedge'), ('n', 5, 'wedge')] #1
+2022-07-15 17:03:57,737 la_modules.py / initialize_weight_components:
+	 Computing basis for component [('u', 0, 'sym'), ('g', 2, 'wedge'), ('n', 4, 'wedge')] #2
+2022-07-15 17:04:10,098 quantum_center.py / Eijk_basis:
+	 Computing quotient basis indices
+2022-07-15 17:04:46,827 quantum_center.py / Eijk_basis:
+	 Creating source module M_(5, -8)
+2022-07-15 17:04:46,861 la_modules.py / initialize_weight_components:
+	 Computing basis for component [('u', 1, 'sym'), ('g', 0, 'wedge'), ('n', 5, 'wedge')] #0
+2022-07-15 17:04:47,069 la_modules.py / initialize_weight_components:
+	 Computing basis for component [('u', 0, 'sym'), ('g', 1, 'wedge'), ('n', 4, 'wedge')] #1
+2022-07-15 17:04:47,489 quantum_center.py / Eijk_basis:
+	 Computing phi
+2022-07-15 17:04:47,501 quantum_center.py / Eijk_basis:
+	 Computing modules
+2022-07-15 17:06:41,967 quantum_center.py / Eijk_basis:
+	 Storing relations as sparse matrix
+2022-07-15 17:06:48,895 quantum_center.py / Eijk_basis:
+	 Done computing modules
+2022-07-15 17:06:49,540 compute_quantum_center.py / <module>:
+	 Computed Eijk in 0:03:02.602152
+2022-07-15 17:06:57,181 compute_quantum_center.py / <module>:
+	 Cohomology initialized in 0:00:07.640307
+2022-07-15 17:06:57,181 compute_quantum_center.py / <module>:
+	 Cohomology computed in 0:00:00.000098
+2022-07-15 17:06:57,519 la_modules.py / cohomology_component:
+	 Computing first d[2] for (0, 0, 0, 0)
+2022-07-15 17:06:57,520 quantum_center.py / __getitem__:
+	 Computing cokernel of (-2, -2, 0, 0)
+2022-07-15 17:06:58,843 quantum_center.py / __getitem__:
+	 Computing cokernel of (0, -2, -2, 0)
+2022-07-15 17:07:00,145 quantum_center.py / __getitem__:
+	 Computing cokernel of (-3, -2, -1, 0)
+2022-07-15 17:07:01,713 quantum_center.py / __getitem__:
+	 Computing cokernel of (-1, -2, -3, 0)
+2022-07-15 17:07:03,227 quantum_center.py / __getitem__:
+	 Computing cokernel of (-2, -1, -2, 0)
+2022-07-15 17:07:04,678 quantum_center.py / __getitem__:
+	 Computing cokernel of (-1, -3, -1, 0)
+2022-07-15 17:07:06,058 quantum_center.py / __getitem__:
+	 Computing cokernel of (0, 0, -2, -4)
+2022-07-15 17:07:07,357 quantum_center.py / __getitem__:
+	 Computing cokernel of (0, 0, -3, -3)
+2022-07-15 17:07:08,789 quantum_center.py / __getitem__:
+	 Computing cokernel of (-1, 0, -2, -1)
+2022-07-15 17:07:10,091 quantum_center.py / __getitem__:
+	 Computing cokernel of (0, -1, -3, -1)
+2022-07-15 17:07:11,488 quantum_center.py / __getitem__:
+	 Computing cokernel of (-1, 0, -1, -3)
+2022-07-15 17:07:12,764 quantum_center.py / __getitem__:
+	 Computing cokernel of (0, -3, -2, -1)
+2022-07-15 17:07:14,409 quantum_center.py / __getitem__:
+	 Computing cokernel of (-1, -2, 0, -1)
+2022-07-15 17:07:15,729 quantum_center.py / __getitem__:
+	 Computing cokernel of (0, -2, -1, -3)
+2022-07-15 17:07:17,170 quantum_center.py / __getitem__:
+	 Computing cokernel of (-2, -1, 0, -1)
+2022-07-15 17:07:18,459 quantum_center.py / __getitem__:
+	 Computing cokernel of (0, -1, -2, -5)
+2022-07-15 17:07:20,018 quantum_center.py / __getitem__:
+	 Computing cokernel of (-1, 0, -1, 0)
+2022-07-15 17:07:21,006 quantum_center.py / __getitem__:
+	 Computing cokernel of (-1, -2, 0, 0)
+2022-07-15 17:07:22,106 quantum_center.py / __getitem__:
+	 Computing cokernel of (0, -2, -1, 0)
+2022-07-15 17:07:23,197 quantum_center.py / __getitem__:
+	 Computing cokernel of (-2, -1, 0, 0)
+2022-07-15 17:07:24,266 quantum_center.py / __getitem__:
+	 Computing cokernel of (0, -1, -2, 0)
+2022-07-15 17:07:25,405 quantum_center.py / __getitem__:
+	 Computing cokernel of (-1, 0, 0, -1)
+2022-07-15 17:07:26,186 quantum_center.py / __getitem__:
+	 Computing cokernel of (0, 0, -1, -3)
+2022-07-15 17:07:27,175 quantum_center.py / __getitem__:
+	 Computing cokernel of (0, -1, 0, -1)
+2022-07-15 17:07:27,952 quantum_center.py / __getitem__:
+	 Computing cokernel of (0, 0, -2, -1)
+2022-07-15 17:09:21,489 la_modules.py / cohomology_component:
+	 Computing first d[1] for (0, 0, 0, 0)
+2022-07-15 17:09:21,491 quantum_center.py / __getitem__:
+	 Computing cokernel of (-1, 0, 0, 0)
+2022-07-15 17:09:22,070 quantum_center.py / __getitem__:
+	 Computing cokernel of (0, 0, -1, 0)
+2022-07-15 17:09:22,716 quantum_center.py / __getitem__:
+	 Computing cokernel of (0, -1, 0, 0)
+2022-07-15 17:09:23,363 quantum_center.py / __getitem__:
+	 Computing cokernel of (0, 0, 0, -1)
+2022-07-15 17:09:38,420 la_modules.py / cohomology_component:
+	 Computing first rank
+2022-07-15 17:10:59,027 la_modules.py / cohomology_component:
+	 Computing second rank
+2022-07-15 17:11:01,176 compute_quantum_center.py / <module>:
+	 Pickle file saved
+2022-07-15 17:11:01,177 compute_quantum_center.py / <module>:
+	 Skipping (6, 6) on diagonal
+2022-07-15 17:11:01,177 compute_quantum_center.py / <module>:
+	 --------------------------------------------------------------------------------
+2022-07-15 17:11:01,177 compute_quantum_center.py / <module>:
+	 Computing cohomology for i+j= 14, j-i = 0
+2022-07-15 17:11:01,212 la_modules.py / initialize_weight_components:
+	 Computing basis for component [('u', 0, 'sym'), ('g', 0, 'wedge'), ('n', 7, 'wedge')] #0
+2022-07-15 17:11:01,281 compute_quantum_center.py / <module>:
+	 Computed Mjk in 0:00:00.104361
+2022-07-15 17:11:01,286 quantum_center.py / Eijk_basis:
+	 Creating target module M_(7, -14)
+2022-07-15 17:11:01,323 la_modules.py / initialize_weight_components:
+	 Computing basis for component [('u', 0, 'sym'), ('g', 0, 'wedge'), ('n', 7, 'wedge')] #0
+2022-07-15 17:11:01,391 quantum_center.py / Eijk_basis:
+	 Computing quotient basis indices
+2022-07-15 17:11:01,393 quantum_center.py / Eijk_basis:
+	 Creating source module M_(6, -14)
+2022-07-15 17:11:01,429 quantum_center.py / Eijk_basis:
+	 Computing phi
+2022-07-15 17:11:01,442 quantum_center.py / Eijk_basis:
+	 Computing modules
+2022-07-15 17:11:01,442 quantum_center.py / Eijk_basis:
+	 Storing relations as sparse matrix
+2022-07-15 17:11:01,442 quantum_center.py / Eijk_basis:
+	 Done computing modules
+2022-07-15 17:11:01,444 compute_quantum_center.py / <module>:
+	 Computed Eijk in 0:00:00.162947
+2022-07-15 17:11:02,257 compute_quantum_center.py / <module>:
+	 Cohomology initialized in 0:00:00.812466
+2022-07-15 17:11:02,257 compute_quantum_center.py / <module>:
+	 Cohomology computed in 0:00:00.000153
+2022-07-15 17:11:02,258 compute_quantum_center.py / <module>:
+	 Pickle file saved
+2022-07-15 17:11:02,258 compute_quantum_center.py / <module>:
+	 --------------------------------------------------------------------------------
+2022-07-15 17:11:02,258 compute_quantum_center.py / <module>:
+	 Computing cohomology for i+j= 12, j-i = 2
+2022-07-15 17:11:02,292 la_modules.py / initialize_weight_components:
+	 Computing basis for component [('u', 1, 'sym'), ('g', 0, 'wedge'), ('n', 7, 'wedge')] #0
+2022-07-15 17:11:03,922 la_modules.py / initialize_weight_components:
+	 Computing basis for component [('u', 0, 'sym'), ('g', 1, 'wedge'), ('n', 6, 'wedge')] #1
+2022-07-15 17:11:05,618 compute_quantum_center.py / <module>:
+	 Computed Mjk in 0:00:03.359692
+2022-07-15 17:11:05,622 quantum_center.py / Eijk_basis:
+	 Creating target module M_(7, -12)
+2022-07-15 17:11:05,655 la_modules.py / initialize_weight_components:
+	 Computing basis for component [('u', 1, 'sym'), ('g', 0, 'wedge'), ('n', 7, 'wedge')] #0
+2022-07-15 17:11:06,191 la_modules.py / initialize_weight_components:
+	 Computing basis for component [('u', 0, 'sym'), ('g', 1, 'wedge'), ('n', 6, 'wedge')] #1
+2022-07-15 17:11:07,890 quantum_center.py / Eijk_basis:
+	 Computing quotient basis indices
+2022-07-15 17:11:10,574 quantum_center.py / Eijk_basis:
+	 Creating source module M_(6, -12)
+2022-07-15 17:11:10,607 la_modules.py / initialize_weight_components:
+	 Computing basis for component [('u', 0, 'sym'), ('g', 0, 'wedge'), ('n', 6, 'wedge')] #0
+2022-07-15 17:11:10,655 quantum_center.py / Eijk_basis:
+	 Computing phi
+2022-07-15 17:11:10,667 quantum_center.py / Eijk_basis:
+	 Computing modules
+2022-07-15 17:11:20,118 quantum_center.py / Eijk_basis:
+	 Storing relations as sparse matrix
+2022-07-15 17:11:20,548 quantum_center.py / Eijk_basis:
+	 Done computing modules
+2022-07-15 17:11:20,615 compute_quantum_center.py / <module>:
+	 Computed Eijk in 0:00:14.997248
+2022-07-15 17:11:24,192 compute_quantum_center.py / <module>:
+	 Cohomology initialized in 0:00:03.576146
+2022-07-15 17:11:24,192 compute_quantum_center.py / <module>:
+	 Cohomology computed in 0:00:00.000096
+2022-07-15 17:11:30,777 la_modules.py / cohomology_component:
+	 Computing first d[5] for (0, 0, 0, 0)
+2022-07-15 17:11:30,779 quantum_center.py / __getitem__:
+	 Computing cokernel of (-3, -4, -3, 0)
+2022-07-15 17:11:30,783 quantum_center.py / __getitem__:
+	 Computing cokernel of (0, -5, -5, -6)
+2022-07-15 17:11:30,787 quantum_center.py / __getitem__:
+	 Computing cokernel of (-2, -5, -3, -6)
+2022-07-15 17:11:30,791 quantum_center.py / __getitem__:
+	 Computing cokernel of (-1, -5, -3, -4)
+2022-07-15 17:11:30,795 quantum_center.py / __getitem__:
+	 Computing cokernel of (-4, -3, -6, -4)
+2022-07-15 17:11:30,799 quantum_center.py / __getitem__:
+	 Computing cokernel of (0, -4, -5, -8)
+2022-07-15 17:11:30,802 quantum_center.py / __getitem__:
+	 Computing cokernel of (-1, -4, -4, -8)
+2022-07-15 17:11:30,806 quantum_center.py / __getitem__:
+	 Computing cokernel of (-1, -2, -7, -8)
+2022-07-15 17:11:30,810 quantum_center.py / __getitem__:
+	 Computing cokernel of (-3, -2, -5, -8)
+2022-07-15 17:11:30,813 quantum_center.py / __getitem__:
+	 Computing cokernel of (0, -2, -6, -8)
+2022-07-15 17:11:30,816 quantum_center.py / __getitem__:
+	 Computing cokernel of (-2, -2, -4, -8)
+2022-07-15 17:11:30,820 quantum_center.py / __getitem__:
+	 Computing cokernel of (-4, -3, -3, -6)
+2022-07-15 17:11:30,822 quantum_center.py / __getitem__:
+	 Computing cokernel of (0, -3, -7, -6)
+2022-07-15 17:11:30,824 quantum_center.py / __getitem__:
+	 Computing cokernel of (-2, -1, -5, -6)
+2022-07-15 17:11:30,826 quantum_center.py / __getitem__:
+	 Computing cokernel of (-1, -3, -6, -10)
+2022-07-15 17:11:30,830 quantum_center.py / __getitem__:
+	 Computing cokernel of (-5, -4, -3, -4)
+2022-07-15 17:11:30,834 quantum_center.py / __getitem__:
+	 Computing cokernel of (0, -4, -6, -4)
+2022-07-15 17:11:30,837 quantum_center.py / __getitem__:
+	 Computing cokernel of (-4, -4, -2, -4)
+2022-07-15 17:11:30,840 quantum_center.py / __getitem__:
+	 Computing cokernel of (-1, -4, -7, -4)
+2022-07-15 17:11:30,843 quantum_center.py / __getitem__:
+	 Computing cokernel of (-6, -5, -5, -5)
+2022-07-15 17:11:30,847 quantum_center.py / __getitem__:
+	 Computing cokernel of (-4, -5, -3, -1)
+2022-07-15 17:11:30,850 quantum_center.py / __getitem__:
+	 Computing cokernel of (-3, -4, -2, -5)
+2022-07-15 17:11:30,854 quantum_center.py / __getitem__:
+	 Computing cokernel of (-2, -4, -3, -7)
+2022-07-15 17:11:30,855 quantum_center.py / __getitem__:
+	 Computing cokernel of (-5, -5, -3, -3)
+2022-07-15 17:11:30,859 quantum_center.py / __getitem__:
+	 Computing cokernel of (0, -3, -6, -9)
+2022-07-15 17:11:30,863 quantum_center.py / __getitem__:
+	 Computing cokernel of (-5, -4, -5, -3)
+2022-07-15 17:11:30,866 quantum_center.py / __getitem__:
+	 Computing cokernel of (-4, -4, -4, -1)
+2022-07-15 17:11:30,870 quantum_center.py / __getitem__:
+	 Computing cokernel of (-3, -3, -3, -7)
+2022-07-15 17:11:30,871 quantum_center.py / __getitem__:
+	 Computing cokernel of (-1, -7, -7, -7)
+2022-07-15 17:11:30,875 quantum_center.py / __getitem__:
+	 Computing cokernel of (-3, -7, -5, -3)
+2022-07-15 17:11:30,878 quantum_center.py / __getitem__:
+	 Computing cokernel of (0, -5, -6, -5)
+2022-07-15 17:11:30,880 quantum_center.py / __getitem__:
+	 Computing cokernel of (-2, -5, -4, -1)
+2022-07-15 17:11:30,882 quantum_center.py / __getitem__:
+	 Computing cokernel of (-2, -4, -8, -5)
+2022-07-15 17:11:30,886 quantum_center.py / __getitem__:
+	 Computing cokernel of (-2, -7, -5, -5)
+2022-07-15 17:11:30,888 quantum_center.py / __getitem__:
+	 Computing cokernel of (-1, -5, -6, -3)
+2022-07-15 17:11:30,891 quantum_center.py / __getitem__:
+	 Computing cokernel of (-2, -2, -7, -7)
+2022-07-15 17:11:30,894 quantum_center.py / __getitem__:
+	 Computing cokernel of (-3, -2, -6, -5)
+2022-07-15 17:11:30,898 quantum_center.py / __getitem__:
+	 Computing cokernel of (-1, -3, -8, -7)
+2022-07-15 17:11:30,900 quantum_center.py / __getitem__:
+	 Computing cokernel of (-3, -3, -6, -3)
+2022-07-15 17:11:30,903 quantum_center.py / __getitem__:
+	 Computing cokernel of (0, -3, -6, -4)
+2022-07-15 17:11:30,906 quantum_center.py / __getitem__:
+	 Computing cokernel of (-4, -3, -2, -4)
+2022-07-15 17:11:30,907 quantum_center.py / __getitem__:
+	 Computing cokernel of (0, -2, -5, -8)
+2022-07-15 17:11:30,910 quantum_center.py / __getitem__:
+	 Computing cokernel of (-1, -2, -4, -8)
+2022-07-15 17:11:30,913 quantum_center.py / __getitem__:
+	 Computing cokernel of (-4, -3, -3, -1)
+2022-07-15 17:11:30,914 quantum_center.py / __getitem__:
+	 Computing cokernel of (-1, -2, -7, -7)
+2022-07-15 17:11:30,917 quantum_center.py / __getitem__:
+	 Computing cokernel of (-3, -2, -5, -3)
+2022-07-15 17:11:30,920 quantum_center.py / __getitem__:
+	 Computing cokernel of (0, -2, -6, -5)
+2022-07-15 17:11:30,923 quantum_center.py / __getitem__:
+	 Computing cokernel of (-5, -4, -3, -3)
+2022-07-15 17:11:30,926 quantum_center.py / __getitem__:
+	 Computing cokernel of (-4, -4, -2, -1)
+2022-07-15 17:11:30,927 quantum_center.py / __getitem__:
+	 Computing cokernel of (-2, -1, -5, -5)
+2022-07-15 17:11:30,929 quantum_center.py / __getitem__:
+	 Computing cokernel of (-1, -3, -6, -3)
+2022-07-15 17:11:30,932 quantum_center.py / __getitem__:
+	 Computing cokernel of (0, -5, -5, -5)
+2022-07-15 17:11:30,935 quantum_center.py / __getitem__:
+	 Computing cokernel of (-2, -5, -3, -1)
+2022-07-15 17:11:30,937 quantum_center.py / __getitem__:
+	 Computing cokernel of (-2, -4, -2, -5)
+2022-07-15 17:11:30,938 quantum_center.py / __getitem__:
+	 Computing cokernel of (-1, -5, -3, -3)
+2022-07-15 17:11:30,941 quantum_center.py / __getitem__:
+	 Computing cokernel of (-2, -2, -3, -7)
+2022-07-15 17:11:30,942 quantum_center.py / __getitem__:
+	 Computing cokernel of (0, -4, -5, -3)
+2022-07-15 17:11:30,945 quantum_center.py / __getitem__:
+	 Computing cokernel of (-1, -3, -3, -7)
+2022-07-15 17:17:45,823 la_modules.py / cohomology_component:
+	 Computing first d[4] for (0, 0, 0, 0)
+2022-07-15 17:17:45,826 quantum_center.py / __getitem__:
+	 Computing cokernel of (-4, -3, -2, -1)
+2022-07-15 17:17:45,829 quantum_center.py / __getitem__:
+	 Computing cokernel of (-1, -2, -3, -7)
+2022-07-15 17:17:57,189 la_modules.py / cohomology_component:
+	 Computing first rank
+2022-07-15 17:17:57,255 la_modules.py / cohomology_component:
+	 Computing second rank
+2022-07-15 17:17:57,270 compute_quantum_center.py / <module>:
+	 Pickle file saved
+2022-07-15 17:17:57,270 compute_quantum_center.py / <module>:
+	 --------------------------------------------------------------------------------
+2022-07-15 17:17:57,270 compute_quantum_center.py / <module>:
+	 Computing cohomology for i+j= 10, j-i = 4
+2022-07-15 17:17:57,307 la_modules.py / initialize_weight_components:
+	 Computing basis for component [('u', 2, 'sym'), ('g', 0, 'wedge'), ('n', 7, 'wedge')] #0
+2022-07-15 17:18:02,081 la_modules.py / initialize_weight_components:
+	 Computing basis for component [('u', 1, 'sym'), ('g', 1, 'wedge'), ('n', 6, 'wedge')] #1
+2022-07-15 17:18:16,166 la_modules.py / initialize_weight_components:
+	 Computing basis for component [('u', 0, 'sym'), ('g', 2, 'wedge'), ('n', 5, 'wedge')] #2
+2022-07-15 17:18:40,608 compute_quantum_center.py / <module>:
+	 Computed Mjk in 0:00:43.337572
+2022-07-15 17:18:40,612 quantum_center.py / Eijk_basis:
+	 Creating target module M_(7, -10)
+2022-07-15 17:18:40,645 la_modules.py / initialize_weight_components:
+	 Computing basis for component [('u', 2, 'sym'), ('g', 0, 'wedge'), ('n', 7, 'wedge')] #0
+2022-07-15 17:18:45,348 la_modules.py / initialize_weight_components:
+	 Computing basis for component [('u', 1, 'sym'), ('g', 1, 'wedge'), ('n', 6, 'wedge')] #1
+2022-07-15 17:18:59,290 la_modules.py / initialize_weight_components:
+	 Computing basis for component [('u', 0, 'sym'), ('g', 2, 'wedge'), ('n', 5, 'wedge')] #2
+2022-07-15 17:19:25,048 quantum_center.py / Eijk_basis:
+	 Computing quotient basis indices
+2022-07-15 17:20:40,794 quantum_center.py / Eijk_basis:
+	 Creating source module M_(6, -10)
+2022-07-15 17:20:40,828 la_modules.py / initialize_weight_components:
+	 Computing basis for component [('u', 1, 'sym'), ('g', 0, 'wedge'), ('n', 6, 'wedge')] #0
+2022-07-15 17:20:41,267 la_modules.py / initialize_weight_components:
+	 Computing basis for component [('u', 0, 'sym'), ('g', 1, 'wedge'), ('n', 5, 'wedge')] #1
+2022-07-15 17:20:42,223 quantum_center.py / Eijk_basis:
+	 Computing phi
+2022-07-15 17:20:42,236 quantum_center.py / Eijk_basis:
+	 Computing modules
+2022-07-15 17:24:36,106 quantum_center.py / Eijk_basis:
+	 Storing relations as sparse matrix
+2022-07-15 17:24:49,677 quantum_center.py / Eijk_basis:
+	 Done computing modules
+2022-07-15 17:24:51,053 compute_quantum_center.py / <module>:
+	 Computed Eijk in 0:06:10.445694
+2022-07-15 17:25:00,797 compute_quantum_center.py / <module>:
+	 Cohomology initialized in 0:00:09.743486
+2022-07-15 17:25:00,798 compute_quantum_center.py / <module>:
+	 Cohomology computed in 0:00:00.000171
+2022-07-15 17:25:01,085 la_modules.py / cohomology_component:
+	 Computing first d[3] for (0, 0, 0, 0)
+2022-07-15 17:25:01,087 quantum_center.py / __getitem__:
+	 Computing cokernel of (-2, -4, -2, 0)
+2022-07-15 17:25:02,730 quantum_center.py / __getitem__:
+	 Computing cokernel of (-3, -2, -2, 0)
+2022-07-15 17:25:03,859 quantum_center.py / __getitem__:
+	 Computing cokernel of (-2, -2, -3, 0)
+2022-07-15 17:25:04,994 quantum_center.py / __getitem__:
+	 Computing cokernel of (0, -3, -2, -4)
+2022-07-15 17:25:06,273 quantum_center.py / __getitem__:
+	 Computing cokernel of (-3, -3, -1, 0)
+2022-07-15 17:25:07,404 quantum_center.py / __getitem__:
+	 Computing cokernel of (-1, -3, -3, 0)
+2022-07-15 17:25:08,534 quantum_center.py / __getitem__:
+	 Computing cokernel of (0, 0, -3, -4)
+2022-07-15 17:25:09,369 quantum_center.py / __getitem__:
+	 Computing cokernel of (-1, 0, -2, -4)
+2022-07-15 17:25:10,200 quantum_center.py / __getitem__:
+	 Computing cokernel of (0, -1, -3, -6)
+2022-07-15 17:25:11,573 quantum_center.py / __getitem__:
+	 Computing cokernel of (-4, -3, -2, -1)
+2022-07-15 17:25:13,251 quantum_center.py / __getitem__:
+	 Computing cokernel of (-2, -2, 0, -1)
+2022-07-15 17:25:13,987 quantum_center.py / __getitem__:
+	 Computing cokernel of (0, -2, -2, -5)
+2022-07-15 17:25:15,039 quantum_center.py / __getitem__:
+	 Computing cokernel of (-3, -2, -1, -3)
+2022-07-15 17:25:16,600 quantum_center.py / __getitem__:
+	 Computing cokernel of (-1, -2, -3, -7)
+2022-07-15 17:25:18,263 quantum_center.py / __getitem__:
+	 Computing cokernel of (-2, -1, -2, -5)
+2022-07-15 17:25:19,793 quantum_center.py / __getitem__:
+	 Computing cokernel of (-1, -3, -1, -3)
+2022-07-15 17:25:20,874 quantum_center.py / __getitem__:
+	 Computing cokernel of (-1, 0, -3, -3)
+2022-07-15 17:25:21,815 quantum_center.py / __getitem__:
+	 Computing cokernel of (0, -3, -3, -1)
+2022-07-15 17:25:23,017 quantum_center.py / __getitem__:
+	 Computing cokernel of (0, -2, -5, -3)
+2022-07-15 17:25:24,688 quantum_center.py / __getitem__:
+	 Computing cokernel of (-1, -2, -4, -1)
+2022-07-15 17:25:26,071 quantum_center.py / __getitem__:
+	 Computing cokernel of (0, -4, -3, -3)
+2022-07-15 17:25:27,674 quantum_center.py / __getitem__:
+	 Computing cokernel of (-1, -4, -2, -1)
+2022-07-15 17:25:29,180 quantum_center.py / __getitem__:
+	 Computing cokernel of (0, -1, -5, -5)
+2022-07-15 17:25:30,786 quantum_center.py / __getitem__:
+	 Computing cokernel of (-2, -1, -3, -1)
+2022-07-15 17:25:31,867 quantum_center.py / __getitem__:
+	 Computing cokernel of (-2, -2, 0, 0)
+2022-07-15 17:25:32,478 quantum_center.py / __getitem__:
+	 Computing cokernel of (0, -2, -2, 0)
+2022-07-15 17:25:32,974 quantum_center.py / __getitem__:
+	 Computing cokernel of (-3, -2, -1, 0)
+2022-07-15 17:25:33,890 quantum_center.py / __getitem__:
+	 Computing cokernel of (-1, -2, -3, 0)
+2022-07-15 17:25:34,917 quantum_center.py / __getitem__:
+	 Computing cokernel of (-2, -1, -2, 0)
+2022-07-15 17:25:35,681 quantum_center.py / __getitem__:
+	 Computing cokernel of (-1, -3, -1, 0)
+2022-07-15 17:25:36,427 quantum_center.py / __getitem__:
+	 Computing cokernel of (0, 0, -2, -4)
+2022-07-15 17:25:36,924 quantum_center.py / __getitem__:
+	 Computing cokernel of (0, 0, -3, -3)
+2022-07-15 17:25:37,613 quantum_center.py / __getitem__:
+	 Computing cokernel of (-1, 0, -2, -1)
+2022-07-15 17:25:38,054 quantum_center.py / __getitem__:
+	 Computing cokernel of (0, -1, -3, -1)
+2022-07-15 17:25:38,690 quantum_center.py / __getitem__:
+	 Computing cokernel of (-1, 0, -1, -3)
+2022-07-15 17:25:39,205 quantum_center.py / __getitem__:
+	 Computing cokernel of (0, -3, -2, -1)
+2022-07-15 17:25:39,960 quantum_center.py / __getitem__:
+	 Computing cokernel of (-1, -2, 0, -1)
+2022-07-15 17:25:40,486 quantum_center.py / __getitem__:
+	 Computing cokernel of (0, -2, -1, -3)
+2022-07-15 17:25:41,160 quantum_center.py / __getitem__:
+	 Computing cokernel of (-2, -1, 0, -1)
+2022-07-15 17:25:41,574 quantum_center.py / __getitem__:
+	 Computing cokernel of (0, -1, -2, -5)
+2022-07-15 18:00:51,817 la_modules.py / cohomology_component:
+	 Computing first d[2] for (0, 0, 0, 0)
+2022-07-15 18:00:51,822 quantum_center.py / __getitem__:
+	 Computing cokernel of (-1, 0, -1, 0)
+2022-07-15 18:00:52,070 quantum_center.py / __getitem__:
+	 Computing cokernel of (-1, -2, 0, 0)
+2022-07-15 18:00:52,517 quantum_center.py / __getitem__:
+	 Computing cokernel of (0, -2, -1, 0)
+2022-07-15 18:00:52,845 quantum_center.py / __getitem__:
+	 Computing cokernel of (-2, -1, 0, 0)
+2022-07-15 18:00:53,164 quantum_center.py / __getitem__:
+	 Computing cokernel of (0, -1, -2, 0)
+2022-07-15 18:00:53,587 quantum_center.py / __getitem__:
+	 Computing cokernel of (-1, 0, 0, -1)
+2022-07-15 18:00:53,756 quantum_center.py / __getitem__:
+	 Computing cokernel of (0, 0, -1, -3)
+2022-07-15 18:00:54,003 quantum_center.py / __getitem__:
+	 Computing cokernel of (0, -1, 0, -1)
+2022-07-15 18:00:54,157 quantum_center.py / __getitem__:
+	 Computing cokernel of (0, 0, -2, -1)
+2022-07-15 18:01:50,309 la_modules.py / cohomology_component:
+	 Computing first rank
+2022-07-15 18:09:38,783 la_modules.py / cohomology_component:
+	 Computing second rank
+2022-07-15 18:09:53,062 compute_quantum_center.py / <module>:
+	 Pickle file saved
+2022-07-15 18:09:53,062 compute_quantum_center.py / <module>:
+	 --------------------------------------------------------------------------------
+2022-07-15 18:09:53,062 compute_quantum_center.py / <module>:
+	 Computing cohomology for i+j= 8, j-i = 6
+2022-07-15 18:09:53,097 la_modules.py / initialize_weight_components:
+	 Computing basis for component [('u', 3, 'sym'), ('g', 0, 'wedge'), ('n', 7, 'wedge')] #0
+2022-07-15 18:10:22,491 la_modules.py / initialize_weight_components:
+	 Computing basis for component [('u', 2, 'sym'), ('g', 1, 'wedge'), ('n', 6, 'wedge')] #1
+2022-07-15 18:12:27,426 la_modules.py / initialize_weight_components:
+	 Computing basis for component [('u', 1, 'sym'), ('g', 2, 'wedge'), ('n', 5, 'wedge')] #2
+2022-07-15 18:14:46,356 la_modules.py / initialize_weight_components:
+	 Computing basis for component [('u', 0, 'sym'), ('g', 3, 'wedge'), ('n', 4, 'wedge')] #3
